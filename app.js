@@ -30,7 +30,8 @@ const ICONS = {
   image: '<rect x="4" y="5" width="16" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="m5 17 4.5-4.5 3 3L15 13l4 4"/>',
 };
 const icon = (n) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ''}</svg>`;
-const BRAND = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5.5 5h13A2.5 2.5 0 0 1 21 7.5v7a2.5 2.5 0 0 1-2.5 2.5H12l-4.5 3.5V17h-2A2.5 2.5 0 0 1 3 14.5v-7A2.5 2.5 0 0 1 5.5 5z"/></svg>';
+const BUNNY = '<ellipse cx="8.4" cy="7.2" rx="2.4" ry="5.6" transform="rotate(-12 8.4 7.2)"/><ellipse cx="15.6" cy="7.2" rx="2.4" ry="5.6" transform="rotate(12 15.6 7.2)"/><ellipse cx="12" cy="15.4" rx="7" ry="6.3"/>';
+const BRAND = `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${BUNNY}<circle cx="9.4" cy="14.8" r="1" fill="#3182f6"/><circle cx="14.6" cy="14.8" r="1" fill="#3182f6"/></svg>`;
 
 const SHAPE_ICONS = {
   auto: '<rect x="7" y="6" width="34" height="20" rx="8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-dasharray="3 3"/><path d="M24 10.5l1.4 3.6 3.6 1.4-3.6 1.4-1.4 3.6-1.4-3.6-3.6-1.4 3.6-1.4z"/>',
@@ -101,32 +102,34 @@ const SWATCHES = [
   '#3bc9db', '#38d9a9', '#69db7c', '#a9e34b', '#e3a6a6', '#c8a46a', '#33415c', '#191f28',
 ];
 
-const SAMPLE = `비가 그친 오후였다. 창밖의 물방울이 하나둘 미끄러져 내렸다.
+const SAMPLE = `그해 겨울, 우리는 거의 매일 같은 찻집에서 만났다. 창가 자리의 낡은 테이블은 늘 조금 기울어 있어서, 찻잔을 내려놓을 때마다 작게 달그락거렸다. 서윤은 그 소리를 좋아했다. 무언가가 아직 제자리에 있다는 신호 같다고 했다.
+
+비가 그친 오후였다. 창밖의 물방울이 하나둘 미끄러져 내렸고, 거리는 막 씻어낸 듯 선명했다. 약속 시간이 한참 지났지만 그녀는 자리에서 일어나지 않았다. 기다리는 일에는 이상한 온기가 있어서, 조금만 더 앉아 있으면 무언가 달라질 것만 같았다.
 
 서윤: "오늘은 안 올 줄 알았어."
 
-문이 열리고, 그는 젖은 우산을 접으며 웃었다.
+문이 열리고, 그는 젖은 우산을 접으며 웃었다. 어깨에 내려앉은 빗방울이 불빛을 받아 반짝였다.
 
 도현: "약속했잖아. 비가 와도 온다고."
 
 (거짓말. 사실은 한참을 망설였으면서.)
 
-서윤은 대답 대신 찻잔을 하나 더 꺼냈다. ==따뜻한 김==이 천천히 피어올랐다.`;
+서윤은 대답 대신 찻잔을 하나 더 꺼냈다. ==따뜻한 김==이 천천히 피어올랐고, 둘 사이의 침묵도 그만큼 느슨해졌다. 그날 나눈 이야기는 대부분 잊혔지만, 테이블이 달그락거리던 소리만은 아직도 또렷하다.`;
 
 const DEFAULTS = {
   text: SAMPLE,
   title: '비 갠 오후',
   credit: '— 「작은 찻집」 중에서',
-  parse: { quotes: true, parens: true, inline: false, strip: true, nameless: 'none' },
-  typo: { font: 'Noto Serif KR', fontCustom: '', size: 16, lh: 1.9, ls: -0.01, weight: 400, color: '#2b2a27', align: 'left', gap: 12, indent: 0, hl: '#ffe58a' },
-  head: { font: 'Noto Serif KR', fontCustom: '', size: 24, weight: 700, color: '#1d1c1a', align: 'left', creditSize: 13, creditColor: '#8a857c', creditAlign: 'right', quoteMark: false, accent: '#c8a46a' },
+  parse: { quotes: true, parens: true, inline: false, strip: true, nameless: 'none', blank: 'para' },
+  typo: { font: 'Noto Serif KR', fontCustom: '', size: 16.5, lh: 1.75, ls: -0.015, weight: 400, color: '#2a2826', align: 'left', paraMode: 'gap', gap: 14, indent: 1, hl: '#ffe58a' },
+  head: { font: 'Noto Serif KR', fontCustom: '', size: 22, weight: 700, color: '#1d1c1a', align: 'left', creditSize: 12.5, creditColor: '#8a857c', creditAlign: 'right', quoteMark: false, accent: '#c8a46a' },
   bubble: {
     speech: 'round', thought: 'thought', tail: true, side: 'left',
     font: 'Pretendard', fontCustom: '', size: 15, lh: 1.6, ls: -0.01, weight: 400,
     bg: '#ffffff', color: '#222222', border: '#2b2a27', bw: 0, radius: 18, px: 16, py: 10, maxw: 78, shadow: true, gap: 16,
     avatar: true, avatarSize: 44, avatarShape: 'circle', showName: true, nameSize: 12, nameColor: '#6b665e',
   },
-  canvas: { ratio: '4:5', width: 540, pad: 44, bg: '#f7f3ea', bgImage: '', overlay: 0, overlayColor: '#000000', valign: 'center', fit: false, paginate: true, pageNum: false, scale: 2 },
+  canvas: { ratio: '4:5', width: 540, pad: 48, bgType: 'solid', bg: '#f7f3ea', bg2: '#e6dcc8', gradType: 'linear', gradAngle: 160, pattern: 'dots', patColor: '#8a7f6a', patOpacity: 0.22, patSize: 18, bgImage: '', overlay: 0, overlayColor: '#000000', valign: 'flex-start', fit: false, paginate: true, pageNum: false, scale: 2 },
   chars: [
     { id: 'c1', name: '서윤', avatar: '', side: 'left', shape: '', custom: true, bg: '#ffffff', color: '#222222', border: '#e3a6a6' },
     { id: 'c2', name: '도현', avatar: '', side: 'right', shape: '', custom: true, bg: '#33415c', color: '#ffffff', border: '#33415c' },
@@ -217,24 +220,27 @@ const TEMPLATES = [
     chars: [['#ffffff', '#222222', '#ffffff'], ['#ffe94a', '#222222', '#ffe94a']],
   },
   {
+    id: 'book', name: '책 페이지', sub: '고운바탕 · 들여쓰기 · 2:3', pv: { bg: '#fbfaf6', fg: '#2a2826', book: true },
+    set: { typo: { font: 'Gowun Batang', size: 15.5, lh: 1.8, ls: -0.01, align: 'justify', paraMode: 'indent', indent: 1, color: '#262422' }, head: { font: 'Gowun Batang', size: 19, align: 'center', color: '#262422', creditColor: '#8f8a80', creditAlign: 'center', creditSize: 11.5 }, bubble: { speech: 'plain', thought: 'plain', font: 'Gowun Batang', size: 15.5, lh: 1.8, avatar: false, showName: false, gap: 0 }, canvas: { bg: '#fbfaf6', ratio: '2:3', pad: 52, valign: 'flex-start', pageNum: true } },
+    parse: { strip: false }, chars: null, charSide: 'left',
+  },
+  {
     id: 'quote', name: '인용 카드', sub: '송명 · 1:1 · 큰 따옴표', pv: { bg: '#f4efe6', fg: '#3a3229', q: '#b08d57', center: true },
-    set: { typo: { font: 'Song Myung', size: 21, lh: 1.85, align: 'center', color: '#3a3229' }, head: { font: 'Song Myung', size: 20, align: 'center', color: '#3a3229', creditColor: '#9a8b76', creditAlign: 'center', quoteMark: true, accent: '#b08d57' }, bubble: { speech: 'plain', thought: 'plain', font: 'Song Myung', size: 19, avatar: false, showName: false, side: 'center' }, canvas: { bg: '#f4efe6', ratio: '1:1', pad: 64, fit: true } },
+    set: { typo: { font: 'Song Myung', size: 21, lh: 1.85, align: 'center', color: '#3a3229' }, head: { font: 'Song Myung', size: 20, align: 'center', color: '#3a3229', creditColor: '#9a8b76', creditAlign: 'center', quoteMark: true, accent: '#b08d57' }, bubble: { speech: 'plain', thought: 'plain', font: 'Song Myung', size: 19, avatar: false, showName: false, side: 'center' }, canvas: { bg: '#f4efe6', ratio: '1:1', pad: 64, fit: true, valign: 'center' } },
     chars: null, charSide: 'center',
   },
   {
     id: 'note', name: '손글씨 노트', sub: '나눔손글씨 펜 · 줄 노트', pv: { bg: '#fffdf6', fg: '#2f3b52', b1: '#ffffff', b2: '#fff3bf', lines: true, outline: '#9fb0c6' },
-    set: { typo: { font: 'Nanum Pen Script', size: 24, lh: 1.25, color: '#2f3b52', gap: 0, ls: 0 }, head: { font: 'Nanum Pen Script', size: 34, color: '#2f3b52', creditColor: '#7b8799', creditSize: 18 }, bubble: { speech: 'outline', font: 'Gaegu', size: 16, border: '#9fb0c6', bw: 1.5, shadow: false, nameColor: '#7b8799' }, canvas: { bg: '#fffdf6' } },
-    skin: SKINS.note.css, chars: [['#ffffff', '#2f3b52', '#9fb0c6'], ['#fff3bf', '#2f3b52', '#e6c84f']],
+    set: { typo: { font: 'Nanum Pen Script', size: 24, lh: 1.25, color: '#2f3b52', gap: 0, ls: 0 }, head: { font: 'Nanum Pen Script', size: 34, color: '#2f3b52', creditColor: '#7b8799', creditSize: 18 }, bubble: { speech: 'outline', font: 'Gaegu', size: 16, border: '#9fb0c6', bw: 1.5, shadow: false, nameColor: '#7b8799' }, canvas: { bg: '#fffdf6', bgType: 'pattern', pattern: 'lines', patColor: '#9fb6d0', patOpacity: 0.45, patSize: 30 } }, chars: [['#ffffff', '#2f3b52', '#9fb0c6'], ['#fff3bf', '#2f3b52', '#e6c84f']],
   },
   {
     id: 'film', name: '영화 자막', sub: '16:9 · 검은 화면', pv: { bg: '#000000', fg: '#9a9a9a', film: true },
-    set: { typo: { font: 'Noto Sans KR', color: '#d8d8d8', size: 15 }, head: { font: 'Noto Sans KR', color: '#ffffff', creditColor: '#777777', align: 'center', creditAlign: 'center' }, bubble: { font: 'Noto Sans KR', size: 18, color: '#ffffff', nameColor: '#ffd43b', gap: 14 }, canvas: { bg: '#000000', ratio: '16:9', pad: 40 } },
+    set: { typo: { font: 'Noto Sans KR', color: '#d8d8d8', size: 15 }, head: { font: 'Noto Sans KR', color: '#ffffff', creditColor: '#777777', align: 'center', creditAlign: 'center' }, bubble: { font: 'Noto Sans KR', size: 18, color: '#ffffff', nameColor: '#ffd43b', gap: 14 }, canvas: { bg: '#000000', ratio: '16:9', pad: 40, valign: 'center' } },
     skin: SKINS.film.css, chars: [['#000000', '#ffffff', '#000000'], ['#000000', '#ffffff', '#000000']],
   },
   {
     id: 'pastel', name: '파스텔', sub: '고운돋움 · 그라데이션', pv: { bg: 'linear-gradient(160deg,#ffe3ec,#ece6ff 50%,#dff3ff)', fg: '#4a4560', b1: 'rgba(255,255,255,.9)', b2: '#b197fc' },
-    set: { typo: { font: 'Gowun Dodum', color: '#4a4560' }, head: { font: 'Gowun Dodum', color: '#3b3552', creditColor: '#8a82a8' }, bubble: { speech: 'pill', font: 'Gowun Dodum', nameColor: '#8a7fb0' }, canvas: { bg: '#f3eaff' } },
-    skin: SKINS.pastel.css, chars: [['#ffffff', '#4a4560', '#ffffff'], ['#b197fc', '#ffffff', '#b197fc']],
+    set: { typo: { font: 'Gowun Dodum', color: '#4a4560' }, head: { font: 'Gowun Dodum', color: '#3b3552', creditColor: '#8a82a8' }, bubble: { speech: 'pill', font: 'Gowun Dodum', nameColor: '#8a7fb0' }, canvas: { bgType: 'gradient', bg: '#ffe3ec', bg2: '#dff3ff', gradAngle: 160 } }, chars: [['#ffffff', '#4a4560', '#ffffff'], ['#b197fc', '#ffffff', '#b197fc']],
   },
   {
     id: 'vintage', name: '빈티지', sub: '나눔명조 · 액자', pv: { bg: '#efe4cc', fg: '#3b2f22', b1: '#f8f0de', b2: '#8a7356', frame: true },
@@ -315,6 +321,16 @@ function fmt(s) {
     .replace(/(^|[^*])\*([^*\s][^*]*?)\*(?!\*)/g, '$1<i>$2</i>');
 }
 
+/* 마지막 두 어절을 한 덩어리로 묶어 마지막 줄에 단어(또는 음절) 하나만 남는 것을 막음 */
+function fmtNoOrphan(text, justify) {
+  // 양쪽 정렬(음절 단위 줄바꿈)에서는 마지막 어절만, 그 외에는 마지막 두 어절을 묶음
+  const m = justify ? text.match(/^([\s\S]*?\s)(\S{1,8})\s*$/) : text.match(/^([\s\S]*?)(\S+\s+\S{1,8})\s*$/);
+  if (!m || m[1].length < 12) return fmt(text);
+  const odd = (str, mk) => (str.split(mk).length - 1) % 2 === 1;
+  if (['**', '==', '*'].some((mk) => m[2].includes(mk) || odd(m[1], mk))) return fmt(text.replace(/\s+(\S{1,8})\s*$/, '\u00a0$1'));
+  return fmt(m[1]) + '<span class="nobr">' + fmt(m[2]) + '</span>';
+}
+
 let toastTimer;
 function toast(msg, action, ms = 2600) {
   const t = $('#toast');
@@ -382,10 +398,16 @@ function dropTarget(el, accept, onFile) {
    ========================================================= */
 let state = loadState();
 
+function migrate(st, raw) {
+  // 이전 버전: 배경 이미지만 있던 설정은 '이미지' 배경으로
+  if (raw && raw.canvas && !raw.canvas.bgType && raw.canvas.bgImage) st.canvas.bgType = 'image';
+  return st;
+}
+
 function loadState() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
-    if (raw) return deepMerge(copyState(DEFAULTS), JSON.parse(raw));
+    if (raw) return migrate(deepMerge(copyState(DEFAULTS), JSON.parse(raw)), JSON.parse(raw));
   } catch (e) { /* 무시 */ }
   return copyState(DEFAULTS);
 }
@@ -558,12 +580,17 @@ function parseText() {
     out.push({ type: 'bubble', kind, inner, full, name: name || null, key: `${base}|${occ[base]}` });
   };
 
+  const narr = (text) => {
+    const prev = out[out.length - 1];
+    out.push({ type: 'narr', text, ind: !!prev && prev.type === 'narr' });
+  };
+  let blanks = 0;
   for (const raw of lines) {
     const line = raw.trim();
-    if (!line) {
-      if (out.length && out[out.length - 1].type !== 'gap') out.push({ type: 'gap' });
-      continue;
-    }
+    if (!line) { blanks++; continue; }
+    // 빈 줄 하나는 문단 경계일 뿐, 두 줄 이상은 장면 전환(여백)으로 본다
+    if (blanks && out.length && (P.blank === 'space' || blanks >= 2)) out.push({ type: 'gap' });
+    blanks = 0;
     if (/^(-{3,}|\*{3,}|_{3,}|—{2,})$/.test(line)) { out.push({ type: 'hr' }); continue; }
 
     const sp = splitSpeaker(line);
@@ -591,11 +618,11 @@ function parseText() {
         if (!t) continue;
         const w = wrapped(t, PAIRS_SPEECH);
         if (w) bubble('speech', w.inner, t);
-        else out.push({ type: 'narr', text: t });
+        else narr(t);
       }
       continue;
     }
-    out.push({ type: 'narr', text: line });
+    narr(line);
   }
   while (out.length && out[out.length - 1].type === 'gap') out.pop();
   return out;
@@ -645,7 +672,7 @@ function genCSS() {
   const fit = (v) => `calc(${v}px * var(--fit, 1))`;
   let css = `.card {
   --card-bg: ${c.bg};
-  --overlay: ${c.overlay};
+  --overlay: ${c.bgType === 'image' && c.bgImage ? c.overlay : 0};
   --overlay-color: ${c.overlayColor};
   --pad: ${c.pad}px;
   --valign: ${c.valign};
@@ -658,8 +685,9 @@ function genCSS() {
   --text-weight: ${t.weight};
   --text-color: ${t.color};
   --text-align: ${t.align};
-  --para-gap: ${fit(t.gap)};
-  --indent: ${t.indent}em;
+  --text-break: ${t.align === 'justify' ? 'normal' : 'keep-all'};
+  --para-gap: ${t.paraMode === 'indent' ? '0px' : fit(t.gap)};
+  --indent: ${t.paraMode === 'indent' ? t.indent : 0}em;
   --b-font: ${fontStack(b.font, b.fontCustom)};
   --b-size: ${fit(b.size)};
   --b-lh: ${b.lh};
@@ -688,9 +716,76 @@ function genCSS() {
   --credit-color: ${hd.creditColor};
   --credit-align: ${hd.creditAlign};
 }`;
-  if (c.bgImage) css += `\n.card { background-image: url("${c.bgImage}"); }`;
+  const bg = backgroundCSS(c);
+  css += `\n.card { background-image: ${bg.image}; background-size: ${bg.size}; background-repeat: ${bg.repeat}; background-position: ${bg.pos}; }`;
   return css;
 }
+
+/* 배경: 단색 · 그라데이션 · 패턴 · 이미지 */
+function hexToRgba(hex, a) {
+  let x = hex.replace('#', '');
+  if (x.length === 3) x = x.split('').map((c) => c + c).join('');
+  const n = parseInt(x.slice(0, 6), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+}
+const svgUrl = (svg) => `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+
+const PATTERNS = [['dots', '점'], ['grid', '격자'], ['lines', '줄 노트'], ['diagonal', '사선'], ['check', '체크'], ['plus', '플러스'], ['paper', '종이 질감'], ['manuscript', '원고지']];
+
+function patternCSS(type, color, op, s) {
+  const C = hexToRgba(color, op);
+  switch (type) {
+    case 'dots': {
+      const r = Math.max(1, s * 0.09);
+      return { image: `radial-gradient(circle, ${C} ${r}px, transparent ${r + 0.6}px)`, size: `${s}px ${s}px` };
+    }
+    case 'grid':
+      return { image: `linear-gradient(${C} 1px, transparent 1px), linear-gradient(90deg, ${C} 1px, transparent 1px)`, size: `${s}px ${s}px` };
+    case 'lines':
+      return { image: `linear-gradient(transparent ${s - 1}px, ${C} ${s - 1}px)`, size: `100% ${s}px` };
+    case 'diagonal':
+      return { image: `repeating-linear-gradient(45deg, ${C} 0 1px, transparent 1px ${s / 2}px)`, size: 'auto' };
+    case 'check':
+      return { image: `conic-gradient(${C} 25%, transparent 0 50%, ${C} 0 75%, transparent 0)`, size: `${s}px ${s}px` };
+    case 'plus': {
+      const m = s / 2, a = Math.max(2.5, s * 0.14);
+      return { image: svgUrl(`<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}"><path d="M${m} ${m - a}v${a * 2}M${m - a} ${m}h${a * 2}" stroke="${color}" stroke-opacity="${op}" stroke-width="1.3" stroke-linecap="round"/></svg>`), size: `${s}px ${s}px` };
+    }
+    case 'paper': {
+      const n = parseInt(color.replace('#', '').padEnd(6, '0').slice(0, 6), 16);
+      const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => (v / 255).toFixed(3));
+      const t = 140 + s * 4;
+      return { image: svgUrl(`<svg xmlns="http://www.w3.org/2000/svg" width="${t}" height="${t}"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="${(1.4 - s / 100).toFixed(2)}" numOctaves="3" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 ${r} 0 0 0 0 ${g} 0 0 0 0 ${b} ${(op * 1.6).toFixed(2)} 0 0 0 0"/></filter><rect width="100%" height="100%" filter="url(#n)"/></svg>`), size: `${t}px ${t}px` };
+    }
+    case 'manuscript': {
+      // 원고지: 정사각 칸 + 줄 사이 여백
+      const cell = s, gap = Math.round(s * 0.35), hgt = cell + gap;
+      return { image: svgUrl(`<svg xmlns="http://www.w3.org/2000/svg" width="${cell}" height="${hgt}"><rect x=".5" y="${gap + 0.5}" width="${cell}" height="${cell - 1}" fill="none" stroke="${color}" stroke-opacity="${op}" stroke-width="1"/></svg>`), size: `${cell}px ${hgt}px` };
+    }
+  }
+  return { image: 'none', size: 'auto' };
+}
+
+function backgroundCSS(c) {
+  if (c.bgType === 'gradient') {
+    const image = c.gradType === 'radial'
+      ? `radial-gradient(ellipse at 50% 35%, ${c.bg} 0%, ${c.bg2} 100%)`
+      : `linear-gradient(${c.gradAngle}deg, ${c.bg} 0%, ${c.bg2} 100%)`;
+    return { image, size: '100% 100%', repeat: 'no-repeat', pos: 'center' };
+  }
+  if (c.bgType === 'pattern') {
+    const p = patternCSS(c.pattern, c.patColor, c.patOpacity, c.patSize);
+    return { image: p.image, size: p.size, repeat: 'repeat', pos: 'center top' };
+  }
+  if (c.bgType === 'image' && c.bgImage) return { image: `url("${c.bgImage}")`, size: 'cover', repeat: 'no-repeat', pos: 'center' };
+  return { image: 'none', size: 'auto', repeat: 'no-repeat', pos: 'center' };
+}
+
+const GRADIENTS = [
+  ['#ffe3ec', '#dff3ff', 160], ['#fbc2eb', '#a6c1ee', 135], ['#fdfcfb', '#e2d1c3', 120], ['#f6f3ea', '#e3d5bd', 180],
+  ['#a1c4fd', '#c2e9fb', 180], ['#d4fc79', '#96e6a1', 135], ['#f6d365', '#fda085', 135], ['#e0c3fc', '#8ec5fc', 135],
+  ['#2b2b33', '#121216', 160], ['#0f2027', '#2c5364', 160], ['#3a1c71', '#d76d77', 135], ['#141e30', '#243b55', 180],
+];
 
 function applySkin() {
   const src = state.skin || '';
@@ -701,7 +796,9 @@ function applySkin() {
 let editingKey = null;
 
 function renderBlock(b) {
-  if (b.type === 'narr') return h('p', { class: 'narr', html: fmt(b.text) });
+  if (b.type === 'narr') {
+    return h('p', { class: 'narr' + (b.ind && !b.cont ? ' ind' : '') + (b.cont ? ' cont' : ''), html: fmtNoOrphan(b.text, state.typo.align === 'justify') });
+  }
   if (b.type === 'gap') return h('div', { class: 'gap' });
   if (b.type === 'hr') return h('hr', { class: 'divider' });
 
@@ -746,7 +843,7 @@ function ratioHeight(W) {
 }
 
 function newPage(idx, W, H) {
-  const card = h('div', { class: 'card' + (H ? '' : ' auto-h') });
+  const card = h('div', { class: 'card' + (H ? '' : ' auto-h') + (state.typo.paraMode === 'indent' ? ' para-indent' : '') });
   card.style.width = W + 'px';
   if (H) card.style.height = H + 'px';
   card.append(h('div', { class: 'card-overlay' }));
@@ -765,6 +862,47 @@ function newPage(idx, W, H) {
   const label = h('div', { class: 'page-label' });
   const wrap = h('div', { class: 'page-wrap' }, label, card);
   return { wrap, card, content, flow, label };
+}
+
+/* 문단이 페이지 끝에 걸리면 줄 단위로 나눠 다음 장으로 이어 붙임
+   - 앞쪽에 2줄 미만만 남으면(외톨이 줄) 문단 전체를 넘김
+   - 뒤쪽에 1줄만 넘어가면(과부 줄) 한 줄을 더 넘김 */
+function balanceMarks(a, rest) {
+  for (const m of ['**', '==']) {
+    if ((a.split(m).length - 1) % 2) { a += m; rest = m + rest; }
+  }
+  return [a, rest];
+}
+function splitParagraph(page, el, b, alone) {
+  const tokens = b.text.split(/(\s+)/);
+  if (tokens.length < 3) return null;
+  const head = (k) => tokens.slice(0, k).join('').trimEnd();
+  const tail = (k) => tokens.slice(k).join('').trimStart();
+  const show = (k) => { el.innerHTML = fmt(balanceMarks(head(k), tail(k))[0]); };
+  const fits = (k) => { show(k); return !overflows(page); };
+  let lo = 0, hi = tokens.length - 1;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    if (fits(mid)) lo = mid; else hi = mid - 1;
+  }
+  if (lo === 0 || !tail(lo)) { el.innerHTML = fmt(b.text); return null; }
+  show(lo);
+  const lh = parseFloat(getComputedStyle(el).lineHeight) || 24;
+  const lines = Math.round(el.offsetHeight / lh);
+  if (lines < 2 && !alone) { el.innerHTML = fmt(b.text); return null; }
+  // 과부 줄: 넘어갈 글이 한 줄도 안 되면 한 줄을 함께 넘김
+  const restLen = tail(lo).length;
+  const perLine = head(lo).length / Math.max(1, lines);
+  if (lines >= 3 && restLen < perLine * 0.85) {
+    const target = el.offsetHeight - lh + 1;
+    let k = lo;
+    while (k > 1) { k--; show(k); if (el.offsetHeight <= target) break; }
+    lo = k;
+    show(lo);
+  }
+  const [a, rest] = balanceMarks(head(lo), tail(lo));
+  el.innerHTML = fmt(a);
+  return rest;
 }
 
 const overflows = (p) => p.flow.offsetHeight > p.content.clientHeight + 0.5;
@@ -805,19 +943,32 @@ function render() {
     page.flow.append(h('p', { class: 'narr placeholder' }, '텍스트를 입력하면 여기에 나타나요'));
   }
 
-  for (const b of blocks) {
+  const queue = blocks.slice();
+  const nextPage = () => {
+    trimGaps(page.flow);
+    page = newPage(pages.length, W, H);
+    stage.append(page.wrap);
+    pages.push(page);
+  };
+  while (queue.length) {
+    const b = queue.shift();
     if (b.type === 'gap' && !page.flow.childElementCount) continue;
     const el = renderBlock(b);
     page.flow.append(el);
-    if (split && page.flow.childElementCount > 1 && overflows(page)) {
-      el.remove();
-      trimGaps(page.flow);
-      page = newPage(pages.length, W, H);
-      stage.append(page.wrap);
-      pages.push(page);
-      if (b.type === 'gap') continue;
-      page.flow.append(el);
+    if (!split || !overflows(page)) continue;
+    const alone = page.flow.childElementCount === 1;
+    if (b.type === 'narr') {
+      const rest = splitParagraph(page, el, b, alone);
+      if (rest) {
+        queue.unshift({ type: 'narr', text: rest, cont: true });
+        nextPage();
+        continue;
+      }
     }
+    if (alone) continue; // 한 장보다 큰 덩어리는 그대로 둠
+    el.remove();
+    nextPage();
+    queue.unshift(b);
   }
   trimGaps(page.flow);
 
@@ -839,6 +990,7 @@ function render() {
     p.wrap.classList.toggle('overflowing', !!H && overflows(p));
   });
 
+  updateMeasure();
   lastStats = { bubbles: blocks.filter((b) => b.type === 'bubble').length, pages: pages.length };
   updateStats();
   const sc = c.scale;
@@ -892,6 +1044,18 @@ function stepZoom(dir) {
 
 const cardObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => requestAnimationFrame(rescale)) : null;
 
+function updateMeasure() {
+  const el = $('#measure-val');
+  if (!el) return;
+  const t = state.typo, c = state.canvas;
+  const cw = c.width - c.pad * 2;
+  const n = Math.round(cw / (t.size * (1 + t.ls)));
+  const good = n >= 24 && n <= 36;
+  el.textContent = `약 ${n}자`;
+  el.dataset.state = good ? 'good' : 'warn';
+  $('#measure-hint').textContent = good ? '읽기 편한 길이예요' : n < 24 ? '조금 짧아요 · 글자를 줄이거나 여백을 줄여 보세요' : '조금 길어요 · 글자를 키우거나 여백을 늘려 보세요';
+}
+
 function updateStats() {
   const n = state.text.replace(/\s/g, '').length;
   $('#text-stats').textContent = `${n.toLocaleString()}자 · 말풍선 ${lastStats.bubbles}개 · ${lastStats.pages}장`;
@@ -902,7 +1066,10 @@ function updateStats() {
    ========================================================= */
 let conditions = [];
 function refreshConditions() {
-  for (const { el, when } of conditions) el.classList.toggle('disabled', !when());
+  for (const { el, when, hide } of conditions) {
+    if (hide) el.hidden = !when();
+    else el.classList.toggle('disabled', !when());
+  }
 }
 
 const fixedRatio = () => state.canvas.ratio !== 'auto';
@@ -918,6 +1085,7 @@ const SCHEMA = {
       { t: 'switch', p: 'parse.parens', l: '괄호 줄을 생각 말풍선으로', sub: '( )' },
       { t: 'switch', p: 'parse.inline', l: '문장 속 따옴표도 분리', sub: '서술 중간에 있는 대사도 말풍선으로 꺼내요' },
       { t: 'switch', p: 'parse.strip', l: '따옴표 · 괄호 기호 숨기기' },
+      { t: 'select', p: 'parse.blank', l: '빈 줄 한 개', o: [['para', '문단 나눔만'], ['space', '여백으로']] },
       { t: 'select', p: 'parse.nameless', l: '이름 없는 대사의 화자', o: () => [['none', '지정 안 함'], ['alt', '번갈아 가며'], ...state.chars.map((c) => [c.id, c.name || '(이름 없음)'])] },
     ] },
   ],
@@ -950,7 +1118,7 @@ const SCHEMA = {
     ] },
   ],
   typo: [
-    { sec: '본문', rows: [
+    { sec: '본문', note: '긴 글은 한 줄 25~35자, 행간 1.6~1.8, 문단은 간격과 들여쓰기 중 하나로만 구분할 때 가장 읽기 편해요. 들여쓰기는 장면 전환이나 말풍선 다음 첫 문단에는 자동으로 빠져요.', rows: [
       { t: 'font', p: 'typo.font', c: 'typo.fontCustom' },
       { t: 'slider', p: 'typo.size', l: '크기', min: 10, max: 40, step: 0.5, u: 'px' },
       { t: 'slider', p: 'typo.lh', l: '행간', min: 1, max: 3, step: 0.05, u: '' },
@@ -958,8 +1126,10 @@ const SCHEMA = {
       { t: 'select', p: 'typo.weight', l: '굵기', o: WEIGHTS, num: true },
       { t: 'color', p: 'typo.color', l: '글자 색' },
       { t: 'seg', p: 'typo.align', l: '정렬', o: ALIGN4, block: true },
-      { t: 'slider', p: 'typo.gap', l: '문단 간격', min: 0, max: 40, step: 1, u: 'px' },
-      { t: 'slider', p: 'typo.indent', l: '첫 줄 들여쓰기', min: 0, max: 4, step: 0.5, u: 'em' },
+      { t: 'seg', p: 'typo.paraMode', l: '문단 구분', o: [['gap', '문단 사이 간격'], ['indent', '첫 줄 들여쓰기']], block: true },
+      { t: 'slider', p: 'typo.gap', l: '문단 간격', min: 0, max: 40, step: 1, u: 'px', show: () => state.typo.paraMode !== 'indent' },
+      { t: 'slider', p: 'typo.indent', l: '들여쓰기', min: 0.5, max: 4, step: 0.5, u: 'em', show: () => state.typo.paraMode === 'indent' },
+      { t: 'measure' },
       { t: 'color', p: 'typo.hl', l: '형광펜 색', sub: '==이렇게== 감싼 글자' },
     ] },
     { sec: '말풍선 글자', rows: [
@@ -996,10 +1166,20 @@ const SCHEMA = {
       { t: 'slider', p: 'canvas.pad', l: '바깥 여백', min: 0, max: 120, step: 1, u: 'px' },
     ] },
     { sec: '배경', rows: [
-      { t: 'color', p: 'canvas.bg', l: '배경 색' },
-      { t: 'image', p: 'canvas.bgImage', l: '배경 이미지', sub: '미리보기에 이미지를 끌어다 놓아도 돼요' },
-      { t: 'slider', p: 'canvas.overlay', l: '덮개 진하기', min: 0, max: 0.9, step: 0.05, u: '', when: () => !!state.canvas.bgImage },
-      { t: 'color', p: 'canvas.overlayColor', l: '덮개 색', when: () => !!state.canvas.bgImage },
+      { t: 'seg', p: 'canvas.bgType', l: '종류', o: [['solid', '단색'], ['gradient', '그라데이션'], ['pattern', '패턴'], ['image', '이미지']], block: true, rebuild: true },
+      { t: 'gradients', show: () => state.canvas.bgType === 'gradient' },
+      { t: 'patterns', p: 'canvas.pattern', show: () => state.canvas.bgType === 'pattern' },
+      { t: 'color', p: 'canvas.bg', l: '배경 색', show: () => state.canvas.bgType !== 'gradient' },
+      { t: 'color', p: 'canvas.bg', l: '시작 색', show: () => state.canvas.bgType === 'gradient' },
+      { t: 'color', p: 'canvas.bg2', l: '끝 색', show: () => state.canvas.bgType === 'gradient' },
+      { t: 'seg', p: 'canvas.gradType', l: '모양', o: [['linear', '직선'], ['radial', '원형']], show: () => state.canvas.bgType === 'gradient' },
+      { t: 'slider', p: 'canvas.gradAngle', l: '각도', min: 0, max: 360, step: 5, u: '°', show: () => state.canvas.bgType === 'gradient' && state.canvas.gradType === 'linear' },
+      { t: 'color', p: 'canvas.patColor', l: '패턴 색', show: () => state.canvas.bgType === 'pattern' },
+      { t: 'slider', p: 'canvas.patOpacity', l: '패턴 진하기', min: 0.05, max: 1, step: 0.05, u: '', show: () => state.canvas.bgType === 'pattern' },
+      { t: 'slider', p: 'canvas.patSize', l: '패턴 크기', min: 6, max: 60, step: 1, u: 'px', show: () => state.canvas.bgType === 'pattern' },
+      { t: 'image', p: 'canvas.bgImage', l: '배경 이미지', sub: '미리보기에 이미지를 끌어다 놓아도 돼요', show: () => state.canvas.bgType === 'image' },
+      { t: 'slider', p: 'canvas.overlay', l: '덮개 진하기', min: 0, max: 0.9, step: 0.05, u: '', show: () => state.canvas.bgType === 'image', when: () => !!state.canvas.bgImage },
+      { t: 'color', p: 'canvas.overlayColor', l: '덮개 색', show: () => state.canvas.bgType === 'image', when: () => !!state.canvas.bgImage },
     ] },
   ],
 };
@@ -1039,7 +1219,7 @@ function colorButton(get, set, label) {
 }
 
 function fieldEl(d) {
-  const val = getPath(d.p);
+  const val = d.p ? getPath(d.p) : undefined;
   let el;
   switch (d.t) {
     case 'text':
@@ -1079,7 +1259,7 @@ function fieldEl(d) {
     }
 
     case 'seg': {
-      const seg = segEl(d.o, val, (v) => setPath(d.p, d.num ? +v : v), d.block);
+      const seg = segEl(d.o, val, (v) => { setPath(d.p, d.num ? +v : v); if (d.rebuild) buildFields(); }, d.block);
       el = d.block ? h('div', { class: 'row stack' }, labelEl(d.l), seg) : h('div', { class: 'row' }, labelEl(d.l), seg);
       break;
     }
@@ -1135,6 +1315,44 @@ function fieldEl(d) {
       break;
     }
 
+    case 'measure': {
+      el = h('div', { class: 'row' }, labelEl('한 줄 글자 수', ''), h('span', { class: 'measure', id: 'measure-val' }));
+      el.querySelector('small') || el.firstChild.append(h('small', { id: 'measure-hint' }));
+      break;
+    }
+
+    case 'gradients': {
+      const grid = h('div', { class: 'grad-presets' });
+      GRADIENTS.forEach(([a, b, ang]) => {
+        const btn = h('button', { type: 'button', 'aria-label': `${a} → ${b}` });
+        btn.style.background = `linear-gradient(${ang}deg, ${a}, ${b})`;
+        btn.addEventListener('click', () => {
+          Object.assign(state.canvas, { bg: a, bg2: b, gradAngle: ang, gradType: 'linear' });
+          changed(); buildFields();
+        });
+        grid.append(btn);
+      });
+      el = h('div', { class: 'row stack' }, labelEl('추천 그라데이션'), grid);
+      break;
+    }
+
+    case 'patterns': {
+      const tiles = h('div', { class: 'tiles pattern' });
+      const c = state.canvas;
+      PATTERNS.forEach(([k, l]) => {
+        const pv = h('span', { class: 'pat-pv' });
+        const pc = patternCSS(k, c.patColor, Math.max(0.35, c.patOpacity), k === 'paper' ? 20 : 10);
+        pv.style.backgroundColor = c.bg;
+        pv.style.backgroundImage = pc.image;
+        pv.style.backgroundSize = pc.size;
+        const t = h('button', { type: 'button', class: 'tile' + (k === val ? ' on' : '') }, pv, h('span', {}, l));
+        t.addEventListener('click', () => { $$('.tile', tiles).forEach((x) => x.classList.toggle('on', x === t)); setPath(d.p, k); });
+        tiles.append(t);
+      });
+      el = h('div', { class: 'row stack' }, tiles);
+      break;
+    }
+
     case 'ratio': {
       const tiles = h('div', { class: 'tiles ratio' });
       RATIOS.forEach(([k, l]) => {
@@ -1156,6 +1374,7 @@ function fieldEl(d) {
     }
   }
   if (el && d.when) conditions.push({ el, when: d.when });
+  if (el && d.show) conditions.push({ el, when: d.show, hide: true });
   return el;
 }
 
@@ -1452,7 +1671,11 @@ function buildTemplates() {
     if (p.frame) pv.style.boxShadow = 'inset 0 0 0 6px ' + p.bg + ', inset 0 0 0 7px rgba(80,55,30,.35)';
     const line = (w, center) => { const l = h('i', { class: 'l' }); l.style.cssText = `display:block;width:${w}%;background:${p.fg};${center ? 'align-self:center' : ''}`; return l; };
     if (p.q) { const q = h('div', { class: 'q' }, '“'); q.style.color = p.q; q.style.alignSelf = 'center'; pv.append(q); }
-    if (p.film || p.center) {
+    if (p.book) {
+      const tl = line(40, true); tl.style.opacity = '.8'; pv.style.justifyContent = 'flex-start'; pv.style.paddingTop = '22px';
+      pv.append(tl, h('i', { style: 'display:block;height:6px' }));
+      for (let k = 0; k < 7; k++) { const l = line(k % 3 === 2 ? 62 : 100); l.style.height = '4px'; if (k % 3 === 0) l.style.marginLeft = '8%'; l.style.width = k % 3 === 0 ? '92%' : l.style.width; pv.append(l); }
+    } else if (p.film || p.center) {
       pv.append(line(78, true), line(64, true), line(70, true));
     } else {
       pv.append(line(80), line(56));
@@ -1468,12 +1691,13 @@ function buildTemplates() {
 function applyTemplate(t) {
   const c0 = state.canvas;
   const keep = { width: c0.width, scale: c0.scale, paginate: c0.paginate, pageNum: c0.pageNum, ratio: c0.ratio, fit: c0.fit, bgImage: c0.bgImage, overlay: c0.overlay, overlayColor: c0.overlayColor };
+  state.parse.strip = t.parse && 'strip' in t.parse ? t.parse.strip : true;
   for (const k of ['typo', 'head', 'bubble', 'canvas']) {
     const base = copyState(DEFAULTS[k]);
     state[k] = deepMerge(base, (t.set && t.set[k]) || {});
   }
   Object.assign(state.canvas, keep);
-  for (const k of ['ratio', 'fit']) if (t.set.canvas && k in t.set.canvas) state.canvas[k] = t.set.canvas[k];
+  for (const k of ['ratio', 'fit', 'pageNum']) if (t.set.canvas && k in t.set.canvas) state.canvas[k] = t.set.canvas[k];
   state.skin = t.skin || '';
   state.chars.forEach((c, i) => {
     if (t.chars) {
@@ -1700,6 +1924,52 @@ async function buildFontEmbedCSS(cards) {
   return parts.join('\n') || '/* no web fonts */';
 }
 
+/* 미리보기의 줄바꿈 위치를 그대로 고정 (이미지 변환기는 글자 폭을 미세하게 다르게 계산하므로) */
+function freezeLines(E, scale) {
+  const cs = getComputedStyle(E);
+  const lh = (parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.4) * scale;
+  const walker = document.createTreeWalker(E, NodeFilter.SHOW_TEXT);
+  const r = document.createRange();
+  const breaks = [];
+  let prevTop = null, node;
+  while ((node = walker.nextNode())) {
+    const t = node.data;
+    for (let i = 0; i < t.length; i++) {
+      if (t[i] === ' ' || t[i] === '\n' || t[i] === '\t') continue;
+      r.setStart(node, i); r.setEnd(node, i + 1);
+      const rc = r.getClientRects()[0];
+      if (!rc) continue;
+      if (prevTop !== null && rc.top - prevTop > lh * 0.5) breaks.push([node, i]);
+      prevTop = rc.top;
+    }
+  }
+  if (!breaks.length) return;
+  const frags = [];
+  for (let k = breaks.length - 1; k >= 0; k--) {
+    r.setStart(breaks[k][0], breaks[k][1]);
+    r.setEnd(E, E.childNodes.length);
+    frags.unshift(r.extractContents());
+  }
+  const first = document.createDocumentFragment();
+  while (E.firstChild) first.appendChild(E.firstChild);
+  frags.unshift(first);
+  const justify = cs.textAlign === 'justify';
+  frags.forEach((frag, i) => {
+    const ln = document.createElement('span');
+    ln.appendChild(frag);
+    ln.style.cssText = `display:block;white-space:pre;text-indent:${i === 0 ? cs.textIndent : '0'};text-align-last:${justify && i < frags.length - 1 ? 'justify' : 'auto'}`;
+    const texts = [];
+    const w = document.createTreeWalker(ln, NodeFilter.SHOW_TEXT);
+    while (w.nextNode()) texts.push(w.currentNode);
+    if (texts.length) {
+      const last = texts[texts.length - 1];
+      last.data = last.data.replace(/[ \t\n]+$/, '');
+      if (i > 0) texts[0].data = texts[0].data.replace(/^[ \t\n]+/, '');
+    }
+    E.appendChild(ln);
+  });
+}
+
 function cardToPng(card, fontCSS) {
   return htmlToImage.toPng(card, {
     width: card.offsetWidth,
@@ -1739,6 +2009,11 @@ async function exportImages() {
     await document.fonts.ready;
     const cards = $$('#stage .card');
     const fontCSS = await buildFontEmbedCSS(cards);
+    for (const card of cards) {
+      card.querySelectorAll('.narr, .bubble, .card-title, .credit').forEach((el) => {
+        try { freezeLines(el, currentScale); } catch (e) { /* 원래 상태로 둠 */ }
+      });
+    }
     lastImages = [];
     for (let i = 0; i < cards.length; i++) {
       if (cards.length > 1) label.textContent = `${i + 1} / ${cards.length}`;
@@ -1749,6 +2024,7 @@ async function exportImages() {
     console.error(err);
     toast('이미지를 만들지 못했어요. 다시 시도해 주세요.', null, 3600);
   } finally {
+    render(); // 줄 고정을 풀고 원래 미리보기로
     exporting = false;
     btn.disabled = false;
     label.textContent = orig;
@@ -1868,6 +2144,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 dropTarget($('#canvas-area'), isImageFile, async (f) => {
+  state.canvas.bgType = 'image';
   await setImagePath('canvas.bgImage', f);
   buildFields();
   toast('배경 이미지로 넣었어요', { label: '되돌리기', fn: undo });

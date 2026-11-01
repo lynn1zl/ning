@@ -3,11 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>발췌 스튜디오</title>
-<meta name="description" content="텍스트를 붙여넣고 대사를 말풍선으로, 원하는 서체와 비율로 이미지를 만드는 발췌기">
+<title>발췌기 니니닝!</title>
+<meta name="description" content="발췌기 니니닝! — 글을 붙여넣으면 대사는 말풍선으로, 문단은 예쁜 타이포그래피로 정리해 이미지로 만들어 주는 발췌기">
+<meta property="og:title" content="발췌기 니니닝!">
 <meta name="theme-color" content="#f2f4f6" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#101012" media="(prefers-color-scheme: dark)">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%233182f6'/%3E%3Cpath d='M16 18h32a6 6 0 0 1 6 6v13a6 6 0 0 1-6 6H31l-9 7v-7h-6a6 6 0 0 1-6-6V24a6 6 0 0 1 6-6z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%233182f6'/%3E%3Cg fill='%23fff' transform='translate(6 5) scale(2.17)'%3E%3Cellipse cx='8.4' cy='7.2' rx='2.4' ry='5.6' transform='rotate(-12 8.4 7.2)'/%3E%3Cellipse cx='15.6' cy='7.2' rx='2.4' ry='5.6' transform='rotate(12 15.6 7.2)'/%3E%3Cellipse cx='12' cy='15.4' rx='7' ry='6.3'/%3E%3Ccircle cx='9.4' cy='14.8' r='1' fill='%233182f6'/%3E%3Ccircle cx='14.6' cy='14.8' r='1' fill='%233182f6'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%233182f6'/%3E%3Cg fill='%23fff' transform='translate(6 5) scale(2.17)'%3E%3Cellipse cx='8.4' cy='7.2' rx='2.4' ry='5.6' transform='rotate(-12 8.4 7.2)'/%3E%3Cellipse cx='15.6' cy='7.2' rx='2.4' ry='5.6' transform='rotate(12 15.6 7.2)'/%3E%3Cellipse cx='12' cy='15.4' rx='7' ry='6.3'/%3E%3Ccircle cx='9.4' cy='14.8' r='1' fill='%233182f6'/%3E%3Ccircle cx='14.6' cy='14.8' r='1' fill='%233182f6'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" crossorigin="anonymous" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/pretendard-dynamic-subset.min.css">
@@ -20,7 +22,7 @@
   <header class="appbar">
     <div class="brand">
       <span class="brand-mark" aria-hidden="true"></span>
-      <span class="brand-name">발췌 스튜디오</span>
+      <span class="brand-name">발췌기 니니닝!</span>
     </div>
     <div class="appbar-tools">
       <button type="button" class="icon-btn" id="btn-undo" title="실행 취소 (Ctrl/⌘ + Z)" aria-label="실행 취소"></button>
@@ -144,7 +146,8 @@
       <div class="help-item"><code>"대사"</code> <code>“대사”</code> <code>「대사」</code> <code>『대사』</code><span>줄 전체가 따옴표면 말풍선</span></div>
       <div class="help-item"><code>(속마음)</code><span>줄 전체가 괄호면 생각 말풍선</span></div>
       <div class="help-item"><code>이름: "대사"</code> <code>[이름] 대사</code><span>화자 지정 · 캐릭터 탭에 등록하면 사진과 색이 적용</span></div>
-      <div class="help-item"><code>빈 줄</code> <code>---</code><span>여백 · 구분선</span></div>
+      <div class="help-item"><code>빈 줄 1개</code><span>문단 나눔 (설정에서 바꿀 수 있어요)</span></div>
+      <div class="help-item"><code>빈 줄 2개</code> <code>---</code><span>장면 전환 여백 · 구분선</span></div>
       <div class="help-item"><code>**굵게**</code> <code>*기울임*</code> <code>==형광펜==</code><span>강조</span></div>
       <div class="help-item"><span class="kbd">말풍선 클릭</span><span>그 말풍선만 화자 · 위치 · 모양 변경</span></div>
       <h4>단축키</h4>

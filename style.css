@@ -151,11 +151,11 @@ svg { display: block; }
 }
 .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .brand-mark {
-  width: 30px; height: 30px; border-radius: 9px; flex: none;
+  width: 32px; height: 32px; border-radius: 10px; flex: none;
   background: var(--accent);
   display: grid; place-items: center; color: #fff;
 }
-.brand-mark svg { width: 18px; height: 18px; }
+.brand-mark svg { width: 24px; height: 24px; }
 .brand-name { font-size: 17px; font-weight: 700; letter-spacing: -0.03em; white-space: nowrap; }
 .appbar-tools { display: flex; gap: 2px; margin-left: 12px; }
 .appbar-right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
@@ -407,6 +407,24 @@ svg { display: block; }
 .tile.on { background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 1.5px var(--accent); }
 .tile svg { width: 40px; height: 27px; }
 .tile span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; padding: 0 2px; }
+.tiles.pattern { grid-template-columns: repeat(4, 1fr); }
+.pat-pv {
+  width: 100%; max-width: 56px; aspect-ratio: 1; border-radius: 8px;
+  box-shadow: inset 0 0 0 1px var(--hair);
+}
+.grad-presets { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.grad-presets button {
+  aspect-ratio: 1; border: 0; border-radius: 12px; padding: 0;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .08);
+  transition: transform .12s var(--ease);
+}
+.grad-presets button:hover { transform: scale(1.06); }
+.measure {
+  font-size: 14px; font-weight: 650; font-variant-numeric: tabular-nums;
+  padding: 4px 10px; border-radius: 999px;
+}
+.measure[data-state="good"] { color: #0e8a4f; background: rgba(18, 184, 106, .12); }
+.measure[data-state="warn"] { color: #c7520a; background: rgba(255, 146, 43, .14); }
 .ratio-box { height: 30px; display: grid; place-items: center; }
 .ratio-box i { display: block; border: 2px solid currentColor; border-radius: 4px; }
 .ratio-box i.auto { border-style: dashed; }
@@ -897,18 +915,23 @@ textarea.code {
   letter-spacing: var(--text-ls);
   font-weight: var(--text-weight);
   text-align: var(--text-align);
-  text-indent: var(--indent);
-  word-break: keep-all;
+  text-indent: 0;
+  word-break: var(--text-break, keep-all);
   overflow-wrap: anywhere;
   white-space: pre-wrap;
+  hanging-punctuation: first allow-end;
+  font-kerning: normal;
 }
+/* 들여쓰기 모드: 앞 문단에 이어지는 문단만 들여씀 (장면 전환 · 말풍선 다음 · 페이지에서 이어진 문단은 제외) */
+.para-indent .narr.ind { text-indent: var(--indent); }
 .narr.placeholder { opacity: .35; text-align: center; text-indent: 0; }
+.card .nobr { white-space: nowrap; }
 .card mark {
   background: linear-gradient(transparent 56%, var(--hl) 56%);
   color: inherit;
   padding: 0 .08em;
 }
-.gap { height: calc(var(--text-size) * var(--text-lh) * .5); }
+.gap { height: calc(var(--text-size) * var(--text-lh) * .75); }
 .divider {
   border: 0;
   border-top: 1px solid currentColor;
