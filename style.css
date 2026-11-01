@@ -839,7 +839,7 @@ textarea.code {
   .result-list { grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 12px 16px; }
   .toast { bottom: calc(var(--tabbar-h) + var(--safe-b) + 16px); }
 }
-@media (max-width: 380px) {
+@media (max-width: 520px) {
   .brand-name { display: none; }
 }
 
@@ -926,8 +926,11 @@ textarea.code {
 .para-indent .narr.ind { text-indent: var(--indent); }
 .narr.placeholder { opacity: .35; text-align: center; text-indent: 0; }
 .card .nobr { white-space: nowrap; }
+.card u { text-decoration-thickness: .07em; text-underline-offset: .22em; }
+.card s { text-decoration-thickness: .07em; }
 .card mark {
-  background: linear-gradient(transparent 56%, var(--hl) 56%);
+  background: linear-gradient(transparent var(--hl-stop, 55%), var(--hl) var(--hl-stop, 55%));
+  border-radius: 2px;
   color: inherit;
   padding: 0 .08em;
 }
@@ -989,7 +992,8 @@ textarea.code {
   position: relative;
   background: var(--b-bg);
   color: var(--b-color);
-  border: var(--b-bw) solid var(--b-border);
+  --tbw: var(--b-bw);
+  border: var(--tbw) solid var(--b-border);
   border-radius: var(--b-radius);
   padding: var(--b-py) var(--b-px);
   font-family: var(--b-font);
@@ -997,7 +1001,7 @@ textarea.code {
   line-height: var(--b-lh);
   letter-spacing: var(--b-ls);
   font-weight: var(--b-weight);
-  box-shadow: var(--b-shadow);
+  filter: var(--b-shadow);
   white-space: pre-wrap;
   word-break: keep-all;
   overflow-wrap: anywhere;
@@ -1005,29 +1009,30 @@ textarea.code {
 }
 .msg-center .bubble { text-align: center; }
 
-/* 꼬리 (삼각형) */
-.tail-tri .bubble::before {
+/* 꼬리 (삼각형) — 말풍선 바깥에 딱 붙여 그려서 겹침 · 틈 · 잘림이 없게 */
+.tail-tri { gap: 13px; }
+.tail-tri .bubble { --tw: 7px; --th: 12px; }
+.tail-tri .bubble::before, .tail-tri .bubble::after {
   content: "";
   position: absolute;
-  top: calc(var(--b-py) + var(--b-size) * var(--b-lh) / 2 - 6px);
-  width: 11px; height: 11px;
-  background: inherit;
-  border: inherit;
-  border-radius: 0;
-  box-shadow: none;
+  pointer-events: none;
 }
-.tail-tri.msg-left .bubble::before {
-  left: calc(-6px - var(--b-bw));
-  transform: rotate(45deg);
-  border-top-width: 0; border-right-width: 0;
+.tail-tri .bubble::before { /* 테두리 층 */
+  top: calc(var(--b-py) + var(--b-size) * var(--b-lh) / 2 - var(--th) / 2 - var(--tbw) * 1.2);
+  width: calc(var(--tw) + var(--tbw) * 2.2);
+  height: calc(var(--th) + var(--tbw) * 2.4);
+  background: var(--b-border);
 }
-.tail-tri.msg-right .bubble::before {
-  right: calc(-6px - var(--b-bw));
-  transform: rotate(45deg);
-  border-bottom-width: 0; border-left-width: 0;
+.tail-tri .bubble::after { /* 채움 층: 테두리 선 위를 덮어 이음새를 없앰 */
+  top: calc(var(--b-py) + var(--b-size) * var(--b-lh) / 2 - var(--th) / 2);
+  width: calc(var(--tw) + var(--tbw));
+  height: var(--th);
+  background: var(--b-bg);
 }
-.tail-tri.no-avatar.msg-left .msg-body { margin-left: 8px; }
-.tail-tri.no-avatar.msg-right .msg-body { margin-right: 8px; }
+.tail-tri.msg-left .bubble::before, .tail-tri.msg-left .bubble::after { right: 100%; clip-path: polygon(100% 0, 0 50%, 100% 100%); }
+.tail-tri.msg-right .bubble::before, .tail-tri.msg-right .bubble::after { left: 100%; clip-path: polygon(0 0, 100% 50%, 0 100%); }
+.tail-tri.no-avatar.msg-left .msg-body { margin-left: calc(var(--tw, 7px) + 6px); }
+.tail-tri.no-avatar.msg-right .msg-body { margin-right: calc(var(--tw, 7px) + 6px); }
 
 /* 꼬리 (생각 구름 점) */
 .tail-dots .bubble { margin-bottom: 14px; }
@@ -1035,12 +1040,11 @@ textarea.code {
   content: "";
   position: absolute;
   border-radius: 50%;
-  background: inherit;
-  border: inherit;
-  box-shadow: none;
+  background: var(--b-bg);
+  border: var(--tbw) solid var(--b-border);
 }
-.tail-dots .bubble::before { width: 12px; height: 12px; bottom: -9px; }
-.tail-dots .bubble::after { width: 7px; height: 7px; bottom: -17px; }
+.tail-dots .bubble::before { width: 12px; height: 12px; bottom: -10px; }
+.tail-dots .bubble::after { width: 7px; height: 7px; bottom: -18px; }
 .tail-dots.msg-left .bubble::before { left: 14px; }
 .tail-dots.msg-left .bubble::after { left: 6px; }
 .tail-dots.msg-right .bubble::before { right: 14px; }
@@ -1052,26 +1056,75 @@ textarea.code {
 .shape-messenger.msg-left .bubble { border-top-left-radius: 3px; }
 .shape-messenger.msg-right .bubble { border-top-right-radius: 3px; }
 .shape-thought .bubble { border-radius: 2.2em; padding: calc(var(--b-py) + 4px) calc(var(--b-px) + 8px); }
-.shape-outline .bubble { background: var(--card-bg); border-width: max(var(--b-bw), 1.5px); box-shadow: none; }
-.shape-dashed .bubble { border-style: dashed; border-width: max(var(--b-bw), 1.5px); }
+.shape-outline .bubble { --b-bg: var(--card-bg); --tbw: max(var(--b-bw), 1.5px); filter: none; }
+.shape-dashed .bubble { --tbw: max(var(--b-bw), 1.5px); border-style: dashed; }
 .shape-shout .bubble {
   clip-path: polygon(0% 12%, 7% 0%, 15% 9%, 25% 0%, 35% 8%, 45% 0%, 55% 9%, 65% 0%, 75% 8%, 85% 0%, 93% 9%, 100% 0%, 97% 26%, 100% 50%, 96% 74%, 100% 100%, 91% 91%, 81% 100%, 71% 92%, 61% 100%, 51% 91%, 41% 100%, 31% 92%, 21% 100%, 11% 91%, 0% 100%, 4% 75%, 0% 50%, 3% 26%);
   padding: calc(var(--b-py) + 16px) calc(var(--b-px) + 22px);
   border: 0;
   border-radius: 0;
-  box-shadow: none;
+  filter: none;
   font-weight: 700;
 }
 .shape-minimal .bubble, .shape-plain .bubble { color: var(--text-color); }
 .shape-minimal .bubble {
-  background: none; border: 0; border-radius: 0; box-shadow: none;
+  background: none; border: 0; border-radius: 0; filter: none;
   border-left: 3px solid var(--b-border);
   padding: 2px 0 2px 12px;
 }
 .shape-minimal.msg-right .bubble { border-left: 0; border-right: 3px solid var(--b-border); padding: 2px 12px 2px 0; text-align: right; }
 .shape-minimal.msg-center .bubble { border-left: 0; padding: 2px 0; }
-.shape-plain .bubble { background: none; border: 0; box-shadow: none; padding: 0; border-radius: 0; }
+.shape-plain .bubble { background: none; border: 0; filter: none; padding: 0; border-radius: 0; }
 .shape-plain.msg-right .bubble { text-align: right; }
+
+/* 게임창: 이름표가 붙은 RPG 대화창 */
+.shape-game { --game-bg: rgba(20, 26, 56, .95); --game-fg: #ffffff; --game-line: #ffffff; }
+.shape-game .msg-body { max-width: 100%; flex: 1; align-items: stretch !important; }
+.shape-game .bubble {
+  background: var(--game-bg);
+  color: var(--game-fg);
+  border: 2px solid var(--game-line);
+  border-radius: 6px;
+  box-shadow: 0 0 0 2px var(--game-bg), 0 0 0 3.5px var(--b-border);
+  padding: calc(var(--b-py) + 6px) calc(var(--b-px) + 4px) calc(var(--b-py) + 14px);
+  filter: none;
+  text-align: left;
+  margin: 2px;
+}
+.shape-game .bubble::after { content: "▼"; position: absolute; right: 12px; bottom: 6px; font-size: .6em; line-height: 1; opacity: .85; }
+.shape-game .name {
+  position: relative; z-index: 1;
+  align-self: flex-start;
+  background: var(--game-bg); color: var(--game-fg);
+  border: 2px solid var(--game-line); border-bottom: 0;
+  border-radius: 6px 6px 0 0;
+  padding: 3px 12px 2px;
+  margin: 0 0 -2px 14px;
+}
+.shape-game.msg-right .name { align-self: flex-end; margin: 0 14px -2px 0; }
+.shape-game .avatar { border-radius: 6px; box-shadow: 0 0 0 2px var(--game-line), 0 0 0 3.5px var(--b-border); }
+
+/* 레트로: 픽셀풍 각진 상자 + 딱딱한 그림자 */
+.shape-retro .bubble { --tbw: max(var(--b-bw), 2.5px); border-radius: 0; filter: none; box-shadow: 4px 4px 0 var(--b-border); }
+
+/* 만화: 굵은 외곽선 */
+.shape-comic .bubble { --tbw: max(var(--b-bw), 2.5px); border-radius: 1.6em; padding: calc(var(--b-py) + 3px) calc(var(--b-px) + 6px); font-weight: 600; filter: none; }
+.shape-comic .bubble { --tw: 9px; --th: 13px; }
+
+/* 시스템 메시지: 가운데 작은 안내문 (채팅 로그용) */
+.msg.shape-system { flex-direction: column; align-items: center; justify-content: center; }
+.shape-system .avatar, .shape-system .name { display: none; }
+.shape-system .msg-body { align-items: center !important; max-width: 90%; margin: 0 !important; }
+.shape-system .bubble {
+  background: color-mix(in srgb, var(--text-color) 8%, transparent);
+  color: var(--text-color);
+  border: 0; border-radius: 999px;
+  padding: 5px 14px;
+  font-size: calc(var(--b-size) * .88);
+  filter: none;
+  text-align: center;
+  opacity: .9;
+}
 
 /* =========================================================
    대사 인식 · 내 양식 · 저장 폴더
@@ -1139,3 +1192,45 @@ textarea.code {
   .folder-line { margin: 0 16px; }
   .sym-row .input.sym { width: 56px; }
 }
+
+/* =========================================================
+   서식 도구 막대
+   ========================================================= */
+.fmt-bar {
+  display: flex; align-items: center; gap: 2px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--hair);
+  overflow-x: auto; scrollbar-width: none;
+}
+.fmt-bar::-webkit-scrollbar { display: none; }
+.ft {
+  flex: none;
+  min-width: 34px; height: 34px; padding: 0 8px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  border: 0; border-radius: 9px; background: none;
+  color: var(--text-2); font-size: 15px;
+  transition: background-color .15s, transform .1s var(--ease);
+}
+.ft:hover { background: var(--fill); color: var(--text); }
+.ft:active { transform: scale(.94); }
+.ft-b { font-weight: 800; }
+.ft-i { font-style: italic; font-family: Georgia, "Times New Roman", serif; font-size: 16px; }
+.ft-u { text-decoration: underline; text-underline-offset: 3px; }
+.ft-s { text-decoration: line-through; }
+.ft-text { font-size: 13px; font-weight: 600; }
+.ft-sep { width: 1px; height: 20px; background: var(--line); margin: 0 5px; flex: none; }
+.ft-group { display: inline-flex; align-items: center; border-radius: 9px; }
+.ft-group:hover { background: var(--fill); }
+.ft-group .ft:hover { background: var(--fill-strong); }
+.ft-hl { padding: 0 6px 0 8px; border-radius: 9px 0 0 9px; }
+.ft-more { min-width: 22px; width: 22px; padding: 0; border-radius: 0 9px 9px 0; }
+.ft-more svg { width: 14px; height: 14px; }
+.hl-ico svg { width: 18px; height: 18px; }
+.hl-sw { width: 14px; height: 14px; border-radius: 4px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .12); }
+.quick-insert { padding: 10px 12px 0; }
+.palette.hl { grid-template-columns: repeat(8, 1fr); flex: 1; }
+.hl-row { display: flex; align-items: center; gap: 8px; }
+.native-color.sm { width: 30px; height: 30px; border-radius: 8px; }
+.hl-sample { margin: 0 2px; font-size: 17px; font-weight: 600; }
+.hl-sample mark { color: inherit; padding: 0 .08em; border-radius: 2px; }
+.pop-note { margin: 12px 2px 0; font-size: 12.5px; color: var(--text-3); line-height: 1.55; }

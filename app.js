@@ -29,6 +29,8 @@ const ICONS = {
   chevron: '<path d="m9 6 6 6-6 6"/>',
   folder: '<path d="M3.5 7.5A2 2 0 0 1 5.5 5.5h3.6l2 2h7.4a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/>',
   refresh: '<path d="M19 12a7 7 0 1 1-2.05-4.95M19 4.5V8h-3.5"/>',
+  marker: '<path d="m15 4 5 5-8.5 8.5H7v-4.5z"/><path d="M4 20.5h16"/>',
+  chevdown: '<path d="m7 10 5 5 5-5"/>',
   image: '<rect x="4" y="5" width="16" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="m5 17 4.5-4.5 3 3L15 13l4 4"/>',
 };
 const icon = (n) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ''}</svg>`;
@@ -47,6 +49,10 @@ const SHAPE_ICONS = {
   dashed: '<rect x="8" y="6" width="34" height="20" rx="8" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="4 3"/>',
   minimal: '<rect x="8" y="6" width="3" height="20" rx="1.5"/><rect x="15" y="10" width="25" height="3.5" rx="1.75" opacity=".5"/><rect x="15" y="18.5" width="17" height="3.5" rx="1.75" opacity=".5"/>',
   plain: '<rect x="8" y="10" width="32" height="3.5" rx="1.75" opacity=".55"/><rect x="8" y="18.5" width="22" height="3.5" rx="1.75" opacity=".55"/>',
+  game: '<rect x="4" y="9" width="40" height="19" rx="2.5"/><rect x="7" y="4" width="15" height="7" rx="1.5"/><rect x="7.5" y="12" width="33" height="13" rx="1" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="1.2"/><path d="M36 20.5h4l-2 2.5z" fill="#fff" fill-opacity=".8"/>',
+  retro: '<rect x="12" y="8" width="32" height="20" opacity=".45"/><rect x="8" y="4" width="32" height="20"/><path d="M8.5 10 3 13l5.5 3z"/>',
+  comic: '<rect x="8" y="5" width="35" height="21" rx="10" fill="none" stroke="currentColor" stroke-width="3"/><path d="M9.5 11 2.5 15l7 3.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>',
+  system: '<rect x="8" y="10" width="32" height="12" rx="6" opacity=".45"/><rect x="15" y="14.8" width="18" height="2.4" rx="1.2"/>',
 };
 const shapeSvg = (k) => `<svg viewBox="0 0 48 32" fill="currentColor" aria-hidden="true">${SHAPE_ICONS[k]}</svg>`;
 
@@ -88,8 +94,9 @@ const FONTS = [
 const SHAPES = [
   ['round', '둥근'], ['pill', '알약'], ['square', '각진'], ['messenger', '메신저'], ['thought', '생각'],
   ['shout', '외침'], ['outline', '외곽선'], ['dashed', '점선'], ['minimal', '라인'], ['plain', '텍스트'],
+  ['game', '게임창'], ['retro', '레트로'], ['comic', '만화'], ['system', '시스템'],
 ];
-const TRI_TAIL = ['round', 'pill', 'square', 'outline', 'dashed'];
+const TRI_TAIL = ['round', 'pill', 'square', 'outline', 'dashed', 'retro', 'comic'];
 const SIDES = [['left', '왼쪽'], ['center', '가운데'], ['right', '오른쪽']];
 const ALIGN3 = [['left', '왼쪽'], ['center', '가운데'], ['right', '오른쪽']];
 const ALIGN4 = [...ALIGN3, ['justify', '양쪽']];
@@ -104,37 +111,50 @@ const SWATCHES = [
   '#3bc9db', '#38d9a9', '#69db7c', '#a9e34b', '#e3a6a6', '#c8a46a', '#33415c', '#191f28',
 ];
 
-const SAMPLE = `그해 겨울, 우리는 거의 매일 같은 찻집에서 만났다. 창가 자리의 낡은 테이블은 늘 조금 기울어 있어서, 찻잔을 내려놓을 때마다 작게 달그락거렸다. 서윤은 그 소리를 좋아했다. 무언가가 아직 제자리에 있다는 신호 같다고 했다.
+// 앙투안 드 생텍쥐페리 『어린 왕자』(1943) 21장 일부를 원문에서 옮김
+const SAMPLE = `여우가 나타난 건 바로 그때였다.
 
-비가 그친 오후였다. 창밖의 물방울이 하나둘 미끄러져 내렸고, 거리는 막 씻어낸 듯 선명했다. 약속 시간이 한참 지났지만 그녀는 자리에서 일어나지 않았다. 기다리는 일에는 이상한 온기가 있어서, 조금만 더 앉아 있으면 무언가 달라질 것만 같았다.
+여우: "안녕."
 
-서윤: "오늘은 안 올 줄 알았어."
+어린 왕자는 공손하게 대답하며 뒤를 돌아보았지만, 아무것도 보이지 않았다.
 
-문이 열리고, 그는 젖은 우산을 접으며 웃었다. 어깨에 내려앉은 빗방울이 불빛을 받아 반짝였다.
+어린 왕자: "안녕."
 
-도현: "약속했잖아. 비가 와도 온다고."
+여우: "나 여기 있어. 사과나무 아래."
 
-(거짓말. 사실은 한참을 망설였으면서.)
+어린 왕자: "넌 누구니? 참 예쁘구나."
 
-서윤은 대답 대신 찻잔을 하나 더 꺼냈다. ==따뜻한 김==이 천천히 피어올랐고, 둘 사이의 침묵도 그만큼 느슨해졌다. 그날 나눈 이야기는 대부분 잊혔지만, 테이블이 달그락거리던 소리만은 아직도 또렷하다.`;
+여우: "난 여우야."
+
+어린 왕자: "이리 와서 나랑 놀자. 난 지금 너무 슬프거든."
+
+여우: "난 너랑 놀 수 없어. 난 길들여지지 않았거든."
+
+어린 왕자: "'길들인다'는 게 무슨 뜻이야?"
+
+여우: "그건 사람들이 너무 쉽게 잊어버린 일이야. '관계를 맺는다'는 뜻이지."
+
+그리고 여우는 ==비밀 하나==를 알려 주었다.
+
+여우: "내 비밀은 이거야. 아주 간단해. 마음으로 보아야만 잘 보인다는 것. **가장 중요한 것은 눈에 보이지 않아.**"`;
 
 const DEFAULTS = {
   text: SAMPLE,
-  title: '비 갠 오후',
-  credit: '— 「작은 찻집」 중에서',
+  title: '어린 왕자',
+  credit: '— 앙투안 드 생텍쥐페리',
   parse: { auto: true, formats: ['dq', 'sq', 'corner', 'wcorner'], custom: [], mode: 'marked', inline: false, strip: true, nameless: 'none', blank: 'para' },
-  typo: { font: 'Noto Serif KR', fontCustom: '', size: 15, lh: 1.75, ls: -0.015, weight: 400, color: '#2a2826', align: 'left', paraMode: 'gap', gap: 12, indent: 1, hl: '#ffe58a' },
-  head: { font: 'Noto Serif KR', fontCustom: '', size: 20, weight: 700, color: '#1d1c1a', align: 'left', creditSize: 11.5, creditColor: '#8a857c', creditAlign: 'right', quoteMark: false, accent: '#c8a46a' },
+  typo: { font: 'Noto Serif KR', fontCustom: '', size: 13.5, lh: 1.7, ls: -0.005, weight: 400, color: '#2a2826', align: 'left', paraMode: 'gap', gap: 10, indent: 1, hl: '#ffe58a', hlStyle: 'under' },
+  head: { font: 'Noto Serif KR', fontCustom: '', size: 17, weight: 700, color: '#1d1c1a', align: 'left', creditSize: 10.5, creditColor: '#8a857c', creditAlign: 'right', quoteMark: false, accent: '#c8a46a' },
   bubble: {
     speech: 'round', tail: true, side: 'left',
-    font: 'Pretendard', fontCustom: '', size: 14, lh: 1.6, ls: -0.01, weight: 400,
-    bg: '#ffffff', color: '#222222', border: '#2b2a27', bw: 0, radius: 16, px: 14, py: 9, maxw: 78, shadow: true, gap: 14,
-    avatar: true, avatarSize: 38, avatarShape: 'circle', showName: true, nameSize: 11, nameColor: '#6b665e',
+    font: 'Pretendard', fontCustom: '', size: 13, lh: 1.55, ls: 0, weight: 400,
+    bg: '#ffffff', color: '#222222', border: '#2b2a27', bw: 0, radius: 14, px: 12, py: 8, maxw: 78, shadow: true, gap: 12,
+    avatar: true, avatarSize: 34, avatarShape: 'circle', showName: true, nameSize: 10.5, nameColor: '#6b665e',
   },
-  canvas: { ratio: '4:5', width: 540, pad: 48, bgType: 'solid', bg: '#f7f3ea', bg2: '#e6dcc8', gradType: 'linear', gradAngle: 160, pattern: 'dots', patColor: '#8a7f6a', patOpacity: 0.22, patSize: 18, bgImage: '', overlay: 0, overlayColor: '#000000', valign: 'flex-start', fit: false, paginate: true, pageNum: false, scale: 2 },
+  canvas: { ratio: 'auto', width: 540, pad: 44, bgType: 'solid', bg: '#f7f3ea', bg2: '#e6dcc8', gradType: 'linear', gradAngle: 160, pattern: 'dots', patColor: '#8a7f6a', patOpacity: 0.22, patSize: 18, bgImage: '', overlay: 0, overlayColor: '#000000', valign: 'flex-start', fit: false, paginate: true, pageNum: false, scale: 2 },
   chars: [
-    { id: 'c1', name: '서윤', avatar: '', side: 'left', shape: '', custom: true, bg: '#ffffff', color: '#222222', border: '#e3a6a6' },
-    { id: 'c2', name: '도현', avatar: '', side: 'right', shape: '', custom: true, bg: '#33415c', color: '#ffffff', border: '#33415c' },
+    { id: 'c1', name: '어린 왕자', avatar: '', side: 'left', shape: '', custom: true, bg: '#ffffff', color: '#222222', border: '#e7b84a' },
+    { id: 'c2', name: '여우', avatar: '', side: 'right', shape: '', custom: true, bg: '#e8742c', color: '#ffffff', border: '#e8742c' },
   ],
   overrides: {},
   skin: '',
@@ -165,7 +185,7 @@ const SKINS = {
     css: `.card {
   background-image: linear-gradient(160deg, #ffe3ec 0%, #ece6ff 50%, #dff3ff 100%);
 }
-.bubble { box-shadow: 0 4px 14px rgba(120, 100, 180, .15); }`,
+.card { --b-shadow: drop-shadow(0 4px 10px rgba(120, 100, 180, .18)); }`,
   },
   vintage: {
     name: '빈티지 액자',
@@ -195,12 +215,9 @@ const SKINS = {
   glass: {
     name: '반투명 말풍선',
     css: `/* 배경 이미지와 함께 쓰면 좋아요 */
-.bubble {
-  background: rgba(255, 255, 255, .72);
-  border: 1px solid rgba(255, 255, 255, .6);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
-}
-.msg-right .bubble { background: rgba(25, 31, 40, .72); color: #fff; }`,
+.bubble { --b-bg: rgba(255, 255, 255, .78); --b-border: rgba(255, 255, 255, .6); --b-bw: 1px; --b-color: #222; }
+.msg-right .bubble { --b-bg: rgba(25, 31, 40, .78); --b-border: rgba(25, 31, 40, .78); --b-color: #fff; }
+.card { --b-shadow: drop-shadow(0 6px 16px rgba(0, 0, 0, .14)); --name-color: rgba(255, 255, 255, .85); --credit-color: rgba(255, 255, 255, .7); }`,
   },
 };
 
@@ -218,12 +235,12 @@ const TEMPLATES = [
   },
   {
     id: 'messenger', name: '메신저', sub: '채팅 화면 스타일', pv: { bg: '#b9cde0', fg: '#4a5a6a', b1: '#ffffff', b2: '#ffe94a' },
-    set: { typo: { font: 'Pretendard', size: 13, color: '#4a5a6a', align: 'center', lh: 1.6 }, head: { font: 'Pretendard', size: 20, color: '#2c3a48', creditColor: '#5a6b7c' }, bubble: { speech: 'messenger', radius: 14, shadow: false, nameColor: '#4a5a6a', gap: 12 }, canvas: { bg: '#b9cde0' } },
+    set: { typo: { font: 'Pretendard', size: 12, color: '#4a5a6a', align: 'center', lh: 1.6 }, head: { font: 'Pretendard', size: 20, color: '#2c3a48', creditColor: '#5a6b7c' }, bubble: { speech: 'messenger', radius: 14, shadow: false, nameColor: '#4a5a6a', gap: 12 }, canvas: { bg: '#b9cde0' } },
     chars: [['#ffffff', '#222222', '#ffffff'], ['#ffe94a', '#222222', '#ffe94a']],
   },
   {
-    id: 'book', name: '책 페이지', sub: '고운바탕 · 들여쓰기 · 2:3', pv: { bg: '#fbfaf6', fg: '#2a2826', book: true },
-    set: { typo: { font: 'Gowun Batang', size: 14.5, lh: 1.8, ls: -0.01, align: 'justify', paraMode: 'indent', indent: 1, color: '#262422' }, head: { font: 'Gowun Batang', size: 18, align: 'center', color: '#262422', creditColor: '#8f8a80', creditAlign: 'center', creditSize: 11.5 }, bubble: { speech: 'plain', font: 'Gowun Batang', size: 14.5, lh: 1.8, avatar: false, showName: false, gap: 0 }, canvas: { bg: '#fbfaf6', ratio: '2:3', pad: 52, valign: 'flex-start', pageNum: true } },
+    id: 'book', name: '단정한 페이지', sub: '고운바탕 · 들여쓰기 · 2:3', pv: { bg: '#fbfaf6', fg: '#2a2826', book: true },
+    set: { typo: { font: 'Gowun Batang', size: 13.5, lh: 1.8, ls: -0.01, align: 'justify', paraMode: 'indent', indent: 1, color: '#262422' }, head: { font: 'Gowun Batang', size: 16, align: 'center', color: '#262422', creditColor: '#8f8a80', creditAlign: 'center', creditSize: 11.5 }, bubble: { speech: 'plain', font: 'Gowun Batang', size: 13.5, lh: 1.8, avatar: false, showName: false, gap: 0 }, canvas: { bg: '#fbfaf6', ratio: '2:3', pad: 52, valign: 'flex-start', pageNum: true } },
     parse: { strip: false }, chars: null, charSide: 'left',
   },
   {
@@ -233,11 +250,11 @@ const TEMPLATES = [
   },
   {
     id: 'note', name: '손글씨 노트', sub: '나눔손글씨 펜 · 줄 노트', pv: { bg: '#fffdf6', fg: '#2f3b52', b1: '#ffffff', b2: '#fff3bf', lines: true, outline: '#9fb0c6' },
-    set: { typo: { font: 'Nanum Pen Script', size: 22, lh: 1.36, color: '#2f3b52', gap: 0, ls: 0 }, head: { font: 'Nanum Pen Script', size: 34, color: '#2f3b52', creditColor: '#7b8799', creditSize: 18 }, bubble: { speech: 'outline', font: 'Gaegu', size: 15, border: '#9fb0c6', bw: 1.5, shadow: false, nameColor: '#7b8799' }, canvas: { bg: '#fffdf6', bgType: 'pattern', pattern: 'lines', patColor: '#9fb6d0', patOpacity: 0.45, patSize: 30 } }, chars: [['#ffffff', '#2f3b52', '#9fb0c6'], ['#fff3bf', '#2f3b52', '#e6c84f']],
+    set: { typo: { font: 'Nanum Pen Script', size: 22, lh: 1.36, color: '#2f3b52', gap: 0, ls: 0 }, head: { font: 'Nanum Pen Script', size: 34, color: '#2f3b52', creditColor: '#7b8799', creditSize: 18 }, bubble: { speech: 'outline', font: 'Gaegu', size: 14, border: '#9fb0c6', bw: 1.5, shadow: false, nameColor: '#7b8799' }, canvas: { bg: '#fffdf6', bgType: 'pattern', pattern: 'lines', patColor: '#9fb6d0', patOpacity: 0.45, patSize: 30 } }, chars: [['#ffffff', '#2f3b52', '#9fb0c6'], ['#fff3bf', '#2f3b52', '#e6c84f']],
   },
   {
     id: 'film', name: '영화 자막', sub: '16:9 · 검은 화면', pv: { bg: '#000000', fg: '#9a9a9a', film: true },
-    set: { typo: { font: 'Noto Sans KR', color: '#d8d8d8', size: 14 }, head: { font: 'Noto Sans KR', color: '#ffffff', creditColor: '#777777', align: 'center', creditAlign: 'center' }, bubble: { font: 'Noto Sans KR', size: 16, color: '#ffffff', nameColor: '#ffd43b', gap: 14 }, canvas: { bg: '#000000', ratio: '16:9', pad: 40, valign: 'center' } },
+    set: { typo: { font: 'Noto Sans KR', color: '#d8d8d8', size: 13 }, head: { font: 'Noto Sans KR', color: '#ffffff', creditColor: '#777777', align: 'center', creditAlign: 'center' }, bubble: { font: 'Noto Sans KR', size: 14.5, color: '#ffffff', nameColor: '#ffd43b', gap: 14 }, canvas: { bg: '#000000', ratio: '16:9', pad: 40, valign: 'center' } },
     skin: SKINS.film.css, chars: [['#000000', '#ffffff', '#000000'], ['#000000', '#ffffff', '#000000']],
   },
   {
@@ -251,19 +268,19 @@ const TEMPLATES = [
   },
   {
     id: 'terminal', name: '레트로 터미널', sub: '고정폭 · 초록 글씨', pv: { bg: '#0b110b', fg: '#4dff88', b1: '#0b110b', b2: '#0b110b', outline: '#4dff88' },
-    set: { typo: { font: 'monospace', color: '#4dff88', size: 14 }, head: { font: 'monospace', color: '#8dffb0', creditColor: '#2e9e57' }, bubble: { speech: 'square', font: 'monospace', bg: '#0b110b', color: '#4dff88', border: '#4dff88', bw: 1, shadow: false, nameColor: '#2e9e57', avatar: false }, canvas: { bg: '#0b110b' } },
+    set: { typo: { font: 'monospace', color: '#4dff88', size: 13 }, head: { font: 'monospace', color: '#8dffb0', creditColor: '#2e9e57' }, bubble: { speech: 'square', font: 'monospace', bg: '#0b110b', color: '#4dff88', border: '#4dff88', bw: 1, shadow: false, nameColor: '#2e9e57', avatar: false }, canvas: { bg: '#0b110b' } },
     skin: SKINS.terminal.css, chars: [['#0b110b', '#4dff88', '#4dff88'], ['#0b110b', '#8dffb0', '#8dffb0']],
   },
 ];
 
 const PANES = [
   { id: 'text', label: '텍스트', icon: 'text', desc: '발췌할 글을 붙여넣고, 아래 ‘대사 → 말풍선’으로 대사를 한 번에 말풍선으로 바꿔요.' },
-  { id: 'template', label: '양식', icon: 'grid', desc: '자주 쓰는 양식을 저장해 두고 불러오거나, 템플릿으로 디자인을 한 번에 바꿔요.' },
   { id: 'bubble', label: '말풍선', icon: 'bubble', desc: '말풍선 모양과 색, 프로필 표시 방식을 정해요.' },
   { id: 'chars', label: '캐릭터', icon: 'person', desc: '본문에 이름: "대사" 형식으로 쓰면 여기 등록한 캐릭터와 연결돼요.' },
   { id: 'typo', label: '서체', icon: 'type', desc: '본문, 말풍선, 제목의 글꼴과 간격을 다듬어요.' },
   { id: 'canvas', label: '화면', icon: 'frame', desc: '비율과 크기, 배경을 정해요.' },
   { id: 'skin', label: '스킨', icon: 'code', desc: 'CSS로 디자인을 자유롭게 덮어써요.' },
+  { id: 'template', label: '프리셋', icon: 'grid', desc: '자주 쓰는 설정을 프리셋으로 저장해 두고 불러오거나, 템플릿으로 디자인을 한 번에 바꿔요.' },
 ];
 
 /* =========================================================
@@ -319,6 +336,8 @@ const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, 
 function fmt(s) {
   return esc(s)
     .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+    .replace(/__(.+?)__/g, '<u>$1</u>')
+    .replace(/~~(.+?)~~/g, '<s>$1</s>')
     .replace(/==(.+?)==/g, '<mark>$1</mark>')
     .replace(/(^|[^*])\*([^*\s][^*]*?)\*(?!\*)/g, '$1<i>$2</i>');
 }
@@ -329,7 +348,7 @@ function fmtNoOrphan(text, justify) {
   const m = justify ? text.match(/^([\s\S]*?\s)(\S{1,8})\s*$/) : text.match(/^([\s\S]*?)(\S+\s+\S{1,8})\s*$/);
   if (!m || m[1].length < 12) return fmt(text);
   const odd = (str, mk) => (str.split(mk).length - 1) % 2 === 1;
-  if (['**', '==', '*'].some((mk) => m[2].includes(mk) || odd(m[1], mk))) return fmt(text.replace(/\s+(\S{1,8})\s*$/, '\u00a0$1'));
+  if (['**', '__', '~~', '==', '*'].some((mk) => m[2].includes(mk) || odd(m[1], mk))) return fmt(text.replace(/\s+(\S{1,8})\s*$/, '\u00a0$1'));
   return fmt(m[1]) + '<span class="nobr">' + fmt(m[2]) + '</span>';
 }
 
@@ -713,7 +732,8 @@ function colorFor(name) {
   return AV_COLORS[x % AV_COLORS.length];
 }
 function avatarColor(ch, name) {
-  return ch && ch.custom && ch.border !== ch.bg ? ch.border : colorFor(name || '?');
+  if (ch && ch.custom) return ch.border !== ch.bg && ch.border.toLowerCase() !== '#ffffff' ? ch.border : ch.bg;
+  return colorFor(name || '?');
 }
 
 function genCSS() {
@@ -728,6 +748,7 @@ function genCSS() {
   --valign: ${c.valign};
   --accent: ${hd.accent};
   --hl: ${t.hl};
+  --hl-stop: ${{ full: '0%', under: '55%', thin: '78%' }[t.hlStyle] || '55%'};
   --text-font: ${fontStack(t.font, t.fontCustom)};
   --text-size: ${fit(t.size)};
   --text-lh: ${t.lh};
@@ -751,7 +772,7 @@ function genCSS() {
   --b-px: ${fit(b.px)};
   --b-py: ${fit(b.py)};
   --b-maxw: ${b.maxw}%;
-  --b-shadow: ${b.shadow ? '0 2px 10px rgba(0,0,0,.08)' : 'none'};
+  --b-shadow: ${b.shadow ? 'drop-shadow(0 2px 5px rgba(0,0,0,.09))' : 'none'};
   --msg-gap: ${fit(b.gap)};
   --avatar-size: ${fit(b.avatarSize)};
   --avatar-radius: ${ar};
@@ -918,7 +939,7 @@ function newPage(idx, W, H) {
    - 앞쪽에 2줄 미만만 남으면(외톨이 줄) 문단 전체를 넘김
    - 뒤쪽에 1줄만 넘어가면(과부 줄) 한 줄을 더 넘김 */
 function balanceMarks(a, rest) {
-  for (const m of ['**', '==']) {
+  for (const m of ['**', '__', '~~', '==']) {
     if ((a.split(m).length - 1) % 2) { a += m; rest = m + rest; }
   }
   return [a, rest];
@@ -1045,7 +1066,7 @@ function render() {
   lastStats = { bubbles: blocks.filter((b) => b.type === 'bubble').length, pages: pages.length };
   updateStats();
   const sc = c.scale;
-  $('#page-info').textContent = `${pages.length}장 · ${W * sc}×${H ? H * sc : '자동'}`;
+  $('#page-info').textContent = `${pages.length}장 · ${W * sc}×${H ? H * sc : '높이 자동'}`;
 
   if (cardObserver) {
     cardObserver.disconnect();
@@ -1161,7 +1182,7 @@ const SCHEMA = {
     ] },
     { sec: '제목 · 출처', rows: [
       { t: 'text', p: 'title', l: '제목', ph: '비워두면 표시하지 않아요' },
-      { t: 'text', p: 'credit', l: '출처 · 서명', ph: '예) — 「책 제목」 중에서 / @내계정' },
+      { t: 'text', p: 'credit', l: '출처 · 서명', ph: '예) @내계정 · 2026.11.01' },
     ] },
   ],
   bubble: [
@@ -1187,14 +1208,14 @@ const SCHEMA = {
       { t: 'slider', p: 'bubble.avatarSize', l: '사진 크기', min: 20, max: 100, step: 1, u: 'px', when: () => state.bubble.avatar },
       { t: 'seg', p: 'bubble.avatarShape', l: '사진 모양', o: [['circle', '원'], ['rounded', '둥근 사각'], ['square', '사각']], when: () => state.bubble.avatar },
       { t: 'switch', p: 'bubble.showName', l: '이름' },
-      { t: 'slider', p: 'bubble.nameSize', l: '이름 크기', min: 8, max: 24, step: 0.5, u: 'px', when: () => state.bubble.showName },
+      { t: 'slider', p: 'bubble.nameSize', l: '이름 크기', min: 8, max: 24, step: 0.5, u: 'px', when: () => state.bubble.showName , pt: true },
       { t: 'color', p: 'bubble.nameColor', l: '이름 색', when: () => state.bubble.showName },
     ] },
   ],
   typo: [
     { sec: '본문', note: '긴 글은 한 줄 25~35자, 행간 1.6~1.8, 문단은 간격과 들여쓰기 중 하나로만 구분할 때 가장 읽기 편해요. 들여쓰기는 장면 전환이나 말풍선 다음 첫 문단에는 자동으로 빠져요.', rows: [
       { t: 'font', p: 'typo.font', c: 'typo.fontCustom' },
-      { t: 'slider', p: 'typo.size', l: '크기', min: 10, max: 40, step: 0.5, u: 'px' },
+      { t: 'slider', p: 'typo.size', l: '크기', min: 10, max: 40, step: 0.5, u: 'px' , pt: true },
       { t: 'slider', p: 'typo.lh', l: '행간', min: 1, max: 3, step: 0.05, u: '' },
       { t: 'slider', p: 'typo.ls', l: '자간', min: -0.1, max: 0.3, step: 0.005, u: 'em' },
       { t: 'select', p: 'typo.weight', l: '굵기', o: WEIGHTS, num: true },
@@ -1204,18 +1225,19 @@ const SCHEMA = {
       { t: 'slider', p: 'typo.gap', l: '문단 간격', min: 0, max: 40, step: 1, u: 'px', show: () => state.typo.paraMode !== 'indent' },
       { t: 'slider', p: 'typo.indent', l: '들여쓰기', min: 0.5, max: 4, step: 0.5, u: 'em', show: () => state.typo.paraMode === 'indent' },
       { t: 'measure' },
-      { t: 'color', p: 'typo.hl', l: '형광펜 색', sub: '==이렇게== 감싼 글자' },
+      { t: 'color', p: 'typo.hl', l: '형광펜 색', sub: '텍스트 편집창의 형광펜 버튼에서도 바꿀 수 있어요' },
+      { t: 'seg', p: 'typo.hlStyle', l: '형광펜 모양', o: [['under', '밑줄형'], ['thin', '얇게'], ['full', '전체']] },
     ] },
     { sec: '말풍선 글자', rows: [
       { t: 'font', p: 'bubble.font', c: 'bubble.fontCustom' },
-      { t: 'slider', p: 'bubble.size', l: '크기', min: 10, max: 36, step: 0.5, u: 'px' },
+      { t: 'slider', p: 'bubble.size', l: '크기', min: 10, max: 36, step: 0.5, u: 'px' , pt: true },
       { t: 'slider', p: 'bubble.lh', l: '행간', min: 1, max: 2.6, step: 0.05, u: '' },
       { t: 'slider', p: 'bubble.ls', l: '자간', min: -0.1, max: 0.3, step: 0.005, u: 'em' },
       { t: 'select', p: 'bubble.weight', l: '굵기', o: WEIGHTS, num: true },
     ] },
     { sec: '제목', rows: [
       { t: 'font', p: 'head.font', c: 'head.fontCustom' },
-      { t: 'slider', p: 'head.size', l: '크기', min: 12, max: 64, step: 1, u: 'px' },
+      { t: 'slider', p: 'head.size', l: '크기', min: 12, max: 64, step: 1, u: 'px' , pt: true },
       { t: 'select', p: 'head.weight', l: '굵기', o: WEIGHTS, num: true },
       { t: 'color', p: 'head.color', l: '색' },
       { t: 'seg', p: 'head.align', l: '정렬', o: ALIGN3 },
@@ -1223,7 +1245,7 @@ const SCHEMA = {
       { t: 'color', p: 'head.accent', l: '장식 색', when: () => state.head.quoteMark },
     ] },
     { sec: '출처', rows: [
-      { t: 'slider', p: 'head.creditSize', l: '크기', min: 8, max: 28, step: 0.5, u: 'px' },
+      { t: 'slider', p: 'head.creditSize', l: '크기', min: 8, max: 28, step: 0.5, u: 'px' , pt: true },
       { t: 'color', p: 'head.creditColor', l: '색' },
       { t: 'seg', p: 'head.creditAlign', l: '정렬', o: ALIGN3 },
     ] },
@@ -1328,7 +1350,11 @@ function fieldEl(d) {
         num.value = show(v);
         setPath(d.p, v);
       });
-      el = h('div', { class: 'row stack' }, h('div', { class: 'row-top' }, labelEl(d.l), num), slider);
+      const ptText = (v) => `${+(v * 0.75).toFixed(1)}pt`;
+      const lab = labelEl(d.l, d.pt ? ptText(val) : null);
+      if (d.pt) slider.addEventListener('input', () => { lab.querySelector('small').textContent = ptText(slider.value); });
+      if (d.pt) num.addEventListener('change', () => { lab.querySelector('small').textContent = ptText(getPath(d.p)); });
+      el = h('div', { class: 'row stack' }, h('div', { class: 'row-top' }, lab, num), slider);
       break;
     }
 
@@ -1775,17 +1801,159 @@ src.addEventListener('input', () => {
 });
 dropTarget($('.editor-card'), isTextFile, async (f) => insertSnippet(await f.text(), '', false));
 
+/* 입력창 글자 바꾸기 (가능하면 브라우저 기본 실행 취소 기록에 남김) */
+function replaceRange(s, e, text) {
+  src.focus();
+  src.setSelectionRange(s, e);
+  let ok = false;
+  try { ok = text ? document.execCommand('insertText', false, text) : document.execCommand('delete'); } catch (err) { ok = false; }
+  if (!ok) { src.setRangeText(text, s, e, 'end'); src.dispatchEvent(new Event('input')); }
+}
+
 function insertSnippet(before, after = '', block = true) {
   const s = src.selectionStart, e = src.selectionEnd, v = src.value;
   const sel = v.slice(s, e);
   let pre = before;
   if (block && s > 0 && v[s - 1] !== '\n') pre = '\n' + pre;
-  src.setRangeText(pre + sel + after, s, e, 'end');
+  replaceRange(s, e, pre + sel + after);
   const caret = sel ? s + pre.length + sel.length + after.length : s + pre.length;
-  src.focus();
   src.setSelectionRange(caret, caret);
-  src.dispatchEvent(new Event('input'));
 }
+
+/* 서식 켜고 끄기: 선택한 글자를 기호로 감싸거나 이미 감싸져 있으면 풀기 */
+const MARKS = ['**', '__', '~~', '==', '*'];
+function markTokens(run, base) {
+  const out = [];
+  let i = 0;
+  while (i < run.length) {
+    const m = MARKS.find((k) => run.startsWith(k, i));
+    if (!m) break;
+    out.push([base + i, m]);
+    i += m.length;
+  }
+  return out;
+}
+function toggleWrap(mk) {
+  const s = src.selectionStart, e = src.selectionEnd, v = src.value;
+  const sel = v.slice(s, e);
+  const L = mk.length;
+  // 이미 같은 서식으로 감싸져 있으면(다른 서식 기호가 사이에 있어도) 해당 기호만 제거
+  const lm = v.slice(0, s).match(/(?:\*\*|__|~~|==|\*)+$/);
+  const rm = v.slice(e).match(/^(?:\*\*|__|~~|==|\*)+/);
+  if (sel && lm && rm) {
+    const left = markTokens(lm[0], s - lm[0].length).filter((t) => t[1] === mk).pop();
+    const right = markTokens(rm[0], e).find((t) => t[1] === mk);
+    if (left && right) {
+      replaceRange(right[0], right[0] + L, '');
+      replaceRange(left[0], left[0] + L, '');
+      src.setSelectionRange(s - L, e - L);
+      return;
+    }
+  }
+  if (sel.length > 2 * L && sel.startsWith(mk) && sel.endsWith(mk)) {
+    const inner = sel.slice(L, -L);
+    replaceRange(s, e, inner);
+    src.setSelectionRange(s, s + inner.length);
+    return;
+  }
+  if (!sel) {
+    replaceRange(s, e, mk + mk);
+    src.setSelectionRange(s + L, s + L);
+    return;
+  }
+  if (!sel.includes('\n')) {
+    replaceRange(s, e, mk + sel + mk);
+    src.setSelectionRange(s + L, s + L + sel.length); // 안쪽 글자를 선택해 두어 서식을 겹쳐 적용하기 쉽게
+    return;
+  }
+  // 여러 줄이면 줄마다 따로 감쌈 (서식은 줄 단위로 적용됨)
+  const out = sel.split('\n').map((line) => {
+    const m = line.match(/^(\s*)(.*?)(\s*)$/);
+    return m[2] ? m[1] + mk + m[2] + mk + m[3] : line;
+  }).join('\n');
+  replaceRange(s, e, out);
+  src.setSelectionRange(s, s + out.length);
+}
+
+const FORMAT_TOOLS = [
+  { mk: '**', label: 'B', title: '굵게', key: 'b', cls: 'ft-b' },
+  { mk: '*', label: 'I', title: '기울임', key: 'i', cls: 'ft-i' },
+  { mk: '__', label: 'U', title: '밑줄', key: 'u', cls: 'ft-u' },
+  { mk: '~~', label: 'S', title: '취소선', key: 'x', shift: true, cls: 'ft-s' },
+];
+const HL_COLORS = ['#ffe58a', '#ffd8a8', '#ffc9c9', '#fcc2d7', '#d0bfff', '#a5d8ff', '#b2f2bb', '#e9ecef'];
+const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+const modName = isMac ? '⌘' : 'Ctrl';
+
+function buildFmtBar() {
+  const bar = $('#fmt-bar');
+  bar.innerHTML = '';
+  const keep = (e) => e.preventDefault(); // 선택 영역 유지
+  FORMAT_TOOLS.forEach((t) => {
+    bar.append(h('button', {
+      type: 'button', class: `ft ${t.cls}`, title: `${t.title} (${modName}${t.shift ? '+Shift' : ''}+${t.key.toUpperCase()})`, 'aria-label': t.title,
+      onmousedown: keep, onclick: () => toggleWrap(t.mk),
+    }, t.label));
+  });
+  bar.append(h('span', { class: 'ft-sep' }));
+  // 형광펜: 누르면 칠하기, 옆 화살표로 색 · 모양 바꾸기
+  const sw = h('span', { class: 'hl-sw' });
+  sw.style.background = state.typo.hl;
+  const hlMain = h('button', { type: 'button', class: 'ft ft-hl', title: `형광펜 (${modName}+Shift+H)`, 'aria-label': '형광펜', onmousedown: keep, onclick: () => toggleWrap('==') },
+    h('span', { class: 'hl-ico', html: icon('marker') }), sw);
+  const hlMore = h('button', { type: 'button', class: 'ft ft-more', title: '형광펜 색 · 모양', 'aria-label': '형광펜 색 바꾸기', onmousedown: keep, html: icon('chevdown') });
+  hlMore.addEventListener('click', () => openHighlightPop(hlMore));
+  bar.append(h('span', { class: 'ft-group' }, hlMain, hlMore));
+  bar.append(h('span', { class: 'ft-sep' }));
+  bar.append(h('button', { type: 'button', class: 'ft ft-text', title: '이름 없는 대사', onmousedown: keep, onclick: () => insertSnippet('"', '"') }, '“대사”'));
+  bar.append(h('button', { type: 'button', class: 'ft ft-text', title: '구분선 넣기', onmousedown: keep, onclick: () => insertSnippet('---\n', '', true) }, '구분선'));
+}
+
+function openHighlightPop(anchor) {
+  const grid = h('div', { class: 'palette hl' });
+  const mark = () => $$('button', grid).forEach((b) => b.classList.toggle('on', b.dataset.c === state.typo.hl));
+  const pick = (c) => {
+    state.typo.hl = c;
+    changed();
+    mark();
+    $('#fmt-bar .hl-sw').style.background = c;
+  };
+  HL_COLORS.forEach((c) => {
+    const b = h('button', { type: 'button', 'data-c': c, 'aria-label': c });
+    b.style.background = c;
+    b.addEventListener('click', () => pick(c));
+    grid.append(b);
+  });
+  mark();
+  const native = h('input', { type: 'color', value: /^#[0-9a-f]{6}$/i.test(state.typo.hl) ? state.typo.hl : '#ffe58a', 'aria-label': '직접 고르기' });
+  native.addEventListener('input', () => pick(native.value));
+  const sample = h('p', { class: 'hl-sample' }, '이렇게 ', h('mark', {}, '칠해져요'));
+  const paintSample = () => {
+    const stop = { full: '0%', under: '55%', thin: '78%' }[state.typo.hlStyle] || '55%';
+    sample.querySelector('mark').style.background = `linear-gradient(transparent ${stop}, ${state.typo.hl} ${stop})`;
+  };
+  paintSample();
+  const origPick = pick;
+  openPop(h('div', {},
+    h('div', { class: 'pop-title' }, '형광펜'),
+    sample,
+    h('div', { class: 'pop-label' }, '색'),
+    h('div', { class: 'hl-row' }, grid, h('label', { class: 'native-color sm', title: '직접 고르기' }, native)),
+    h('div', { class: 'pop-label' }, '모양'),
+    segEl([['under', '밑줄형'], ['thin', '얇게'], ['full', '전체']], state.typo.hlStyle, (v) => { state.typo.hlStyle = v; changed(); paintSample(); }, true),
+    h('p', { class: 'pop-note' }, '선택한 글자를 칠하려면 형광펜 버튼을 누르세요. 색은 모든 형광펜에 함께 적용돼요.')), anchor, () => buildFields());
+  grid.addEventListener('click', paintSample);
+  native.addEventListener('input', paintSample);
+  void origPick;
+}
+
+src.addEventListener('keydown', (e) => {
+  if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
+  const k = e.key.toLowerCase();
+  const t = FORMAT_TOOLS.find((x) => x.key === k && !!x.shift === e.shiftKey);
+  if (t) { e.preventDefault(); toggleWrap(t.mk); return; }
+  if (k === 'h' && e.shiftKey) { e.preventDefault(); toggleWrap('=='); }
+});
 
 function buildQuickInsert() {
   const box = $('#quick-insert');
@@ -1797,10 +1965,7 @@ function buildQuickInsert() {
     else { av.textContent = [...c.name][0]; av.style.background = avatarColor(c, c.name); }
     box.append(h('button', { type: 'button', class: 'qi', title: `${c.name}의 대사 넣기`, onmousedown: (e) => e.preventDefault(), onclick: () => insertSnippet(`${c.name}: "`, '"') }, av, c.name));
   });
-  const plain = (label, title, fn) => box.append(h('button', { type: 'button', class: 'qi plain', title, onmousedown: (e) => e.preventDefault(), onclick: fn }, label));
-  plain('“대사”', '이름 없는 대사', () => insertSnippet('"', '"'));
-  plain('==강조==', '선택한 글자에 형광펜', () => insertSnippet('==', '==', false));
-  plain('구분선', '구분선 넣기', () => insertSnippet('---\n', '', true));
+  box.hidden = !box.childElementCount;
 }
 
 /* 내 양식: 디자인 · 대사 인식 설정을 저장/불러오기 (글은 제외) */
@@ -1821,19 +1986,19 @@ function applyStyle(st) {
   }
   if (Array.isArray(data.chars)) state.chars = copyState(data.chars);
   commit(); rebuildAll(); save();
-  toast(`‘${st.name || '양식'}’을(를) 적용했어요`, { label: '되돌리기', fn: undo });
+  toast(`‘${st.name || '프리셋'}’을(를) 적용했어요`, { label: '되돌리기', fn: undo });
 }
 async function persistStyles() {
   try { await idb.set('styles', myStyles); } catch (e) { toast('브라우저에 저장하지 못했어요 · 파일로 보관해 주세요'); }
 }
 async function downloadStyle(st) {
   const json = JSON.stringify(st, null, 2);
-  const name = `${(st.name || '양식').replace(/[\\/:*?"<>|]+/g, '_')}.ninining.json`;
+  const name = `${(st.name || '프리셋').replace(/[\\/:*?"<>|]+/g, '_')}.ninining.json`;
   if (typeof window.showSaveFilePicker === 'function' && !isMobile()) {
     try {
-      const fh = await window.showSaveFilePicker({ suggestedName: name, startIn: dirHandle || 'documents', types: [{ description: '니니닝 양식', accept: { 'application/json': ['.json'] } }] });
+      const fh = await window.showSaveFilePicker({ suggestedName: name, startIn: dirHandle || 'documents', types: [{ description: '니니닝 프리셋', accept: { 'application/json': ['.json'] } }] });
       const w = await fh.createWritable(); await w.write(json); await w.close();
-      toast('양식 파일을 저장했어요');
+      toast('프리셋 파일을 저장했어요');
       return;
     } catch (e) { if (e && e.name === 'AbortError') return; }
   }
@@ -1854,20 +2019,20 @@ function buildMyStyles() {
   const list = $('#style-list');
   list.innerHTML = '';
   if (!myStyles.length) {
-    list.append(h('div', { class: 'row empty' }, h('div', { class: 'row-label' }, '저장한 양식이 없어요', h('small', {}, '지금 화면의 서체 · 말풍선 · 배경 · 대사 형식을 이름 붙여 보관해 보세요'))));
+    list.append(h('div', { class: 'row empty' }, h('div', { class: 'row-label' }, '저장한 프리셋이 없어요', h('small', {}, '지금 화면의 서체 · 말풍선 · 배경 · 대사 형식을 이름 붙여 보관해 보세요'))));
     return;
   }
   myStyles.forEach((st, i) => {
     const d = new Date(st.createdAt || Date.now());
     const sub = `${d.getMonth() + 1}월 ${d.getDate()}일${st.data && st.data.chars ? ' · 캐릭터 포함' : ''}`;
     list.append(h('div', { class: 'row style-row' },
-      h('button', { type: 'button', class: 'style-main', onclick: () => applyStyle(st), title: '이 양식 적용' },
+      h('button', { type: 'button', class: 'style-main', onclick: () => applyStyle(st), title: '이 프리셋 적용' },
         styleSwatch(st), h('span', { class: 'row-label' }, st.name, h('small', {}, sub))),
       h('div', { class: 'style-tools' },
         h('button', { type: 'button', class: 'icon-btn sm', title: '파일로 저장', 'aria-label': '파일로 저장', html: icon('download'), onclick: () => downloadStyle(st) }),
         h('button', { type: 'button', class: 'icon-btn sm', title: '현재 설정으로 덮어쓰기', 'aria-label': '덮어쓰기', html: icon('refresh'), onclick: () => {
           if (!confirm(`‘${st.name}’을(를) 지금 설정으로 덮어쓸까요?`)) return;
-          myStyles[i] = styleSnapshot(st.name, !!(st.data && st.data.chars)); persistStyles(); buildMyStyles(); toast('양식을 업데이트했어요');
+          myStyles[i] = styleSnapshot(st.name, !!(st.data && st.data.chars)); persistStyles(); buildMyStyles(); toast('프리셋을 업데이트했어요');
         } }),
         h('button', { type: 'button', class: 'icon-btn sm danger', title: '삭제', 'aria-label': '삭제', html: icon('trash'), onclick: () => {
           const removed = myStyles.splice(i, 1)[0]; persistStyles(); buildMyStyles();
@@ -1877,14 +2042,14 @@ function buildMyStyles() {
 }
 function currentStyleName() {
   const v = $('#style-name').value.trim();
-  return v || `내 양식 ${myStyles.length + 1}`;
+  return v || `내 프리셋 ${myStyles.length + 1}`;
 }
 $('#btn-style-save').addEventListener('click', () => {
   const st = styleSnapshot(currentStyleName(), $('#style-chars').checked);
   myStyles.unshift(st);
   persistStyles(); buildMyStyles();
   $('#style-name').value = '';
-  toast(`‘${st.name}’ 양식을 저장했어요`);
+  toast(`‘${st.name}’ 프리셋을 저장했어요`);
 });
 $('#style-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#btn-style-save').click(); });
 $('#btn-style-file').addEventListener('click', () => downloadStyle(styleSnapshot(currentStyleName(), $('#style-chars').checked)));
@@ -1899,7 +2064,7 @@ $('#file-style').addEventListener('change', async (e) => {
     myStyles.unshift(st);
     persistStyles(); buildMyStyles();
     applyStyle(st);
-  } catch (err) { toast('양식 파일을 읽지 못했어요'); }
+  } catch (err) { toast('프리셋 파일을 읽지 못했어요'); }
 });
 
 /* 템플릿 */
@@ -2563,6 +2728,7 @@ $('#zoom-fit').addEventListener('click', () => { zoom = 'fit'; rescale(); });
 
 function rebuildAll() {
   const scroll = $('#panel-scroll').scrollTop;
+  buildFmtBar();
   if (src.value !== state.text) src.value = state.text;
   buildFields();
   buildChars();

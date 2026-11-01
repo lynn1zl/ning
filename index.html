@@ -59,6 +59,7 @@
 
         <section class="pane" data-pane="text">
           <div class="editor-card">
+            <div class="fmt-bar" id="fmt-bar" role="toolbar" aria-label="서식"></div>
             <div class="quick-insert" id="quick-insert"></div>
             <textarea id="src" spellcheck="false" placeholder="여기에 글을 붙여넣으세요.&#10;&#10;서윤: &quot;이렇게 쓰면 말풍선이 돼요.&quot;"></textarea>
             <div class="editor-foot">
@@ -70,22 +71,22 @@
         </section>
 
         <section class="pane" data-pane="template">
-          <div class="section-title">내 양식</div>
+          <div class="section-title">내 프리셋</div>
           <div class="section">
             <div class="row stack">
               <div class="style-save">
-                <input type="text" class="input" id="style-name" placeholder="양식 이름 (예: 로판 대화용)" maxlength="40">
+                <input type="text" class="input" id="style-name" placeholder="프리셋 이름 (예: 채팅 로그용)" maxlength="40">
                 <button type="button" class="btn btn-primary" id="btn-style-save">저장</button>
               </div>
               <label class="style-opt"><input type="checkbox" class="switch sm" id="style-chars"> 캐릭터(이름 · 사진 · 색)도 함께</label>
             </div>
             <div id="style-list"></div>
             <div class="row style-files">
-              <button type="button" class="btn btn-sm" id="btn-style-file"><span class="btn-icon" data-icon="download"></span>현재 양식을 파일로</button>
-              <label class="btn btn-sm"><span class="btn-icon" data-icon="folder"></span>양식 파일 불러오기<input type="file" id="file-style" accept="application/json,.json" hidden></label>
+              <button type="button" class="btn btn-sm" id="btn-style-file"><span class="btn-icon" data-icon="download"></span>현재 설정을 파일로</button>
+              <label class="btn btn-sm"><span class="btn-icon" data-icon="folder"></span>프리셋 파일 불러오기<input type="file" id="file-style" accept="application/json,.json" hidden></label>
             </div>
           </div>
-          <p class="footnote">양식에는 서체 · 말풍선 · 배경 · 비율 · 스킨 · 대사 형식이 담기고, 글 내용은 담기지 않아요. 파일로 보관하면 다른 기기에서도 불러올 수 있어요.</p>
+          <p class="footnote">프리셋에는 서체 · 말풍선 · 배경 · 비율 · 스킨 · 대사 형식이 담기고, 글 내용은 담기지 않아요. 파일로 보관하면 다른 기기에서도 불러올 수 있어요.</p>
           <div class="section-title">템플릿</div>
           <div class="template-grid" id="template-grid"></div>
         </section>
@@ -102,24 +103,13 @@
         <section class="pane" data-pane="canvas"><div data-fields="canvas"></div></section>
 
         <section class="pane" data-pane="skin">
-          <div class="section-title">프리셋</div>
+          <div class="section-title">스킨 예시</div>
           <div class="chip-row" id="skin-presets"></div>
           <div class="section-title">CSS 편집</div>
           <div class="code-card">
             <textarea id="skin-css" class="code" spellcheck="false" placeholder="/* 예시 */&#10;.card { --card-bg: #111; --text-color: #eee; }&#10;.msg-right .bubble { background: #ffe14d; }"></textarea>
           </div>
           <p class="footnote">CSS를 바로 쓰거나 <code>&lt;style&gt;</code> 태그가 들어간 HTML을 통째로 붙여넣어도 돼요. <code>@import</code>, <code>@font-face</code>로 외부 웹폰트도 쓸 수 있어요.</p>
-          <div class="section-title">선택자 · 변수</div>
-          <div class="section ref">
-            <div class="ref-row"><code>.card</code><span>이미지 한 장</span></div>
-            <div class="ref-row"><code>.card-title</code> <code>.quote-mark</code><span>제목 · 장식 따옴표</span></div>
-            <div class="ref-row"><code>.card-footer</code> <code>.credit</code> <code>.page-num</code><span>하단</span></div>
-            <div class="ref-row"><code>.narr</code> <code>.gap</code> <code>.divider</code> <code>mark</code><span>서술 · 빈 줄 · 구분선 · 강조</span></div>
-            <div class="ref-row"><code>.msg</code> <code>.msg-left</code> <code>.msg-right</code> <code>.kind-thought</code> <code>.shape-round</code><span>말풍선 줄</span></div>
-            <div class="ref-row"><code>.msg[data-speaker="이름"]</code><span>특정 캐릭터</span></div>
-            <div class="ref-row"><code>.avatar</code> <code>.name</code> <code>.bubble</code><span>사진 · 이름 · 말풍선</span></div>
-            <div class="ref-row"><code>--card-bg</code> <code>--text-color</code> <code>--text-font</code> <code>--b-bg</code> <code>--b-color</code> <code>--b-border</code> <code>--b-radius</code> <code>--name-color</code> <code>--title-color</code> <code>--accent</code> <code>--hl</code><span>변수</span></div>
-          </div>
         </section>
 
       </div>
@@ -172,11 +162,13 @@
       <div class="help-item"><code>이름: "대사"</code> <code>[이름] 대사</code><span>화자 지정 · 캐릭터 탭에 등록하면 사진과 색이 적용</span></div>
       <div class="help-item"><code>빈 줄 1개</code><span>문단 나눔 (설정에서 바꿀 수 있어요)</span></div>
       <div class="help-item"><code>빈 줄 2개</code> <code>---</code><span>장면 전환 여백 · 구분선</span></div>
-      <div class="help-item"><code>**굵게**</code> <code>*기울임*</code> <code>==형광펜==</code><span>강조</span></div>
+      <div class="help-item"><code>**굵게**</code> <code>*기울임*</code> <code>__밑줄__</code> <code>~~취소선~~</code> <code>==형광펜==</code><span>입력창 위 서식 버튼으로도 넣을 수 있어요</span></div>
       <div class="help-item"><span class="kbd">말풍선 클릭</span><span>그 말풍선만 화자 · 위치 · 모양 변경</span></div>
       <h4>단축키</h4>
       <div class="help-item"><span class="kbd">Ctrl/⌘ Z</span><span>실행 취소 (입력창 밖에서)</span></div>
       <div class="help-item"><span class="kbd">Ctrl/⌘ Shift Z</span><span>다시 실행</span></div>
+      <div class="help-item"><span class="kbd">Ctrl/⌘ B · I · U</span><span>굵게 · 기울임 · 밑줄 (입력창에서)</span></div>
+      <div class="help-item"><span class="kbd">Ctrl/⌘ Shift X · H</span><span>취소선 · 형광펜</span></div>
       <div class="help-item"><span class="kbd">Ctrl/⌘ S</span><span>이미지 저장</span></div>
       <div class="help-item"><span class="kbd">Ctrl/⌘ + / −</span><span>미리보기 확대 · 축소</span></div>
     </div>
