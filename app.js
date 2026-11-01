@@ -1473,8 +1473,7 @@ const SCHEMA = {
     { sec: '대사 인식', note: '말풍선을 누르면 캐릭터 · 위치 · 모양을 바꾸거나 다시 글로 되돌릴 수 있어요.', rows: [
       { t: 'autoDialog' },
       { t: 'formats' },
-      { t: 'customFormats' },
-      { t: 'seg', p: 'parse.mode', l: '대사 구분 방식', o: [['marked', '기호로 감싼 줄이 대사'], ['plain', '기호 없는 줄이 대사']], block: true },
+      { t: 'mode' },
       { t: 'switch', p: 'parse.inline', l: '문장 속 대사도 분리', sub: '지문 중간에 있는 대사도 말풍선으로 꺼내요', when: () => state.parse.mode === 'marked' },
       { t: 'switch', p: 'parse.strip', l: '말풍선에서 기호 숨기기' },
       { t: 'switch', p: 'parse.mergeTl', l: '아랫줄 괄호는 같은 말풍선에', sub: '대사 바로 아래 ( ) 줄을 번역처럼 작게 붙여요' },
@@ -1765,50 +1764,27 @@ function fieldEl(d) {
         });
         row.append(b);
       });
-      el = h('div', { class: 'row stack' }, labelEl('대사 형식', '중복 선택 가능'), row);
-      break;
-    }
-
-    case 'customFormats': {
-      const fmtLabel = (o, c) => (c ? `${o} 대사 ${c}` : `${o} 대사…`);
-      const list = h('div', { class: 'chip-row' });
+      // 직접 지정한 형식 (× 로 삭제)
       (state.parse.custom || []).forEach((c, idx) => {
-        list.append(h('span', { class: 'fchip on custom', title: c.close ? '' : '이 기호로 시작하는 줄 전체' }, fmtLabel(c.open, c.close),
+        row.append(h('span', { class: 'fchip on custom', title: c.close ? '직접 지정한 형식' : '이 기호로 시작하는 줄 전체' }, customFmtLabel(c.open, c.close),
           h('button', { type: 'button', 'aria-label': '삭제', html: icon('close'), onclick: () => {
             const arr = state.parse.custom.slice(); arr.splice(idx, 1); setPath('parse.custom', arr); buildFields();
           } })));
       });
-      const open = h('input', { type: 'text', class: 'input sym', placeholder: '⧼', maxlength: 6, 'aria-label': '여는 기호' });
-      const close = h('input', { type: 'text', class: 'input sym', placeholder: '⟯', maxlength: 6, 'aria-label': '닫는 기호 (생략 가능)' });
-      const preview = h('div', { class: 'sym-preview' });
-      const addBtn = h('button', { type: 'button', class: 'btn btn-soft btn-sm' }, '추가');
-      const paint = () => {
-        const o = open.value.trim(), c = close.value.trim();
-        preview.innerHTML = '';
-        addBtn.disabled = !o;
-        if (!o) { preview.append(h('span', { class: 'muted' }, '여는 기호를 넣으면 어떻게 인식되는지 보여 드려요')); return; }
-        preview.append(h('span', { class: 'sym-ex' }, h('b', {}, o), ' 오늘은 늦었네.', c ? h('b', {}, ' ' + c) : null),
-          h('span', { class: 'muted' }, c ? '→ 기호 사이의 글이 대사' : '→ 이 기호로 시작하는 줄 전체가 대사'));
-      };
-      const add = () => {
-        const o = open.value.trim(), c = close.value.trim();
-        if (!o) { open.focus(); return; }
-        setPath('parse.custom', [...(state.parse.custom || []), { open: o, close: c }]);
-        if (!state.parse.auto) state.parse.auto = true;
-        buildFields();
-        toast(`‘${fmtLabel(o, c)}’ 형식을 추가했어요`);
-      };
-      addBtn.addEventListener('click', add);
-      [open, close].forEach((x) => {
-        x.addEventListener('input', paint);
-        x.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) add(); });
-      });
-      paint();
-      const cell = (input, cap, opt) => h('label', { class: 'sym-cell' }, input, h('span', { class: 'sym-cap' + (opt ? ' opt' : '') }, cap));
-      el = h('div', { class: 'row stack' }, labelEl('기호 직접 지정'),
-        (state.parse.custom || []).length ? list : null,
-        h('div', { class: 'sym-row' }, cell(open, '여는 기호'), h('span', { class: 'sym-mid' }, '대사'), cell(close, '닫는 기호 · 생략 가능', true), addBtn),
-        preview);
+      const plus = h('button', { type: 'button', class: 'fchip add', 'aria-label': '대사 형식 직접 지정' }, h('span', { class: 'add-ico', html: icon('plus') }), '직접 지정');
+      plus.addEventListener('click', () => openCustomFormatPop(plus));
+      row.append(plus);
+      el = h('div', { class: 'row stack' }, labelEl('대사 형식', '중복 선택 가능'), row);
+      break;
+    }
+
+    case 'mode': {
+      const isPlain = state.parse.mode === 'plain';
+      const hint = h('small', { class: 'mode-hint' });
+      const paint = (m) => { hint.textContent = m === 'plain' ? '고른 기호로 감싼 줄은 지문이 되고, 기호 없는 줄이 말풍선이 돼요' : '고른 기호로 감싼 줄이 말풍선이 되고, 나머지는 지문이에요'; };
+      paint(isPlain ? 'plain' : 'marked');
+      const seg = segEl([['marked', '대사로'], ['plain', '지문으로']], state.parse.mode, (v) => { setPath('parse.mode', v); paint(v); }, true);
+      el = h('div', { class: 'row stack mode-row' }, h('div', { class: 'row-label' }, '위에서 고른 형식을', hint), seg);
       break;
     }
 
@@ -1883,6 +1859,44 @@ const saveUi = () => { try { localStorage.setItem(UI_KEY, JSON.stringify(uiState
 function isOpen(pane, sec, idx) {
   const o = (uiState.open || {})[pane];
   return o && sec in o ? o[sec] : idx === 0;
+}
+
+/* 대사 형식 직접 지정 (칩 목록 끝의 '+ 직접 지정') */
+const customFmtLabel = (o, c) => (c ? `${o} 대사 ${c}` : `${o} 대사…`);
+function openCustomFormatPop(anchor) {
+  const open = h('input', { type: 'text', class: 'input sym', placeholder: '⧼', maxlength: 6, 'aria-label': '여는 기호' });
+  const close = h('input', { type: 'text', class: 'input sym', placeholder: '⟯', maxlength: 6, 'aria-label': '닫는 기호 (생략 가능)' });
+  const preview = h('div', { class: 'sym-preview' });
+  const addBtn = h('button', { type: 'button', class: 'btn btn-primary btn-sm' }, '추가');
+  const paint = () => {
+    const o = open.value.trim(), c = close.value.trim();
+    preview.innerHTML = '';
+    addBtn.disabled = !o;
+    if (!o) { preview.append(h('span', { class: 'muted' }, '여는 기호를 넣으면 어떻게 인식되는지 보여 드려요')); return; }
+    preview.append(h('span', { class: 'sym-ex' }, h('b', {}, o), ' 오늘은 늦었네.', c ? h('b', {}, ' ' + c) : null),
+      h('span', { class: 'muted' }, c ? '→ 기호 사이의 글이 대사' : '→ 이 기호로 시작하는 줄 전체가 대사'));
+  };
+  const add = () => {
+    const o = open.value.trim(), c = close.value.trim();
+    if (!o) { open.focus(); return; }
+    setPath('parse.custom', [...(state.parse.custom || []), { open: o, close: c }]);
+    if (!state.parse.auto) state.parse.auto = true;
+    closePop();
+    buildFields();
+    toast(`‘${customFmtLabel(o, c)}’ 형식을 추가했어요`);
+  };
+  addBtn.addEventListener('click', add);
+  [open, close].forEach((x) => {
+    x.addEventListener('input', paint);
+    x.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) add(); });
+  });
+  paint();
+  const cell = (input, cap, opt) => h('label', { class: 'sym-cell' }, input, h('span', { class: 'sym-cap' + (opt ? ' opt' : '') }, cap));
+  openPop(h('div', { class: 'fmt-pop' },
+    h('div', { class: 'pop-title' }, '대사 형식 직접 지정'),
+    h('div', { class: 'sym-row' }, cell(open, '여는 기호'), h('span', { class: 'sym-mid' }, '대사'), cell(close, '닫는 기호 · 생략 가능', true), addBtn),
+    preview), anchor);
+  setTimeout(() => open.focus(), 30);
 }
 
 function buildFields() {

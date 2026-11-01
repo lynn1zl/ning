@@ -1335,3 +1335,13 @@ button.char-av:focus-visible { outline: 2px solid var(--accent); outline-offset:
 .po-ico svg { width: 20px; height: 20px; }
 .photo-pop .photo-url .input { min-width: 0; }
 .photo-del { align-self: flex-start; margin-top: 12px; }
+
+/* 대사 형식: + 직접 지정 칩, 구분 방식 */
+.fchip.add { background: transparent; color: var(--accent); box-shadow: inset 0 0 0 1.5px var(--accent); border-style: dashed; }
+.fchip.add { box-shadow: none; outline: 1.5px dashed var(--accent); outline-offset: -1.5px; }
+.fchip.add:hover { background: var(--accent-soft); }
+.fchip .add-ico { display: grid; }
+.fchip .add-ico svg { width: 14px; height: 14px; }
+.fmt-pop .sym-row { margin-bottom: 10px; }
+.mode-row .row-label { font-weight: 600; }
+.mode-hint { color: var(--text-3); }
