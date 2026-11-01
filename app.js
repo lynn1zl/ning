@@ -183,6 +183,21 @@ const SKINS = {
   background: repeating-linear-gradient(rgba(0,0,0,.22) 0 1px, transparent 1px 3px);
 }`,
   },
+  chungking: {
+    name: '중경삼림 무드',
+    css: `/* 네온 번짐 · 필름 그레인 · 비네팅 */
+.card-title { letter-spacing: .14em; text-shadow: 1.5px 0 rgba(0, 255, 220, .45), -1.5px 0 rgba(255, 40, 90, .55), 0 0 14px rgba(255, 90, 78, .45); }
+.bubble { text-shadow: 0 1px 2px rgba(0, 0, 0, .7), 0 0 10px rgba(255, 216, 74, .25); letter-spacing: .02em; }
+.name { letter-spacing: .12em; text-transform: uppercase; }
+.narr { text-shadow: 0 0 6px rgba(127, 209, 185, .18); }
+.shape-plain .bubble { color: var(--b-color); }
+.card::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    radial-gradient(ellipse at 50% 45%, transparent 45%, rgba(0, 0, 0, .55) 100%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .14 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}`,
+  },
   polaroid: {
     name: '폴라로이드',
     css: `.card { box-shadow: inset 0 0 0 18px #ffffff, inset 0 0 0 19px rgba(0,0,0,.06); }
@@ -225,8 +240,14 @@ const TEMPLATES = [
     chars: null, charSide: 'center',
   },
   {
-    id: 'note', name: '손글씨 노트', sub: '나눔손글씨 펜 · 줄 노트', pv: { bg: '#fffdf6', fg: '#2f3b52', b1: '#ffffff', b2: '#fff3bf', lines: true, outline: '#9fb0c6' },
-    set: { typo: { font: 'Nanum Pen Script', size: 22, lh: 1.36, color: '#2f3b52', gap: 0, ls: 0 }, head: { font: 'Nanum Pen Script', size: 34, color: '#2f3b52', creditColor: '#7b8799', creditSize: 18 }, bubble: { speech: 'outline', font: 'Gaegu', size: 14, border: '#9fb0c6', bw: 1.5, shadow: false, nameColor: '#7b8799' }, canvas: { bg: '#fffdf6', bgType: 'pattern', pattern: 'lines', patColor: '#9fb6d0', patOpacity: 0.45, patSize: 30 } }, chars: [['#ffffff', '#2f3b52', '#9fb0c6'], ['#fff3bf', '#2f3b52', '#e6c84f']],
+    id: 'line', name: '라인 메신저', sub: '프로필 · 초록 말풍선', pv: { bg: '#8fabd4', fg: '#3a4a5e', b1: '#ffffff', b2: '#a6e877', center: false },
+    set: { typo: { font: 'Pretendard', size: 12, color: '#33475e', align: 'center', lh: 1.6 }, head: { font: 'Pretendard', size: 17, color: '#1f2d3d', creditColor: '#3f5571', creditAlign: 'center' }, bubble: { speech: 'round', font: 'Pretendard', size: 13.5, radius: 18, px: 13, py: 8, shadow: false, tail: true, gap: 10, avatar: true, avatarSize: 36, nameSize: 11, nameColor: '#33475e' }, canvas: { bg: '#8fabd4' } },
+    chars: [['#ffffff', '#1d1d1d', '#ffffff'], ['#a6e877', '#1d2a10', '#a6e877']],
+  },
+  {
+    id: 'chungking', name: '중경삼림 무드', sub: '네온 · 필름 그레인 · 노란 자막', pv: { bg: 'linear-gradient(160deg,#103129,#1b1f1a 55%,#3d1a17)', fg: '#e9dcc0', film: true, subtitle: '#ffd84a' },
+    set: { typo: { font: 'Noto Serif KR', size: 13.5, color: '#e6dcc4', lh: 1.8, ls: 0.01 }, head: { font: 'Noto Serif KR', size: 19, weight: 700, color: '#ff5a4e', creditColor: '#7fd1b9', creatorColor: '#7fd1b9', align: 'left' }, bubble: { speech: 'plain', font: 'Noto Sans KR', size: 14, weight: 500, color: '#ffd84a', side: 'center', avatar: false, nameColor: '#ff8a7a', nameSize: 10.5, gap: 14 }, canvas: { bgType: 'gradient', bg: '#103129', bg2: '#3d1a17', gradAngle: 160, pad: 52 } },
+    skin: SKINS.chungking.css, chars: [['#1b1f1a', '#ffd84a', '#1b1f1a'], ['#1b1f1a', '#9ff0d6', '#1b1f1a']], charSide: 'center',
   },
   {
     id: 'film', name: '영화 자막', sub: '16:9 · 검은 화면', pv: { bg: '#000000', fg: '#9a9a9a', film: true },
@@ -256,6 +277,8 @@ const BASE_DESIGN = Object.fromEntries(DESIGN_KEYS.map((k) => [k, copyState(DEFA
   const t = TEMPLATES.find((x) => x.id === 'clean');
   for (const k of DESIGN_KEYS) DEFAULTS[k] = deepMerge(copyState(BASE_DESIGN[k]), t.set[k] || {});
   Object.assign(DEFAULTS.head, { creditFont: t.set.head.font, creatorFont: t.set.head.font, creatorColor: DEFAULTS.head.creditColor });
+  // 기본: 얼굴 사진 끄기, 페이지 번호 끄기 (템플릿을 골라도 그대로 유지)
+  for (const d of [DEFAULTS, BASE_DESIGN]) { d.bubble.avatar = false; d.canvas.pageNum = false; }
 })();
 
 const PANES = [
@@ -2311,6 +2334,7 @@ function buildTemplates() {
       for (let k = 0; k < 7; k++) { const l = line(k % 3 === 2 ? 62 : 100); l.style.height = '4px'; if (k % 3 === 0) l.style.marginLeft = '8%'; l.style.width = k % 3 === 0 ? '92%' : l.style.width; pv.append(l); }
     } else if (p.film || p.center) {
       pv.append(line(78, true), line(64, true), line(70, true));
+      if (p.subtitle) { const sub = line(56, true); sub.style.background = p.subtitle; sub.style.opacity = '.95'; pv.append(sub); }
     } else {
       pv.append(line(80), line(56));
       const b1 = h('i', { class: 'b' }); b1.style.cssText = `display:block;background:${p.b1};${p.outline ? `border:1px solid ${p.outline}` : ''}`;
@@ -2362,7 +2386,7 @@ function buildChars() {
   list.innerHTML = '';
   if (!state.chars.length) list.append(h('p', { class: 'footnote' }, '아직 캐릭터가 없어요. 아래 버튼으로 추가해 보세요.'));
   state.chars.forEach((ch, i) => {
-    const av = h('label', { class: 'char-av', title: '얼굴 사진 올리기' });
+    const av = h('button', { type: 'button', class: 'char-av', title: '얼굴 사진 바꾸기', 'aria-label': `${ch.name || '캐릭터'} 얼굴 사진 바꾸기` });
     if (ch.avatar) av.style.backgroundImage = `url("${ch.avatar}")`;
     else { av.textContent = [...(ch.name || '?')][0]; av.style.background = avatarColor(ch, ch.name); }
     const file = h('input', { type: 'file', accept: 'image/*', hidden: true });
@@ -2391,8 +2415,8 @@ function buildChars() {
       }
       changed(); buildChars(); buildQuickInsert();
     };
-    file.addEventListener('change', () => file.files[0] && setAvatar(file.files[0]));
-    av.append(file, h('span', { class: 'cam', html: icon('camera') }));
+    av.append(h('span', { class: 'cam', html: icon('camera') }));
+    av.addEventListener('click', () => openPhotoPop(av, ch, setAvatar, setAvatarUrl));
 
     const nameIn = h('input', { type: 'text', class: 'char-name', value: ch.name, placeholder: '이름', 'aria-label': '캐릭터 이름' });
     nameIn.addEventListener('input', () => {
@@ -2439,8 +2463,7 @@ function buildChars() {
         h('div', { class: 'row' }, labelEl('위치'), segEl(SIDES, ch.side, (v) => { ch.side = v; changed(); })),
         h('div', { class: 'row' }, labelEl('말풍선 모양'), shapeSel),
         h('label', { class: 'row' }, labelEl('개별 색상'), customSw),
-        colorRow,
-        photoRow(ch, setAvatar, setAvatarUrl)));
+        colorRow));
     dropTarget(card, isImageFile, setAvatar);
     list.append(card);
   });
@@ -2491,20 +2514,23 @@ $('#bulk-names').addEventListener('input', updateBulkPreview);
 $('#bulk-names').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); bulkAddChars(); } });
 $('#btn-bulk-add').addEventListener('click', bulkAddChars);
 
-function photoRow(ch, setAvatar, setAvatarUrl) {
+/* 프로필 원을 누르면: 파일에서 고르기 · 이미지 링크 · 지우기 */
+function openPhotoPop(anchor, ch, setAvatar, setAvatarUrl) {
   const file = h('input', { type: 'file', accept: 'image/*', hidden: true });
-  file.addEventListener('change', () => file.files[0] && setAvatar(file.files[0]));
+  file.addEventListener('change', () => { if (file.files[0]) { closePop(); setAvatar(file.files[0]); } });
   const urlIn = h('input', { type: 'url', class: 'input', placeholder: 'https://… 이미지 주소', 'aria-label': '이미지 링크' });
-  const urlRow = h('div', { class: 'photo-url', hidden: true }, urlIn,
-    h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: () => setAvatarUrl(urlIn.value) }, '넣기'));
-  urlIn.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) setAvatarUrl(urlIn.value); });
-  return h('div', { class: 'row stack' },
-    h('div', { class: 'row-top' }, labelEl('얼굴 사진'),
-      h('div', { class: 'photo-btns' },
-        h('label', { class: 'btn btn-sm' }, '파일', file),
-        h('button', { type: 'button', class: 'btn btn-sm', onclick: () => { urlRow.hidden = !urlRow.hidden; if (!urlRow.hidden) urlIn.focus(); } }, '링크'),
-        ch.avatar ? h('button', { type: 'button', class: 'btn btn-sm danger-text', onclick: () => { ch.avatar = ''; changed(); buildChars(); buildQuickInsert(); } }, '지우기') : null)),
-    urlRow);
+  const apply = () => { if (urlIn.value.trim()) { closePop(); setAvatarUrl(urlIn.value); } else urlIn.focus(); };
+  urlIn.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) apply(); });
+  openPop(h('div', { class: 'photo-pop' },
+    h('div', { class: 'pop-title' }, `${ch.name || '캐릭터'} 얼굴 사진`),
+    h('label', { class: 'photo-opt' }, h('span', { class: 'po-ico', html: icon('image') }),
+      h('span', {}, h('b', {}, '파일에서 고르기'), h('small', {}, '사진을 끌어다 카드에 놓아도 돼요')), file),
+    h('div', { class: 'pop-label' }, '이미지 링크'),
+    h('div', { class: 'photo-url' }, urlIn, h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: apply }, '넣기')),
+    ch.avatar ? h('button', { type: 'button', class: 'link-btn danger photo-del', onclick: () => {
+      closePop(); ch.avatar = ''; changed(); buildChars(); buildQuickInsert();
+      toast('사진을 지웠어요', { label: '되돌리기', fn: undo });
+    } }, '사진 지우기') : null), anchor);
 }
 
 $('#btn-add-char').addEventListener('click', () => {
