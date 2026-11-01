@@ -2838,13 +2838,16 @@ function download(url, name) {
   a.remove();
 }
 
-const fileBase = () => (state.title || 'ninining').replace(/[\\/:*?"<>|\s]+/g, '_').slice(0, 40) || 'ninining';
+// 파일 이름: 발췌닝_저장날짜_제목.png (여러 장이면 끝에 _01, _02 …)
+const titlePart = () => (state.title || '').replace(/[\\/:*?"<>|\n\r\t]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40).trim();
 let fileStamp = '';
 const stampNow = () => {
   const d = new Date(), p = (n) => String(n).padStart(2, '0');
-  fileStamp = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+  fileStamp = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}`;
 };
-const fileName = (i) => `${fileBase()}_${fileStamp}_${String(i + 1).padStart(2, '0')}.png`;
+stampNow();
+const fileBase = () => ['발췌닝', fileStamp, titlePart()].filter(Boolean).join('_');
+const fileName = (i, n = lastImages.length) => `${fileBase()}${n > 1 ? '_' + String(i + 1).padStart(2, '0') : ''}.png`;
 
 let busy = false;
 /** 카드들을 PNG로 변환 (indices 없으면 전부). 끝나면 미리보기를 원래대로 */
@@ -3107,7 +3110,8 @@ document.addEventListener('click', (e) => {
   else if (a === 'export-json') {
     const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    download(url, `${fileBase()}_설정.json`);
+    stampNow();
+    download(url, `${fileBase()}_작업.json`);
     setTimeout(() => URL.revokeObjectURL(url), 2000);
   } else if (a === 'reset') {
     if (!confirm('모든 글과 설정을 처음 상태로 되돌릴까요?')) return;
