@@ -3207,11 +3207,58 @@ document.addEventListener('click', (e) => {
     download(url, `${fileBase()}_작업.json`);
     setTimeout(() => URL.revokeObjectURL(url), 2000);
   } else if (a === 'reset') {
-    if (!confirm('모든 글과 설정을 처음 상태로 되돌릴까요?')) return;
-    state = copyState(DEFAULTS);
-    commit(); rebuildAll(); save();
-    toast('처음 상태로 되돌렸어요', { label: '되돌리기', fn: undo });
+    buildResetList();
+    openModal('#reset');
   }
+});
+
+/* 초기화: 필요한 범위만 골라서 (모두 되돌리기 가능) */
+const RESETS = [
+  { id: 'skin', icon: 'code', title: '스킨만 초기화', desc: 'CSS 스킨과 HTML 배경을 비워요', done: '스킨을 초기화했어요',
+    run() { state.skin = ''; state.bgHtml = ''; } },
+  { id: 'design', icon: 'type', title: '디자인 초기화', desc: '서체 · 말풍선 · 화면 · 스킨을 기본(미니멀 화이트)으로. 글과 캐릭터는 그대로예요', done: '디자인을 기본으로 되돌렸어요',
+    run() {
+      for (const k of DESIGN_KEYS) state[k] = copyState(DEFAULTS[k]);
+      state.skin = ''; state.bgHtml = '';
+      state.overrides = Object.fromEntries(Object.entries(state.overrides).map(([k, v]) => {
+        const { shape, side, ...rest } = v;
+        return [k, rest];
+      }).filter(([, v]) => Object.keys(v).length));
+      state.chars.forEach((c) => { c.shape = ''; c.custom = false; c.side = c.homeSide || c.side; });
+    } },
+  { id: 'chars', icon: 'person', title: '캐릭터 모두 지우기', desc: '등록한 캐릭터와 말풍선마다 바꾼 화자 · 위치 · 모양을 지워요. 글은 그대로예요', done: '캐릭터를 모두 지웠어요',
+    run() {
+      // 글에 남아 있는 이름이 곧바로 다시 자동 등록되지 않게
+      parseText().forEach((b) => { if (b.type === 'bubble' && b.name) autoTried.add(b.name); });
+      state.chars = [];
+      state.overrides = {};
+      state.parse.nameless = 'none';
+    } },
+  { id: 'text', icon: 'text', title: '글 지우기', desc: '입력한 글과 제목 · 출처 · 제작자를 비워요', done: '글을 비웠어요',
+    run() { state.text = ''; state.title = ''; state.credit = ''; state.creator = ''; state.overrides = {}; } },
+  { id: 'all', icon: 'refresh', title: '전부 처음부터', desc: '글 · 캐릭터 · 디자인 · 대사 인식 설정까지 모두 처음 상태로', done: '처음 상태로 되돌렸어요', danger: true,
+    run() { state = copyState(DEFAULTS); autoTried.clear(); } },
+];
+function runReset(id) {
+  const r = RESETS.find((x) => x.id === id);
+  if (!r) return;
+  commit();
+  r.run();
+  commit(); rebuildAll(); save();
+  closeModals();
+  toast(r.done, { label: '되돌리기', fn: undo }, 3600);
+}
+function buildResetList() {
+  const list = $('#reset-list');
+  list.innerHTML = '';
+  RESETS.forEach((r) => list.append(h('button', { type: 'button', class: 'reset-item' + (r.danger ? ' danger' : ''), onclick: () => runReset(r.id) },
+    h('span', { class: 'ri-ico', html: icon(r.icon) }),
+    h('span', { class: 'ri-text' }, h('b', {}, r.title), h('small', {}, r.desc)),
+    h('span', { class: 'ri-chev', html: icon('chevron') }))));
+}
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-reset]');
+  if (b) runReset(b.dataset.reset);
 });
 $('#file-import-json').addEventListener('change', async (e) => {
   const f = e.target.files[0];
