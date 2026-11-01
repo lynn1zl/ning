@@ -78,7 +78,6 @@
                 <input type="text" class="input" id="style-name" placeholder="프리셋 이름 (예: 채팅 로그용)" maxlength="40">
                 <button type="button" class="btn btn-primary" id="btn-style-save">저장</button>
               </div>
-              <label class="style-opt"><input type="checkbox" class="switch sm" id="style-chars"> 캐릭터(이름 · 사진 · 색)도 함께</label>
             </div>
             <div id="style-list"></div>
             <div class="row style-files">
@@ -86,7 +85,11 @@
               <label class="btn btn-sm"><span class="btn-icon" data-icon="folder"></span>프리셋 파일 불러오기<input type="file" id="file-style" accept="application/json,.json" hidden></label>
             </div>
           </div>
-          <p class="footnote">프리셋에는 서체 · 말풍선 · 배경 · 비율 · 스킨 · 대사 형식이 담기고, 글 내용은 담기지 않아요. 파일로 보관하면 다른 기기에서도 불러올 수 있어요.</p>
+          <div class="notice-card">
+            <strong>파일로도 꼭 내려받아 두세요</strong>
+            <span>목록의 프리셋은 이 브라우저에만 저장돼요. 브라우저 캐시 · 사이트 데이터를 지우거나 다른 기기 · 브라우저로 옮기면 사라지니, 각 프리셋 옆 <b>내려받기</b> 버튼이나 ‘현재 설정을 파일로’로 보관해 주세요.</span>
+          </div>
+          <p class="footnote">프리셋에는 서체 · 말풍선 · 배경 · 비율 · 스킨 · 대사 형식 · 캐릭터(이름 · 사진 · 색)가 담기고, 글 내용은 담기지 않아요.</p>
           <div class="section-title">템플릿</div>
           <div class="template-grid" id="template-grid"></div>
         </section>

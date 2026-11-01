@@ -127,7 +127,7 @@ const DEFAULTS = {
     bg: '#ffffff', color: '#222222', border: '#2b2a27', bw: 0, radius: 14, px: 12, py: 8, maxw: 78, shadow: true, gap: 12,
     avatar: true, avatarSize: 34, avatarShape: 'circle', showName: true, nameSize: 10.5, nameColor: '#6b665e',
   },
-  canvas: { ratio: 'auto', width: 540, pad: 44, bgType: 'solid', bg: '#f7f3ea', bg2: '#e6dcc8', gradType: 'linear', gradAngle: 160, pattern: 'dots', patColor: '#8a7f6a', patOpacity: 0.22, patSize: 18, bgImage: '', overlay: 0, overlayColor: '#000000', valign: 'flex-start', fit: false, paginate: true, pageNum: false, scale: 2 },
+  canvas: { ratio: 'auto', width: 700, pad: 48, bgType: 'solid', bg: '#f7f3ea', bg2: '#e6dcc8', gradType: 'linear', gradAngle: 160, pattern: 'dots', patColor: '#8a7f6a', patOpacity: 0.22, patSize: 18, bgImage: '', overlay: 0, overlayColor: '#000000', valign: 'flex-start', fit: false, paginate: true, pageNum: false, scale: 2 },
   chars: [
     { id: 'c1', name: '닝', avatar: '', side: 'left', shape: '', custom: true, bg: '#f2f4f6', color: '#191f28', border: '#f2f4f6' },
   ],
@@ -956,13 +956,15 @@ async function buildHtmlBgURL(html, w, h, layer) {
     : '[data-layer="top"]{visibility:hidden !important;}';
   doc.head.appendChild(layerStyle);
   const xhtml = new XMLSerializer().serializeToString(doc.documentElement);
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><foreignObject x="0" y="0" width="${w}" height="${h}">${xhtml}</foreignObject></svg>`;
+  // 그림 자체 해상도를 저장 배율만큼 키워서 흐릿해지지 않게 (내용 배치는 카드 크기 그대로)
+  const k = Math.max(2, Math.min(4, Math.ceil(Math.max(state.canvas.scale, window.devicePixelRatio || 1))));
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w * k}" height="${h * k}" viewBox="0 0 ${w} ${h}"><foreignObject x="0" y="0" width="${w}" height="${h}">${xhtml}</foreignObject></svg>`;
   const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
   await new Promise((res, rej) => { const im = new Image(); im.onload = res; im.onerror = () => rej(new Error('draw')); im.src = url; });
   return url;
 }
 function htmlBgURL(w, h, layer) {
-  const key = `${layer}|${w}x${h}|${state.bgHtml}`;
+  const key = `${layer}|${w}x${h}|${state.canvas.scale}|${state.bgHtml}`;
   if (!htmlBg.cache.has(key)) {
     if (htmlBg.cache.size > 24) htmlBg.cache.clear();
     htmlBg.cache.set(key, buildHtmlBgURL(state.bgHtml, w, h, layer));
@@ -1298,10 +1300,10 @@ function updateMeasure() {
   const t = state.typo, c = state.canvas;
   const cw = c.width - c.pad * 2;
   const n = Math.round(cw / (t.size * (1 + t.ls)));
-  const good = n >= 24 && n <= 36;
+  const good = n >= 24 && n <= 48;
   el.textContent = `약 ${n}자`;
   el.dataset.state = good ? 'good' : 'warn';
-  $('#measure-hint').textContent = good ? '읽기 편한 길이예요' : n < 24 ? '조금 짧아요 · 글자를 줄이거나 여백을 줄여 보세요' : '조금 길어요 · 글자를 키우거나 여백을 늘려 보세요';
+  $('#measure-hint').textContent = good ? '읽기 편한 길이예요' : n < 24 ? '조금 짧아요 · 글자를 줄이거나 가로를 넓혀 보세요' : '조금 길어요 · 글자를 키우거나 여백을 늘려 보세요';
 }
 
 function updateStats() {
@@ -2248,15 +2250,15 @@ function buildMyStyles() {
   }
   myStyles.forEach((st, i) => {
     const d = new Date(st.createdAt || Date.now());
-    const sub = `${d.getMonth() + 1}월 ${d.getDate()}일${st.data && st.data.chars ? ' · 캐릭터 포함' : ''}`;
+    const sub = `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}${st.data && st.data.chars ? ` · 캐릭터 ${st.data.chars.length}명` : ''}`;
     list.append(h('div', { class: 'row style-row' },
       h('button', { type: 'button', class: 'style-main', onclick: () => applyStyle(st), title: '이 프리셋 적용' },
         styleSwatch(st), h('span', { class: 'row-label' }, st.name, h('small', {}, sub))),
       h('div', { class: 'style-tools' },
-        h('button', { type: 'button', class: 'icon-btn sm', title: '파일로 저장', 'aria-label': '파일로 저장', html: icon('download'), onclick: () => downloadStyle(st) }),
+        h('button', { type: 'button', class: 'icon-btn sm', title: '파일로 내려받기', 'aria-label': '파일로 내려받기', html: icon('download'), onclick: () => downloadStyle(st) }),
         h('button', { type: 'button', class: 'icon-btn sm', title: '현재 설정으로 덮어쓰기', 'aria-label': '덮어쓰기', html: icon('refresh'), onclick: () => {
           if (!confirm(`‘${st.name}’을(를) 지금 설정으로 덮어쓸까요?`)) return;
-          myStyles[i] = styleSnapshot(st.name, !!(st.data && st.data.chars)); persistStyles(); buildMyStyles(); toast('프리셋을 업데이트했어요');
+          myStyles[i] = styleSnapshot(st.name, true); persistStyles(); buildMyStyles(); toast('프리셋을 업데이트했어요');
         } }),
         h('button', { type: 'button', class: 'icon-btn sm danger', title: '삭제', 'aria-label': '삭제', html: icon('trash'), onclick: () => {
           const removed = myStyles.splice(i, 1)[0]; persistStyles(); buildMyStyles();
@@ -2269,14 +2271,14 @@ function currentStyleName() {
   return v || `내 프리셋 ${myStyles.length + 1}`;
 }
 $('#btn-style-save').addEventListener('click', () => {
-  const st = styleSnapshot(currentStyleName(), $('#style-chars').checked);
+  const st = styleSnapshot(currentStyleName(), true);
   myStyles.unshift(st);
   persistStyles(); buildMyStyles();
   $('#style-name').value = '';
   toast(`‘${st.name}’ 프리셋을 저장했어요`);
 });
 $('#style-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#btn-style-save').click(); });
-$('#btn-style-file').addEventListener('click', () => downloadStyle(styleSnapshot(currentStyleName(), $('#style-chars').checked)));
+$('#btn-style-file').addEventListener('click', () => downloadStyle(styleSnapshot(currentStyleName(), true)));
 $('#file-style').addEventListener('change', async (e) => {
   const f = e.target.files[0];
   e.target.value = '';
@@ -2370,6 +2372,25 @@ function buildChars() {
         changed(); buildChars(); buildQuickInsert();
       } catch (e) { toast('이미지를 읽지 못했어요'); }
     };
+    // 이미지 링크: 가능하면 받아서 사진으로 저장(이미지 저장에도 나오게), 막혀 있으면 링크 그대로
+    const setAvatarUrl = async (url) => {
+      url = url.trim();
+      if (!/^(https?:|data:image\/)/i.test(url)) { toast('https:// 로 시작하는 이미지 링크를 넣어 주세요'); return; }
+      try {
+        const r = await fetch(url);
+        if (!r.ok) throw new Error(r.status);
+        const blob = await r.blob();
+        if (!/^image\//.test(blob.type)) throw new Error('type');
+        ch.avatar = await shrinkImage(blob, 256, true);
+        toast('링크의 사진을 넣었어요');
+      } catch (e) {
+        const ok = await new Promise((res) => { const im = new Image(); im.onload = () => res(true); im.onerror = () => res(false); im.src = url; });
+        if (!ok) { toast('이 링크에서 이미지를 불러오지 못했어요'); return; }
+        ch.avatar = url;
+        toast('사진을 넣었어요 · 이 사이트는 외부 사용을 막아 두어 저장 이미지에는 안 나올 수 있어요', null, 4200);
+      }
+      changed(); buildChars(); buildQuickInsert();
+    };
     file.addEventListener('change', () => file.files[0] && setAvatar(file.files[0]));
     av.append(file, h('span', { class: 'cam', html: icon('camera') }));
 
@@ -2419,7 +2440,7 @@ function buildChars() {
         h('div', { class: 'row' }, labelEl('말풍선 모양'), shapeSel),
         h('label', { class: 'row' }, labelEl('개별 색상'), customSw),
         colorRow,
-        ch.avatar ? h('div', { class: 'row' }, labelEl('얼굴 사진'), h('button', { type: 'button', class: 'btn btn-sm', onclick: () => { ch.avatar = ''; changed(); buildChars(); buildQuickInsert(); } }, '사진 지우기')) : null));
+        photoRow(ch, setAvatar, setAvatarUrl)));
     dropTarget(card, isImageFile, setAvatar);
     list.append(card);
   });
@@ -2469,6 +2490,22 @@ function bulkAddChars() {
 $('#bulk-names').addEventListener('input', updateBulkPreview);
 $('#bulk-names').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); bulkAddChars(); } });
 $('#btn-bulk-add').addEventListener('click', bulkAddChars);
+
+function photoRow(ch, setAvatar, setAvatarUrl) {
+  const file = h('input', { type: 'file', accept: 'image/*', hidden: true });
+  file.addEventListener('change', () => file.files[0] && setAvatar(file.files[0]));
+  const urlIn = h('input', { type: 'url', class: 'input', placeholder: 'https://… 이미지 주소', 'aria-label': '이미지 링크' });
+  const urlRow = h('div', { class: 'photo-url', hidden: true }, urlIn,
+    h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: () => setAvatarUrl(urlIn.value) }, '넣기'));
+  urlIn.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) setAvatarUrl(urlIn.value); });
+  return h('div', { class: 'row stack' },
+    h('div', { class: 'row-top' }, labelEl('얼굴 사진'),
+      h('div', { class: 'photo-btns' },
+        h('label', { class: 'btn btn-sm' }, '파일', file),
+        h('button', { type: 'button', class: 'btn btn-sm', onclick: () => { urlRow.hidden = !urlRow.hidden; if (!urlRow.hidden) urlIn.focus(); } }, '링크'),
+        ch.avatar ? h('button', { type: 'button', class: 'btn btn-sm danger-text', onclick: () => { ch.avatar = ''; changed(); buildChars(); buildQuickInsert(); } }, '지우기') : null)),
+    urlRow);
+}
 
 $('#btn-add-char').addEventListener('click', () => {
   const n = state.chars.length;
@@ -2689,6 +2726,23 @@ function freezeLines(E, scale) {
   });
 }
 
+/* HTML 배경 그림을 저장 배율 그대로 PNG로 바꿔 둠 (SVG 그림이 한 번 더 확대되며 흐려지는 것 방지) */
+async function rasterizeHtmlLayers(card) {
+  const sc = state.canvas.scale;
+  for (const img of card.querySelectorAll('.card-htmlbg, .card-htmltop')) {
+    if (!img.getAttribute('src') || img.hidden) continue;
+    try {
+      if (!img.complete) await new Promise((r) => { img.onload = r; img.onerror = r; });
+      const w = card.offsetWidth, hgt = card.offsetHeight;
+      const cv = document.createElement('canvas');
+      cv.width = Math.round(w * sc); cv.height = Math.round(hgt * sc);
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      img.src = cv.toDataURL('image/png');
+      await img.decode().catch(() => {});
+    } catch (e) { /* 브라우저가 막으면 원래 그림 그대로 */ }
+  }
+}
+
 function cardToPng(card, fontCSS) {
   return htmlToImage.toPng(card, {
     width: card.offsetWidth,
@@ -2699,6 +2753,8 @@ function cardToPng(card, fontCSS) {
     cacheBust: false,
     // 아직 그려지지 않은 그림(빈 src)은 건너뜀
     filter: (n) => !(n.tagName === 'IMG' && !n.getAttribute('src')),
+    // 불러오지 못한 외부 그림은 투명하게 두고 저장은 계속
+    imagePlaceholder: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
   });
 }
 
@@ -2728,6 +2784,7 @@ async function makeImages(indices, onProgress) {
   const all = $$('#stage .card');
   const cards = indices ? indices.map((i) => all[i]).filter(Boolean) : all;
   const fontCSS = await buildFontEmbedCSS(cards);
+  for (const card of cards) await rasterizeHtmlLayers(card);
   for (const card of cards) {
     card.querySelectorAll('.narr, .bubble, .card-title, .credit').forEach((el) => {
       try { freezeLines(el, currentScale); } catch (e) { /* 원래 상태로 둠 */ }
