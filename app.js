@@ -111,38 +111,13 @@ const SWATCHES = [
   '#3bc9db', '#38d9a9', '#69db7c', '#a9e34b', '#e3a6a6', '#c8a46a', '#33415c', '#191f28',
 ];
 
-// 앙투안 드 생텍쥐페리 『어린 왕자』(1943) 21장 일부를 원문에서 옮김
-const SAMPLE = `여우가 나타난 건 바로 그때였다.
-
-여우: "안녕."
-
-어린 왕자는 공손하게 대답하며 뒤를 돌아보았지만, 아무것도 보이지 않았다.
-
-어린 왕자: "안녕."
-
-여우: "나 여기 있어. 사과나무 아래."
-
-어린 왕자: "넌 누구니? 참 예쁘구나."
-
-여우: "난 여우야."
-
-어린 왕자: "이리 와서 나랑 놀자. 난 지금 너무 슬프거든."
-
-여우: "난 너랑 놀 수 없어. 난 길들여지지 않았거든."
-
-어린 왕자: "'길들인다'는 게 무슨 뜻이야?"
-
-여우: "그건 사람들이 너무 쉽게 잊어버린 일이야. '관계를 맺는다'는 뜻이지."
-
-그리고 여우는 ==비밀 하나==를 알려 주었다.
-
-여우: "내 비밀은 이거야. 아주 간단해. 마음으로 보아야만 잘 보인다는 것. **가장 중요한 것은 눈에 보이지 않아.**"`;
+const SAMPLE = `닝: "니니닝!"`;
 
 const DEFAULTS = {
   text: SAMPLE,
-  title: '어린 왕자',
-  credit: '『어린 왕자』',
-  creator: '앙투안 드 생텍쥐페리',
+  title: '제목',
+  credit: '출처',
+  creator: '제작자',
   parse: { auto: true, formats: ['dq', 'sq', 'corner', 'wcorner'], custom: [], mode: 'marked', inline: false, strip: true, nameless: 'none', blank: 'para', mergeTl: true },
   typo: { font: 'Noto Serif KR', fontCustom: '', size: 13.5, lh: 1.7, ls: -0.005, weight: 400, color: '#2a2826', align: 'left', paraMode: 'gap', gap: 10, indent: 1, hl: '#ffe58a', hlStyle: 'under' },
   head: { font: 'Noto Serif KR', fontCustom: '', size: 17, weight: 700, color: '#1d1c1a', align: 'left', creditFont: 'Noto Serif KR', creditFontCustom: '', creditSize: 10.5, creditWeight: 400, creditColor: '#8a857c', creatorFont: 'Noto Serif KR', creatorFontCustom: '', creatorSize: 10.5, creatorWeight: 700, creatorColor: '#6b665e', creditAlign: 'right', creditLayout: 'inline', quoteMark: false, accent: '#c8a46a' },
@@ -154,8 +129,7 @@ const DEFAULTS = {
   },
   canvas: { ratio: 'auto', width: 540, pad: 44, bgType: 'solid', bg: '#f7f3ea', bg2: '#e6dcc8', gradType: 'linear', gradAngle: 160, pattern: 'dots', patColor: '#8a7f6a', patOpacity: 0.22, patSize: 18, bgImage: '', overlay: 0, overlayColor: '#000000', valign: 'flex-start', fit: false, paginate: true, pageNum: false, scale: 2 },
   chars: [
-    { id: 'c1', name: '어린 왕자', avatar: '', side: 'left', shape: '', custom: true, bg: '#ffffff', color: '#222222', border: '#e7b84a' },
-    { id: 'c2', name: '여우', avatar: '', side: 'right', shape: '', custom: true, bg: '#e8742c', color: '#ffffff', border: '#e8742c' },
+    { id: 'c1', name: '닝', avatar: '', side: 'left', shape: '', custom: true, bg: '#f2f4f6', color: '#191f28', border: '#f2f4f6' },
   ],
   overrides: {},
   skin: '',
@@ -275,10 +249,19 @@ const TEMPLATES = [
   },
 ];
 
+/* 기본 디자인은 '미니멀 화이트' 템플릿. 템플릿은 중립 기본값(BASE_DESIGN) 위에 적용 */
+const DESIGN_KEYS = ['typo', 'head', 'bubble', 'canvas'];
+const BASE_DESIGN = Object.fromEntries(DESIGN_KEYS.map((k) => [k, copyState(DEFAULTS[k])]));
+(() => {
+  const t = TEMPLATES.find((x) => x.id === 'clean');
+  for (const k of DESIGN_KEYS) DEFAULTS[k] = deepMerge(copyState(BASE_DESIGN[k]), t.set[k] || {});
+  Object.assign(DEFAULTS.head, { creditFont: t.set.head.font, creatorFont: t.set.head.font, creatorColor: DEFAULTS.head.creditColor });
+})();
+
 const PANES = [
   { id: 'text', label: '텍스트', icon: 'text', desc: '발췌할 글을 붙여넣으면 말풍선이 자동으로 만들어져요. 어떤 텍스트를 말풍선으로 만들지는 아래에서 정할 수 있어요.' },
   { id: 'bubble', label: '말풍선', icon: 'bubble', desc: '말풍선 모양과 색, 프로필 표시 방식을 정해요.' },
-  { id: 'chars', label: '캐릭터', icon: 'person', desc: '본문에 이름: "대사" 형식으로 쓰면 여기 등록한 캐릭터와 연결돼요.' },
+  { id: 'chars', label: '캐릭터', icon: 'person', desc: '본문에 쓴 이름이 여기 등록한 캐릭터 이름과 똑같아야(띄어쓰기까지) 말풍선에 사진과 색이 자동으로 연결돼요.' },
   { id: 'typo', label: '서체', icon: 'type', desc: '본문, 말풍선, 제목의 글꼴과 간격을 다듬어요.' },
   { id: 'canvas', label: '화면', icon: 'frame', desc: '비율과 크기, 배경을 정해요.' },
   { id: 'skin', label: '스킨', icon: 'code', desc: 'CSS로 디자인을 자유롭게 덮어써요.' },
@@ -434,7 +417,7 @@ function migrate(st, raw) {
     Object.assign(st.head, { creditFont: st.head.font, creditFontCustom: st.head.fontCustom, creatorFont: st.head.font, creatorFontCustom: st.head.fontCustom, creatorColor: st.head.creditColor, creatorSize: st.head.creditSize });
   }
   if (raw && !('creator' in raw)) st.creator = '';
-  // 이전 버전: 다른 발췌기용 HTML 배경을 CSS 스킨 칸에 넣었던 경우 옮겨 줌
+  // 이전 버전: HTML 배경 코드를 CSS 스킨 칸에 넣었던 경우 옮겨 줌
   if (st.skin && !st.bgHtml && looksLikeHtmlBg(st.skin)) { st.bgHtml = st.skin; st.skin = ''; }
   return st;
 }
@@ -756,7 +739,14 @@ function colorFor(name) {
   return AV_COLORS[x % AV_COLORS.length];
 }
 function avatarColor(ch, name) {
-  const isWhite = (c) => /^#(fff|ffffff)$/i.test(c || '');
+  // 흰색이나 아주 밝은 색이면 흰 글자가 안 보이므로 이름에 따른 색으로
+  const isWhite = (c) => {
+    const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(c || '');
+    if (!m) return false;
+    const x = m[1].length === 3 ? m[1].split('').map((d) => d + d).join('') : m[1];
+    const [r, g, b] = [0, 2, 4].map((i) => parseInt(x.slice(i, i + 2), 16));
+    return 0.299 * r + 0.587 * g + 0.114 * b > 215;
+  };
   if (ch && ch.custom) {
     const c = ch.border !== ch.bg && !isWhite(ch.border) ? ch.border : ch.bg;
     if (!isWhite(c)) return c;
@@ -893,7 +883,7 @@ const GRADIENTS = [
 ];
 
 /* HTML 배경: <style> + 장식 HTML을 카드 크기의 별도 문서로 그려 카드 뒤(와 data-layer="top"은 위)에 깔기
-   - 다른 발췌기(Chat2Img 등)의 배경 코드와 같은 방식: body가 카드 한 장 크기 */
+   - body가 카드 한 장 크기인 독립 문서로 그려서 앱 화면과 스타일이 섞이지 않음 */
 function looksLikeHtmlBg(code) {
   if (!code || !/<[a-z]/i.test(code)) return false;
   const withoutStyle = code.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
@@ -2335,7 +2325,7 @@ function applyTemplate(t) {
   const keep = { width: c0.width, scale: c0.scale, paginate: c0.paginate, pageNum: c0.pageNum, ratio: c0.ratio, fit: c0.fit, bgImage: c0.bgImage, overlay: c0.overlay, overlayColor: c0.overlayColor };
   state.parse.strip = t.parse && 'strip' in t.parse ? t.parse.strip : true;
   for (const k of ['typo', 'head', 'bubble', 'canvas']) {
-    const base = copyState(DEFAULTS[k]);
+    const base = copyState(BASE_DESIGN[k]);
     state[k] = deepMerge(base, (t.set && t.set[k]) || {});
   }
   Object.assign(state.canvas, keep);
@@ -2517,13 +2507,13 @@ $('#skin-css').addEventListener('input', (e) => {
   state.skin = e.target.value;
   clearTimeout(skinTimer);
   skinTimer = setTimeout(() => {
-    // 다른 발췌기용 배경 코드(body 규칙 · 장식 HTML)는 HTML 배경으로 옮겨서 그림
+    // 배경 코드(body 규칙 · 장식 HTML)는 HTML 배경으로 옮겨서 그림
     if (looksLikeHtmlBg(state.skin)) {
       state.bgHtml = state.skin;
       state.skin = '';
       $('#skin-css').value = '';
       $('#html-bg').value = state.bgHtml;
-      toast('다른 발췌기용 배경 코드라서 ‘HTML 배경’으로 옮겨 적용했어요', { label: '되돌리기', fn: undo }, 3600);
+      toast('배경용 HTML 코드라서 ‘HTML 배경’ 칸으로 옮겨 적용했어요', { label: '되돌리기', fn: undo }, 3600);
     }
     applySkin(); changed();
   }, 250);
