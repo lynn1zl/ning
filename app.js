@@ -648,7 +648,7 @@ function splitSpeaker(line) {
   let m = line.match(/^\[([^\]]{1,24})\]\s*(.+)$/);
   if (m) return { name: m[1].trim(), rest: m[2].trim(), strong: true };
   // 이름 | 대사  (채팅 로그에서 흔한 형식)
-  m = line.match(/^([^\s|｜"“「『(（'‘\[][^|｜"“「『]{0,29}?)\s*[|｜]\s*(.+)$/);
+  m = line.match(/^([^\s|｜ㅣ│"“「『(（'‘\[][^|｜ㅣ│"“「『]{0,29}?)\s*[|｜ㅣ│]\s*(.+)$/);
   if (m) return { name: m[1].trim(), rest: m[2].trim(), strong: false };
   m = line.match(/^([^\s:："“「『(（'‘\[][^:："“「『]{0,23}?)\s*[:：]\s*(.+)$/);
   if (m) return { name: m[1].trim(), rest: m[2].trim(), strong: false };
@@ -657,6 +657,25 @@ function splitSpeaker(line) {
   return null;
 }
 
+/* 따옴표로 시작해서 닫힌 뒤에 글이 더 이어지는 줄: 「原文」 번역 */
+function leadQuote(s, rules) {
+  for (const [o, c] of rules.pairs) {
+    if (!s.startsWith(o)) continue;
+    const idx = s.indexOf(c, o.length);
+    if (idx <= o.length) continue;
+    const inner = s.slice(o.length, idx).trim();
+    const rest = s.slice(idx + c.length).trim();
+    if (inner && rest) return { inner, rest, quoted: s.slice(0, idx + c.length) };
+  }
+  return null;
+}
+const HAS_CJK = /[\u3040-\u30ff\u31f0-\u31ff\u3400-\u9fff\uf900-\ufaff]/;
+const HAS_HANGUL = /[\uac00-\ud7a3]/;
+// 따옴표 안이 일본어 · 중국어이고 뒤가 한국어면 번역으로 봄
+const looksTranslated = (lq) => HAS_CJK.test(lq.inner) && !HAS_HANGUL.test(lq.inner) && HAS_HANGUL.test(lq.rest);
+// 이름만 있는 줄: '쿠죠 후유카 ——', '닝 :', '닝ㅣ' (다음 줄이 대사일 때만)
+const NAME_LINE = /^([^\s"“「『(（'‘\[<〈《].{0,23}?)\s*(?:[—―–]+|-{2,}|[:：|｜ㅣ│▶▷»>])\s*$/;
+
 function parseText() {
   const P = state.parse;
   const lines = state.text.replace(/\r/g, '').split('\n');
@@ -664,21 +683,33 @@ function parseText() {
   const occ = {};
   const rules = dialogueRules();
   const inlineRe = inlineRegex(rules);
-  const bubble = (inner, full, name) => {
+  const bubble = (inner, full, name, tlText) => {
     const base = `speech|${inner}`;
     occ[base] = (occ[base] || 0) + 1;
     const key = `${base}|${occ[base]}`;
     if ((state.overrides[key] || {}).asText) { narr(full); out[out.length - 1].key = key; return; }
-    out.push({ type: 'bubble', kind: 'speech', inner, full, name: name || null, key });
+    const b = { type: 'bubble', kind: 'speech', inner, full, name: name || null, key };
+    if (tlText) b.tl = [{ inner: tlText, full: tlText }];
+    out.push(b);
   };
+  // 이름이 붙은 대사 하나를 처리 (뒤에 번역이 이어지면 같은 말풍선에)
+  const namedBubble = (rest, name) => {
+    const w = matchFormat(rest, rules);
+    if (w) { bubble(w.inner, rest, name); return true; }
+    const lq = leadQuote(rest, rules);
+    if (lq) { bubble(lq.inner, lq.quoted, name, lq.rest); return true; }
+    return false;
+  };
+  const isDialogueLine = (t) => !!(t && (matchFormat(t, rules) || leadQuote(t, rules)));
+  let pendingName = null;
 
   const narr = (text) => {
     const prev = out[out.length - 1];
     out.push({ type: 'narr', text, ind: !!prev && prev.type === 'narr' });
   };
   let blanks = 0;
-  for (const raw of lines) {
-    const line = raw.trim();
+  for (let li = 0; li < lines.length; li++) {
+    const line = lines[li].trim();
     if (!line) { blanks++; continue; }
     // 빈 줄 하나는 문단 경계일 뿐, 두 줄 이상은 장면 전환(여백)으로 본다
     const adjacent = blanks === 0;
@@ -695,11 +726,25 @@ function parseText() {
     }
     if (/^(-{3,}|\*{3,}|_{3,}|—{2,})$/.test(line)) { out.push({ type: 'hr' }); continue; }
 
+    // 윗줄에서 이름만 따로 나온 경우
+    if (pendingName) {
+      const name = pendingName;
+      pendingName = null;
+      if (namedBubble(line, name)) continue;
+      if (findChar(name)) { bubble(line, line, name); continue; }
+    }
+    // 이름만 있는 줄 + 바로 다음 줄이 대사 → 다음 줄의 화자로
+    const nl = line.match(NAME_LINE);
+    if (nl && !/[.?!。…]$/.test(nl[1]) && isDialogueLine((lines[li + 1] || '').trim())) {
+      pendingName = nl[1].trim();
+      continue;
+    }
+
     const sp = splitSpeaker(line);
     if (sp) {
-      const w = matchFormat(sp.rest, rules);
-      if (sp.strong || (!sp.loose && findChar(sp.name)) || w) {
-        bubble(w ? w.inner : sp.rest, sp.rest, sp.name);
+      if (namedBubble(sp.rest, sp.name)) continue;
+      if (sp.strong || (!sp.loose && findChar(sp.name))) {
+        bubble(sp.rest, sp.rest, sp.name);
         continue;
       }
     }
@@ -711,6 +756,8 @@ function parseText() {
         continue;
       }
       if (w) { bubble(w.inner, line); continue; }
+      const lq = leadQuote(line, rules);
+      if (lq && looksTranslated(lq)) { bubble(lq.inner, lq.quoted, null, lq.rest); continue; }
       if (P.inline && inlineRe && inlineRe.test(line)) {
         for (const part of line.split(inlineRe)) {
           const t = part.trim();
