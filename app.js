@@ -141,7 +141,7 @@ const SAMPLE = `여우가 나타난 건 바로 그때였다.
 const DEFAULTS = {
   text: SAMPLE,
   title: '어린 왕자',
-  credit: '『어린 왕자』 중에서',
+  credit: '『어린 왕자』',
   creator: '앙투안 드 생텍쥐페리',
   parse: { auto: true, formats: ['dq', 'sq', 'corner', 'wcorner'], custom: [], mode: 'marked', inline: false, strip: true, nameless: 'none', blank: 'para' },
   typo: { font: 'Noto Serif KR', fontCustom: '', size: 13.5, lh: 1.7, ls: -0.005, weight: 400, color: '#2a2826', align: 'left', paraMode: 'gap', gap: 10, indent: 1, hl: '#ffe58a', hlStyle: 'under' },
@@ -276,7 +276,7 @@ const TEMPLATES = [
 ];
 
 const PANES = [
-  { id: 'text', label: '텍스트', icon: 'text', desc: '발췌할 글을 붙여넣고, 아래 ‘대사 → 말풍선’으로 대사를 한 번에 말풍선으로 바꿔요.' },
+  { id: 'text', label: '텍스트', icon: 'text', desc: '발췌할 글을 붙여넣으면 말풍선이 자동으로 만들어져요. 어떤 텍스트를 말풍선으로 만들지는 아래에서 정할 수 있어요.' },
   { id: 'bubble', label: '말풍선', icon: 'bubble', desc: '말풍선 모양과 색, 프로필 표시 방식을 정해요.' },
   { id: 'chars', label: '캐릭터', icon: 'person', desc: '본문에 이름: "대사" 형식으로 쓰면 여기 등록한 캐릭터와 연결돼요.' },
   { id: 'typo', label: '서체', icon: 'type', desc: '본문, 말풍선, 제목의 글꼴과 간격을 다듬어요.' },
@@ -1607,32 +1607,50 @@ function fieldEl(d) {
         });
         row.append(b);
       });
-      el = h('div', { class: 'row stack' }, labelEl('대사 형식', '여러 개를 함께 고를 수 있어요'), row);
+      el = h('div', { class: 'row stack' }, labelEl('대사 형식', '중복 선택 가능'), row);
       break;
     }
 
     case 'customFormats': {
+      const fmtLabel = (o, c) => (c ? `${o} 대사 ${c}` : `${o} 대사…`);
       const list = h('div', { class: 'chip-row' });
       (state.parse.custom || []).forEach((c, idx) => {
-        list.append(h('span', { class: 'fchip on custom' }, c.close ? `${c.open} 텍스트 ${c.close}` : `${c.open} 텍스트`,
+        list.append(h('span', { class: 'fchip on custom', title: c.close ? '' : '이 기호로 시작하는 줄 전체' }, fmtLabel(c.open, c.close),
           h('button', { type: 'button', 'aria-label': '삭제', html: icon('close'), onclick: () => {
             const arr = state.parse.custom.slice(); arr.splice(idx, 1); setPath('parse.custom', arr); buildFields();
           } })));
       });
       const open = h('input', { type: 'text', class: 'input sym', placeholder: '⧼', maxlength: 6, 'aria-label': '여는 기호' });
-      const close = h('input', { type: 'text', class: 'input sym', placeholder: '⟯', maxlength: 6, 'aria-label': '닫는 기호' });
+      const close = h('input', { type: 'text', class: 'input sym', placeholder: '⟯', maxlength: 6, 'aria-label': '닫는 기호 (생략 가능)' });
+      const preview = h('div', { class: 'sym-preview' });
+      const addBtn = h('button', { type: 'button', class: 'btn btn-soft btn-sm' }, '추가');
+      const paint = () => {
+        const o = open.value.trim(), c = close.value.trim();
+        preview.innerHTML = '';
+        addBtn.disabled = !o;
+        if (!o) { preview.append(h('span', { class: 'muted' }, '여는 기호를 넣으면 어떻게 인식되는지 보여 드려요')); return; }
+        preview.append(h('span', { class: 'sym-ex' }, h('b', {}, o), ' 오늘은 늦었네.', c ? h('b', {}, ' ' + c) : null),
+          h('span', { class: 'muted' }, c ? '→ 기호 사이의 글이 대사' : '→ 이 기호로 시작하는 줄 전체가 대사'));
+      };
       const add = () => {
         const o = open.value.trim(), c = close.value.trim();
         if (!o) { open.focus(); return; }
         setPath('parse.custom', [...(state.parse.custom || []), { open: o, close: c }]);
         if (!state.parse.auto) state.parse.auto = true;
         buildFields();
-        toast(`‘${o}${c ? ' … ' + c : ' …'}’ 형식을 추가했어요`);
+        toast(`‘${fmtLabel(o, c)}’ 형식을 추가했어요`);
       };
-      [open, close].forEach((x) => x.addEventListener('keydown', (e) => { if (e.key === 'Enter') add(); }));
-      el = h('div', { class: 'row stack' }, labelEl('기호 직접 지정', '닫는 기호를 비우면 그 기호로 시작하는 줄을 대사로 봐요'),
+      addBtn.addEventListener('click', add);
+      [open, close].forEach((x) => {
+        x.addEventListener('input', paint);
+        x.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) add(); });
+      });
+      paint();
+      const cell = (input, cap, opt) => h('label', { class: 'sym-cell' }, input, h('span', { class: 'sym-cap' + (opt ? ' opt' : '') }, cap));
+      el = h('div', { class: 'row stack' }, labelEl('기호 직접 지정'),
         (state.parse.custom || []).length ? list : null,
-        h('div', { class: 'sym-row' }, open, h('span', { class: 'sym-mid' }, '텍스트'), close, h('button', { type: 'button', class: 'btn btn-soft btn-sm', onclick: add }, '추가')));
+        h('div', { class: 'sym-row' }, cell(open, '여는 기호'), h('span', { class: 'sym-mid' }, '대사'), cell(close, '닫는 기호 · 생략 가능', true), addBtn),
+        preview);
       break;
     }
 

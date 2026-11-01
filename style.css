@@ -1158,7 +1158,18 @@ textarea.code {
 .fchip.custom { padding-right: 4px; }
 .fchip.custom button { border: 0; background: none; color: inherit; width: 20px; height: 20px; display: grid; place-items: center; border-radius: 6px; padding: 0; }
 .fchip.custom button svg { width: 13px; height: 13px; }
-.sym-row { display: flex; align-items: center; gap: 6px; }
+.sym-row { display: flex; align-items: flex-start; gap: 6px; }
+.sym-cell { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.sym-cap { font-size: 11px; font-weight: 600; color: var(--text-3); white-space: nowrap; }
+.sym-cap.opt { color: var(--accent); }
+.sym-row .sym-mid { line-height: 40px; }
+.sym-row > .btn { margin-top: 4px; }
+.sym-row .input.sym::placeholder { color: var(--text-4); }
+.sym-row .input.sym[aria-label^="닫는"] { background: transparent; border: 1.5px dashed var(--text-4); padding: 7.5px 4.5px; }
+.sym-preview { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: 12.5px; padding: 10px 12px; border-radius: 10px; background: var(--fill); }
+.sym-preview .muted { color: var(--text-3); }
+.sym-ex { font-weight: 500; color: var(--text); }
+.sym-ex b { color: var(--accent); }
 .sym-row .input.sym { width: 64px; text-align: center; padding: 9px 6px; font-size: 16px; }
 .sym-mid { color: var(--text-3); font-size: 13px; }
 .sym-row .btn { margin-left: auto; }
