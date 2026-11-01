@@ -2485,11 +2485,15 @@ function applyTemplate(t) {
   if (th.creditAlign) state.head.creditAlign = th.creditAlign;
   state.skin = t.skin || '';
   state.chars.forEach((c, i) => {
+    // 위치: 사용자가 정한 좌/우(homeSide)를 지킴. 가운데 정렬 같은 레이아웃 템플릿만 잠시 바꾸고, 다른 템플릿에서 원래대로
+    if (!c.homeSide) c.homeSide = c.side || 'left';
+    c.side = t.charSide || c.homeSide;
+    // 색: 위치에 맞춰 (왼쪽 → 첫 번째 색, 오른쪽 → 두 번째 색). 레이아웃 템플릿은 캐릭터 구분용으로 순서대로
     if (t.chars) {
-      const [bg, color, border] = t.chars[i % t.chars.length];
+      const pick = t.charSide ? i % t.chars.length : (c.side === 'right' && t.chars.length > 1 ? 1 : 0);
+      const [bg, color, border] = t.chars[pick];
       Object.assign(c, { custom: true, bg, color, border });
     } else c.custom = false;
-    c.side = t.charSide || (i % 2 ? 'right' : 'left');
     c.shape = '';
   });
   state.overrides = Object.fromEntries(Object.entries(state.overrides).map(([k, v]) => {
@@ -2582,7 +2586,7 @@ function buildChars() {
           h('button', { type: 'button', class: 'icon-btn sm', title: '아래로', 'aria-label': '아래로', html: icon('down'), onclick: () => move(1), disabled: i === state.chars.length - 1 }),
           h('button', { type: 'button', class: 'icon-btn sm danger', title: '삭제', 'aria-label': '삭제', html: icon('trash'), onclick: remove }))),
       h('div', { class: 'char-body' },
-        h('div', { class: 'row' }, labelEl('위치'), segEl(SIDES, ch.side, (v) => { ch.side = v; changed(); })),
+        h('div', { class: 'row' }, labelEl('위치'), segEl(SIDES, ch.side, (v) => { ch.side = v; ch.homeSide = v; changed(); })),
         h('div', { class: 'row' }, labelEl('말풍선 모양'), shapeSel),
         h('label', { class: 'row' }, labelEl('개별 색상'), customSw),
         colorRow));
