@@ -1234,3 +1234,19 @@ textarea.code {
 .hl-sample { margin: 0 2px; font-size: 17px; font-weight: 600; }
 .hl-sample mark { color: inherit; padding: 0 .08em; border-radius: 2px; }
 .pop-note { margin: 12px 2px 0; font-size: 12.5px; color: var(--text-3); line-height: 1.55; }
+
+/* 아, 캐릭터 너무 많아! */
+.bulk-card { margin-top: 16px; background: var(--accent-soft); }
+.bulk-card .row-label strong { font-size: 15px; font-weight: 700; }
+.bulk-card .row-label small { color: var(--text-2); line-height: 1.55; margin-top: 3px; }
+.bulk-row { display: flex; gap: 8px; }
+.bulk-row .input { background: var(--surface); }
+.bulk-row .btn { height: 46px; padding: 0 16px; flex: none; }
+.bulk-preview { display: flex; flex-wrap: wrap; gap: 6px; }
+.bulk-chip {
+  font-size: 13px; font-weight: 600;
+  padding: 4px 10px; border-radius: 999px;
+  background: var(--surface); color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--hair);
+}
+.bulk-chip.skip { color: var(--text-3); text-decoration: line-through; text-decoration-color: var(--text-4); }

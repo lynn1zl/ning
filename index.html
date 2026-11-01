@@ -94,6 +94,16 @@
         <section class="pane" data-pane="bubble"><div data-fields="bubble"></div></section>
 
         <section class="pane" data-pane="chars">
+          <div class="section bulk-card">
+            <div class="row stack">
+              <div class="row-label"><strong>아, 캐릭터 너무 많아!</strong><small>이름을 쉼표로 구분해 넣으면 한 번에 추가돼요. 기본 모양(하얀 배경 · 검은 글씨 · 왼쪽)으로 들어가고, 나중에 하나씩 바꿀 수 있어요.</small></div>
+              <div class="bulk-row">
+                <input type="text" class="input" id="bulk-names" placeholder="어린 왕자, 장미, 여우" autocomplete="off">
+                <button type="button" class="btn btn-primary" id="btn-bulk-add">추가</button>
+              </div>
+              <div class="bulk-preview" id="bulk-preview" hidden></div>
+            </div>
+          </div>
           <div id="chars-list"></div>
           <button type="button" class="btn btn-soft btn-block" id="btn-add-char"><span class="btn-icon" data-icon="plus"></span>캐릭터 추가</button>
         </section>

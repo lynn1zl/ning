@@ -732,7 +732,11 @@ function colorFor(name) {
   return AV_COLORS[x % AV_COLORS.length];
 }
 function avatarColor(ch, name) {
-  if (ch && ch.custom) return ch.border !== ch.bg && ch.border.toLowerCase() !== '#ffffff' ? ch.border : ch.bg;
+  const isWhite = (c) => /^#(fff|ffffff)$/i.test(c || '');
+  if (ch && ch.custom) {
+    const c = ch.border !== ch.bg && !isWhite(ch.border) ? ch.border : ch.bg;
+    if (!isWhite(c)) return c;
+  }
   return colorFor(name || '?');
 }
 
@@ -2195,6 +2199,51 @@ function buildChars() {
     list.append(card);
   });
 }
+
+/* 아, 캐릭터 너무 많아!: 쉼표로 구분한 이름을 기본 모양으로 한 번에 추가 */
+function parseBulkNames(text) {
+  const existing = new Set(state.chars.map((c) => (c.name || '').trim()));
+  const seen = new Set();
+  const add = [], skip = [];
+  for (const raw of text.split(/[,，、\n]/)) {
+    const n = raw.trim().slice(0, 24);
+    if (!n || seen.has(n)) continue;
+    seen.add(n);
+    (existing.has(n) ? skip : add).push(n);
+  }
+  return { add, skip };
+}
+function updateBulkPreview() {
+  const box = $('#bulk-preview');
+  const { add, skip } = parseBulkNames($('#bulk-names').value);
+  box.innerHTML = '';
+  box.hidden = !add.length && !skip.length;
+  add.forEach((n) => box.append(h('span', { class: 'bulk-chip' }, n)));
+  skip.forEach((n) => box.append(h('span', { class: 'bulk-chip skip', title: '이미 있는 캐릭터' }, `${n} · 이미 있음`)));
+  $('#btn-bulk-add').textContent = add.length > 1 ? `${add.length}명 추가` : '추가';
+}
+function bulkAddChars() {
+  const input = $('#bulk-names');
+  const { add, skip } = parseBulkNames(input.value);
+  if (!add.length) {
+    toast(skip.length ? '모두 이미 있는 캐릭터예요' : '이름을 쉼표로 구분해 넣어 주세요');
+    input.focus();
+    return;
+  }
+  const base = Date.now().toString(36);
+  add.forEach((name, i) => state.chars.push({
+    id: `c${base}${i}`, name, avatar: '', side: 'left', shape: '',
+    custom: true, bg: '#ffffff', color: '#222222', border: '#ffffff',
+  }));
+  input.value = '';
+  updateBulkPreview();
+  changed(); commit();
+  buildChars(); buildFields(); buildQuickInsert();
+  toast(`${add.length}명을 추가했어요${skip.length ? ` · 이미 있는 ${skip.length}명은 건너뛰었어요` : ''}`, { label: '되돌리기', fn: undo });
+}
+$('#bulk-names').addEventListener('input', updateBulkPreview);
+$('#bulk-names').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); bulkAddChars(); } });
+$('#btn-bulk-add').addEventListener('click', bulkAddChars);
 
 $('#btn-add-char').addEventListener('click', () => {
   const n = state.chars.length;
