@@ -1574,7 +1574,7 @@ const SCHEMA = {
       { t: 'switch', p: 'canvas.paginate', l: '넘치면 다음 장으로', sub: '긴 글을 여러 장으로 나눠요', when: () => fixedRatio() && !state.canvas.fit },
       { t: 'switch', p: 'canvas.pageNum', l: '페이지 번호' },
       { t: 'seg', p: 'canvas.valign', l: '세로 정렬', o: [['flex-start', '위'], ['center', '가운데'], ['flex-end', '아래']], when: fixedRatio },
-      { t: 'slider', p: 'canvas.pad', l: '바깥 여백', min: 0, max: 120, step: 1, u: 'px' },
+      { t: 'slider', p: 'canvas.pad', l: '바깥 여백', min: 0, max: 300, step: 2, u: 'px' },
     ] },
     { sec: '배경', rows: [
       { t: 'seg', p: 'canvas.bgType', l: '종류', o: [['solid', '단색'], ['gradient', '그라데이션'], ['pattern', '패턴'], ['image', '이미지']], block: true, rebuild: true },
