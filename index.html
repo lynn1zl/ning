@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>발췌 스튜디오</title>
+<meta name="description" content="텍스트를 붙여넣고 대사를 말풍선으로, 원하는 서체와 비율로 이미지를 만드는 발췌기">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23333'/%3E%3Cpath d='M14 18h36a6 6 0 0 1 6 6v14a6 6 0 0 1-6 6H30l-10 8v-8h-6a6 6 0 0 1-6-6V24a6 6 0 0 1 6-6z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="style.css">
+<style id="gen-style"></style>
+<style id="skin-style"></style>
+</head>
+<body>
+<header class="topbar">
+  <h1>발췌 스튜디오</h1>
+  <div class="top-actions">
+    <button type="button" class="btn ghost" id="btn-export-json" title="현재 설정을 파일로 저장">설정 저장</button>
+    <label class="btn ghost" title="저장한 설정 파일 불러오기">설정 불러오기<input type="file" id="file-import-json" accept="application/json,.json" hidden></label>
+    <button type="button" class="btn ghost" id="btn-reset">초기화</button>
+  </div>
+</header>
+
+<main class="layout">
+  <aside class="panel">
+    <nav class="tabs" role="tablist">
+      <button type="button" class="tab active" data-tab="text">텍스트</button>
+      <button type="button" class="tab" data-tab="bubble">말풍선</button>
+      <button type="button" class="tab" data-tab="chars">캐릭터</button>
+      <button type="button" class="tab" data-tab="typo">서체</button>
+      <button type="button" class="tab" data-tab="canvas">화면</button>
+      <button type="button" class="tab" data-tab="skin">스킨</button>
+    </nav>
+
+    <div class="pane active" data-pane="text">
+      <textarea id="src" spellcheck="false" placeholder="여기에 텍스트를 붙여넣으세요"></textarea>
+      <details class="help">
+        <summary>작성 규칙</summary>
+        <ul>
+          <li><code>"대사"</code> <code>“대사”</code> <code>「대사」</code> <code>『대사』</code> 처럼 줄 전체가 따옴표면 말풍선이 됩니다.</li>
+          <li><code>(속마음)</code> 처럼 줄 전체가 괄호면 생각 말풍선이 됩니다.</li>
+          <li><code>이름: "대사"</code> · <code>[이름] 대사</code> · <code>이름 "대사"</code> 로 화자를 지정합니다. 캐릭터 탭에 등록한 이름이면 사진과 색이 적용됩니다.</li>
+          <li>빈 줄은 여백, <code>---</code> 는 구분선입니다.</li>
+          <li><code>**굵게**</code>, <code>*기울임*</code> 을 쓸 수 있습니다.</li>
+          <li>미리보기에서 말풍선을 누르면 화자·위치·모양을 하나씩 바꿀 수 있습니다.</li>
+        </ul>
+      </details>
+      <div class="fields" data-fields="text"></div>
+    </div>
+
+    <div class="pane" data-pane="bubble"><div class="fields" data-fields="bubble"></div></div>
+
+    <div class="pane" data-pane="chars">
+      <p class="hint">본문에 <code>이름: "대사"</code> 형식으로 쓰면 아래 캐릭터와 연결됩니다. 동그라미를 눌러 얼굴 사진을 올리세요.</p>
+      <div id="chars-list"></div>
+      <button type="button" class="btn full" id="btn-add-char">+ 캐릭터 추가</button>
+    </div>
+
+    <div class="pane" data-pane="typo"><div class="fields" data-fields="typo"></div></div>
+
+    <div class="pane" data-pane="canvas"><div class="fields" data-fields="canvas"></div></div>
+
+    <div class="pane" data-pane="skin">
+      <label class="field">
+        <span class="lab">프리셋 불러오기</span>
+        <select id="skin-preset"></select>
+      </label>
+      <p class="hint">CSS를 바로 쓰거나, <code>&lt;style&gt;…&lt;/style&gt;</code> 이 들어간 HTML을 통째로 붙여넣어도 됩니다. <code>@import</code>, <code>@font-face</code> 로 웹폰트도 쓸 수 있어요.</p>
+      <textarea id="skin-css" class="code" spellcheck="false" placeholder=".card { --card-bg: #111; --text-color: #eee; }&#10;.msg-right .bubble { background: #ffe14d; }"></textarea>
+      <details class="help" open>
+        <summary>스킨에서 쓸 수 있는 선택자 · 변수</summary>
+        <ul>
+          <li><code>.card</code> 이미지 한 장 · <code>.card-title</code> 제목 · <code>.card-content</code> 본문 영역 · <code>.card-footer</code> <code>.credit</code> <code>.page-num</code></li>
+          <li><code>.narr</code> 서술 문단 · <code>.gap</code> 빈 줄 · <code>.divider</code> 구분선</li>
+          <li><code>.msg</code> 말풍선 한 줄 (<code>.msg-left</code> <code>.msg-right</code> <code>.msg-center</code>, <code>.kind-speech</code> <code>.kind-thought</code>, <code>.shape-round</code> 등)</li>
+          <li><code>.msg[data-speaker="이름"]</code> 특정 캐릭터 · <code>.avatar</code> <code>.name</code> <code>.bubble</code></li>
+          <li>변수: <code>--card-bg --text-color --text-font --b-bg --b-color --b-border --b-radius --name-color --title-color --credit-color</code> 등</li>
+        </ul>
+      </details>
+    </div>
+  </aside>
+
+  <section class="preview">
+    <div class="preview-bar">
+      <span id="page-info">1장</span>
+      <div class="spacer"></div>
+      <button type="button" class="btn primary" id="btn-save">이미지 저장</button>
+    </div>
+    <div id="stage"></div>
+  </section>
+</main>
+
+<div id="popover" class="popover" hidden></div>
+
+<div id="modal" class="modal" hidden>
+  <div class="modal-box">
+    <div class="modal-head">
+      <strong>완성된 이미지</strong>
+      <div class="spacer"></div>
+      <button type="button" class="btn" id="btn-dl-all">전부 다운로드</button>
+      <button type="button" class="btn ghost" id="btn-modal-close" aria-label="닫기">닫기</button>
+    </div>
+    <p class="hint">모바일에서는 이미지를 길게 눌러 저장할 수 있어요.</p>
+    <div id="modal-list" class="modal-list"></div>
+  </div>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="lib/html-to-image.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
