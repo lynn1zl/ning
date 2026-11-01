@@ -113,13 +113,24 @@
         <section class="pane" data-pane="canvas"><div data-fields="canvas"></div></section>
 
         <section class="pane" data-pane="skin">
-          <div class="section-title">스킨 예시</div>
-          <div class="chip-row" id="skin-presets"></div>
-          <div class="section-title">CSS 편집</div>
-          <div class="code-card">
-            <textarea id="skin-css" class="code" spellcheck="false" placeholder="/* 예시 */&#10;.card { --card-bg: #111; --text-color: #eee; }&#10;.msg-right .bubble { background: #ffe14d; }"></textarea>
+          <div class="section-title sec-head">
+            <span>HTML 배경</span>
+            <span class="sec-actions">
+              <button type="button" class="link-btn" id="btn-html-example">예시 넣기</button>
+              <button type="button" class="link-btn muted" id="btn-html-clear">비우기</button>
+            </span>
           </div>
-          <p class="footnote">CSS를 바로 쓰거나 <code>&lt;style&gt;</code> 태그가 들어간 HTML을 통째로 붙여넣어도 돼요. <code>@import</code>, <code>@font-face</code>로 외부 웹폰트도 쓸 수 있어요.</p>
+          <div class="code-card">
+            <textarea id="html-bg" class="code" spellcheck="false" placeholder="<style>&#10;  body { background: #e6f4fd; }&#10;  .deco { position: absolute; top: 20px; right: 20px; }&#10;</style>&#10;<div class=&quot;deco&quot;>★</div>"></textarea>
+          </div>
+          <p class="html-status" id="html-bg-status"></p>
+          <p class="footnote">다른 발췌기에서 쓰던 <code>&lt;style&gt;</code> + HTML 배경 코드를 그대로 붙여넣으면 돼요. <code>body</code>가 카드 한 장 크기이고, 글과 말풍선 뒤에 깔려요. 글 위에 보여야 하는 장식에는 <code>data-layer="top"</code>을 넣어 주세요. 스크립트는 실행되지 않아요.</p>
+          <div class="section-title">CSS 스킨</div>
+          <div class="chip-row" id="skin-presets"></div>
+          <div class="code-card" style="margin-top: 10px">
+            <textarea id="skin-css" class="code" spellcheck="false" placeholder="/* 예시 */&#10;.card { --card-bg: #111; --text-color: #eee; }&#10;.msg-right .bubble { --b-bg: #ffe14d; }"></textarea>
+          </div>
+          <p class="footnote">글 · 말풍선 · 제목 같은 요소의 모양을 CSS로 직접 바꿔요. <code>@import</code>, <code>@font-face</code>로 외부 웹폰트도 쓸 수 있어요.</p>
         </section>
 
       </div>

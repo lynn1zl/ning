@@ -141,10 +141,11 @@ const SAMPLE = `여우가 나타난 건 바로 그때였다.
 const DEFAULTS = {
   text: SAMPLE,
   title: '어린 왕자',
-  credit: '— 앙투안 드 생텍쥐페리',
+  credit: '『어린 왕자』 중에서',
+  creator: '앙투안 드 생텍쥐페리',
   parse: { auto: true, formats: ['dq', 'sq', 'corner', 'wcorner'], custom: [], mode: 'marked', inline: false, strip: true, nameless: 'none', blank: 'para' },
   typo: { font: 'Noto Serif KR', fontCustom: '', size: 13.5, lh: 1.7, ls: -0.005, weight: 400, color: '#2a2826', align: 'left', paraMode: 'gap', gap: 10, indent: 1, hl: '#ffe58a', hlStyle: 'under' },
-  head: { font: 'Noto Serif KR', fontCustom: '', size: 17, weight: 700, color: '#1d1c1a', align: 'left', creditSize: 10.5, creditColor: '#8a857c', creditAlign: 'right', quoteMark: false, accent: '#c8a46a' },
+  head: { font: 'Noto Serif KR', fontCustom: '', size: 17, weight: 700, color: '#1d1c1a', align: 'left', creditFont: 'Noto Serif KR', creditFontCustom: '', creditSize: 10.5, creditWeight: 400, creditColor: '#8a857c', creatorFont: 'Noto Serif KR', creatorFontCustom: '', creatorSize: 10.5, creatorWeight: 700, creatorColor: '#6b665e', creditAlign: 'right', creditLayout: 'inline', quoteMark: false, accent: '#c8a46a' },
   bubble: {
     speech: 'round', tail: true, side: 'left',
     font: 'Pretendard', fontCustom: '', size: 13, lh: 1.55, ls: 0, weight: 400,
@@ -158,6 +159,7 @@ const DEFAULTS = {
   ],
   overrides: {},
   skin: '',
+  bgHtml: '',
 };
 
 const SKINS = {
@@ -427,6 +429,13 @@ function migrate(st, raw) {
     if (raw.parse.quotes === false) st.parse.auto = false;
     if (raw.parse.parens) st.parse.formats = [...st.parse.formats, 'paren'];
   }
+  // 이전 버전: 출처가 한 칸이고 제목 서체를 썼음 → 제작자 서체 · 색도 맞춰 줌
+  if (raw && raw.head && !('creditFont' in raw.head)) {
+    Object.assign(st.head, { creditFont: st.head.font, creditFontCustom: st.head.fontCustom, creatorFont: st.head.font, creatorFontCustom: st.head.fontCustom, creatorColor: st.head.creditColor, creatorSize: st.head.creditSize });
+  }
+  if (raw && !('creator' in raw)) st.creator = '';
+  // 이전 버전: 다른 발췌기용 HTML 배경을 CSS 스킨 칸에 넣었던 경우 옮겨 줌
+  if (st.skin && !st.bgHtml && looksLikeHtmlBg(st.skin)) { st.bgHtml = st.skin; st.skin = ''; }
   return st;
 }
 
@@ -537,6 +546,8 @@ function ensureFonts() {
   ensureFont(fontName(state.typo.font, state.typo.fontCustom));
   ensureFont(fontName(state.bubble.font, state.bubble.fontCustom));
   ensureFont(fontName(state.head.font, state.head.fontCustom));
+  ensureFont(fontName(state.head.creditFont, state.head.creditFontCustom));
+  ensureFont(fontName(state.head.creatorFont, state.head.creatorFontCustom));
 }
 
 /* 글꼴 목록 미리보기용: 라벨 글자만 담은 작은 폰트를 따로 불러옴 */
@@ -787,8 +798,14 @@ function genCSS() {
   --title-weight: ${hd.weight};
   --title-color: ${hd.color};
   --title-align: ${hd.align};
+  --credit-font: ${fontStack(hd.creditFont, hd.creditFontCustom)};
   --credit-size: ${hd.creditSize}px;
+  --credit-weight: ${hd.creditWeight};
   --credit-color: ${hd.creditColor};
+  --creator-font: ${fontStack(hd.creatorFont, hd.creatorFontCustom)};
+  --creator-size: ${hd.creatorSize}px;
+  --creator-weight: ${hd.creatorWeight};
+  --creator-color: ${hd.creatorColor};
   --credit-align: ${hd.creditAlign};
 }`;
   const bg = backgroundCSS(c);
@@ -862,6 +879,121 @@ const GRADIENTS = [
   ['#2b2b33', '#121216', 160], ['#0f2027', '#2c5364', 160], ['#3a1c71', '#d76d77', 135], ['#141e30', '#243b55', 180],
 ];
 
+/* HTML 배경: <style> + 장식 HTML을 카드 크기의 별도 문서로 그려 카드 뒤(와 data-layer="top"은 위)에 깔기
+   - 다른 발췌기(Chat2Img 등)의 배경 코드와 같은 방식: body가 카드 한 장 크기 */
+function looksLikeHtmlBg(code) {
+  if (!code || !/<[a-z]/i.test(code)) return false;
+  const withoutStyle = code.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+  if (/<(?!\/?style\b)[a-z][\s\S]*?>/i.test(withoutStyle)) return true; // 장식용 HTML 요소
+  const css = [...code.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map((m) => m[1]).join('\n');
+  return /(^|[\s,}])(html|body)\s*[,{.:#\[]/i.test(css); // body · html 규칙
+}
+
+const htmlBg = { cache: new Map(), status: '' };
+const blobToDataURL = (blob) => readFileAsDataURL(blob);
+async function inlineUrl(u, base) {
+  if (!u || /^(data:|#)/i.test(u)) return u;
+  try {
+    const abs = new URL(u, base || location.href).href;
+    const r = await fetch(abs);
+    if (!r.ok) return u;
+    return await blobToDataURL(await r.blob());
+  } catch (e) { return u; }
+}
+async function inlineCssUrls(css, base) {
+  const urls = [...new Set([...css.matchAll(/url\(\s*(['"]?)([^'")]+)\1\s*\)/g)].map((m) => m[2]))];
+  const map = new Map(await Promise.all(urls.map(async (u) => [u, await inlineUrl(u, base)])));
+  return css.replace(/url\(\s*(['"]?)([^'")]+)\1\s*\)/g, (m, q, u) => `url("${map.get(u) || u}")`);
+}
+// @import 한 단계 펼치기 (웹폰트는 HTML 안 글자에 쓰이는 조각만)
+async function expandImports(css, text) {
+  const codes = new Set([...(text || '')].map((c) => c.codePointAt(0)));
+  const re = /@import\s+(?:url\()?\s*['"]?([^'")\s;]+)['"]?\s*\)?[^;]*;/g;
+  const found = [...css.matchAll(re)];
+  let out = css;
+  for (const m of found) {
+    let inner = '';
+    try {
+      const r = await fetch(new URL(m[1], location.href).href);
+      if (r.ok) {
+        inner = await r.text();
+        inner = inner.replace(/@font-face\s*{[^}]*}/g, (face) => {
+          const ur = (face.match(/unicode-range:\s*([^;}]+)/) || [])[1];
+          if (!ur) return codes.size ? face : '';
+          const ranges = parseRanges(ur);
+          return [...codes].some((c) => ranges.some(([a, b]) => c >= a && c <= b)) ? face : '';
+        });
+        inner = await inlineCssUrls(inner, m[1]);
+      }
+    } catch (e) { inner = ''; }
+    out = out.replace(m[0], inner);
+  }
+  return out;
+}
+
+async function buildHtmlBgURL(html, w, h, layer) {
+  const doc = new DOMParser().parseFromString(html || '', 'text/html');
+  doc.querySelectorAll('script, iframe, object, embed, meta, base, link:not([rel="stylesheet"])').forEach((el) => el.remove());
+  const text = doc.body ? doc.body.textContent : '';
+  // <link rel=stylesheet> → <style>
+  for (const link of doc.querySelectorAll('link[rel="stylesheet"]')) {
+    const st = doc.createElement('style');
+    st.textContent = `@import url("${link.getAttribute('href')}");`;
+    link.replaceWith(st);
+  }
+  for (const st of doc.querySelectorAll('style')) st.textContent = await inlineCssUrls(await expandImports(st.textContent, text));
+  for (const el of doc.querySelectorAll('[style]')) el.setAttribute('style', await inlineCssUrls(el.getAttribute('style')));
+  for (const img of doc.querySelectorAll('img[src]')) img.setAttribute('src', await inlineUrl(img.getAttribute('src')));
+  const baseStyle = doc.createElement('style');
+  baseStyle.textContent = `html,body{margin:0;padding:0;width:${w}px;height:${h}px;overflow:hidden;}body{position:relative;font-family:"Pretendard",sans-serif;}*{box-sizing:border-box;}`;
+  doc.head.insertBefore(baseStyle, doc.head.firstChild);
+  const layerStyle = doc.createElement('style');
+  layerStyle.textContent = layer === 'top'
+    ? 'html,body{background:transparent !important;}body *{visibility:hidden !important;}[data-layer="top"],[data-layer="top"] *{visibility:visible !important;}'
+    : '[data-layer="top"]{visibility:hidden !important;}';
+  doc.head.appendChild(layerStyle);
+  const xhtml = new XMLSerializer().serializeToString(doc.documentElement);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><foreignObject x="0" y="0" width="${w}" height="${h}">${xhtml}</foreignObject></svg>`;
+  const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  await new Promise((res, rej) => { const im = new Image(); im.onload = res; im.onerror = () => rej(new Error('draw')); im.src = url; });
+  return url;
+}
+function htmlBgURL(w, h, layer) {
+  const key = `${layer}|${w}x${h}|${state.bgHtml}`;
+  if (!htmlBg.cache.has(key)) {
+    if (htmlBg.cache.size > 24) htmlBg.cache.clear();
+    htmlBg.cache.set(key, buildHtmlBgURL(state.bgHtml, w, h, layer));
+  }
+  return htmlBg.cache.get(key);
+}
+function setHtmlStatus(msg, bad) {
+  htmlBg.status = msg;
+  const el = $('#html-bg-status');
+  if (el) { el.textContent = msg; el.classList.toggle('bad', !!bad); }
+}
+let htmlBgSeq = 0;
+function applyHtmlBg(pages) {
+  const code = (state.bgHtml || '').trim();
+  if (!code) { setHtmlStatus(''); return Promise.resolve(); }
+  const hasTop = /data-layer\s*=\s*["']?top/i.test(code);
+  const seq = ++htmlBgSeq;
+  setHtmlStatus('그리는 중…');
+  return Promise.all(pages.map(async (p) => {
+    const w = p.card.offsetWidth, hgt = p.card.offsetHeight;
+    const [base, top] = await Promise.all([htmlBgURL(w, hgt, 'base'), hasTop ? htmlBgURL(w, hgt, 'top') : null]);
+    if (seq !== htmlBgSeq) return;
+    p.bgImg.src = base; p.bgImg.hidden = false;
+    if (top) { p.topImg.src = top; p.topImg.hidden = false; }
+    return `${w} × ${hgt}px`;
+  })).then((sizes) => {
+    if (seq === htmlBgSeq) setHtmlStatus(`적용됨 · 카드 크기 ${[...new Set(sizes)].join(', ')}`);
+  }).catch((e) => {
+    console.warn(e);
+    if (seq === htmlBgSeq) setHtmlStatus('HTML을 그리지 못했어요. 닫는 태그나 따옴표를 확인해 주세요.', true);
+  });
+}
+let htmlBgReady = Promise.resolve();
+
 function applySkin() {
   const src = state.skin || '';
   const styles = [...src.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map((m) => m[1]);
@@ -922,21 +1054,30 @@ function newPage(idx, W, H) {
   card.style.width = W + 'px';
   if (H) card.style.height = H + 'px';
   card.append(h('div', { class: 'card-overlay' }));
+  const bgImg = h('img', { class: 'card-htmlbg', alt: '', hidden: true, 'aria-hidden': 'true' });
+  const topImg = h('img', { class: 'card-htmltop', alt: '', hidden: true, 'aria-hidden': 'true' });
+  card.append(bgImg);
   if (idx === 0 && state.head.quoteMark) card.append(h('div', { class: 'quote-mark', 'aria-hidden': 'true' }, '“'));
   if (idx === 0 && state.title.trim()) card.append(h('h2', { class: 'card-title', html: fmt(state.title) }));
   const content = h('div', { class: 'card-content' });
   const flow = h('div', { class: 'flow' });
   content.append(flow);
   card.append(content);
-  if (state.credit.trim() || state.canvas.pageNum) {
+  const work = (state.credit || '').trim(), author = (state.creator || '').trim();
+  if (work || author || state.canvas.pageNum) {
     const foot = h('div', { class: 'card-footer' });
-    foot.append(h('div', { class: 'credit', html: fmt(state.credit) }));
+    const credit = h('div', { class: `credit credit-${state.head.creditLayout}` });
+    if (work) credit.append(h('span', { class: 'credit-work', html: fmt(work) }));
+    if (work && author && state.head.creditLayout === 'inline') credit.append(h('span', { class: 'credit-sep' }, ' · '));
+    if (author) credit.append(h('span', { class: 'credit-author', html: fmt(author) }));
+    foot.append(credit);
     if (state.canvas.pageNum) foot.append(h('span', { class: 'page-num' }, '0 / 0'));
     card.append(foot);
   }
+  card.append(topImg);
   const label = h('div', { class: 'page-label' });
   const wrap = h('div', { class: 'page-wrap' }, label, card);
-  return { wrap, card, content, flow, label };
+  return { wrap, card, content, flow, label, bgImg, topImg };
 }
 
 /* 문단이 페이지 끝에 걸리면 줄 단위로 나눠 다음 장으로 이어 붙임
@@ -1076,6 +1217,7 @@ function render() {
     cardObserver.disconnect();
     pages.forEach((p) => cardObserver.observe(p.card));
   }
+  htmlBgReady = applyHtmlBg(pages);
   rescale();
   stage.scrollTop = scrollTop;
 }
@@ -1186,7 +1328,8 @@ const SCHEMA = {
     ] },
     { sec: '제목 · 출처', rows: [
       { t: 'text', p: 'title', l: '제목', ph: '비워두면 표시하지 않아요' },
-      { t: 'text', p: 'credit', l: '출처 · 서명', ph: '예) @내계정 · 2026.11.01' },
+      { t: 'text', p: 'credit', l: '출처 · 작품명', ph: '예) 채팅방 이름 · 날짜' },
+      { t: 'text', p: 'creator', l: '출처 · 제작자', ph: '예) @내계정' },
     ] },
   ],
   bubble: [
@@ -1248,9 +1391,20 @@ const SCHEMA = {
       { t: 'switch', p: 'head.quoteMark', l: '장식 따옴표', sub: '첫 장 위에 큰 따옴표를 넣어요' },
       { t: 'color', p: 'head.accent', l: '장식 색', when: () => state.head.quoteMark },
     ] },
-    { sec: '출처', rows: [
-      { t: 'slider', p: 'head.creditSize', l: '크기', min: 8, max: 28, step: 0.5, u: 'px' , pt: true },
+    { sec: '출처 · 작품명', rows: [
+      { t: 'font', p: 'head.creditFont', c: 'head.creditFontCustom' },
+      { t: 'slider', p: 'head.creditSize', l: '크기', min: 8, max: 28, step: 0.5, u: 'px', pt: true },
+      { t: 'select', p: 'head.creditWeight', l: '굵기', o: WEIGHTS, num: true },
       { t: 'color', p: 'head.creditColor', l: '색' },
+    ] },
+    { sec: '출처 · 제작자', rows: [
+      { t: 'font', p: 'head.creatorFont', c: 'head.creatorFontCustom' },
+      { t: 'slider', p: 'head.creatorSize', l: '크기', min: 8, max: 28, step: 0.5, u: 'px', pt: true },
+      { t: 'select', p: 'head.creatorWeight', l: '굵기', o: WEIGHTS, num: true },
+      { t: 'color', p: 'head.creatorColor', l: '색' },
+    ] },
+    { sec: '출처 배치', rows: [
+      { t: 'seg', p: 'head.creditLayout', l: '배치', o: [['inline', '한 줄로'], ['stack', '두 줄로']] },
       { t: 'seg', p: 'head.creditAlign', l: '정렬', o: ALIGN3 },
     ] },
   ],
@@ -1545,18 +1699,55 @@ async function setImagePath(p, file) {
   } catch (e) { toast('이미지를 읽지 못했어요'); }
 }
 
+/* 접이식 섹션: 펼침 상태는 이 브라우저에만 기억 */
+const COLLAPSIBLE = { typo: true };
+const UI_KEY = 'ninining-ui';
+let uiState = (() => { try { return JSON.parse(localStorage.getItem(UI_KEY)) || {}; } catch (e) { return {}; } })();
+const saveUi = () => { try { localStorage.setItem(UI_KEY, JSON.stringify(uiState)); } catch (e) { /* 무시 */ } };
+function isOpen(pane, sec, idx) {
+  const o = (uiState.open || {})[pane];
+  return o && sec in o ? o[sec] : idx === 0;
+}
+
 function buildFields() {
   conditions = [];
   for (const [key, secs] of Object.entries(SCHEMA)) {
     const box = $(`[data-fields="${key}"]`);
     box.innerHTML = '';
-    for (const s of secs) {
-      box.append(h('div', { class: 'section-title' }, s.sec));
-      box.append(h('div', { class: 'section' }, s.rows.map(fieldEl)));
-      if (s.note) box.append(h('p', { class: 'footnote' }, s.note));
+    secs.forEach((s, idx) => {
+      const body = [h('div', { class: 'section' }, s.rows.map(fieldEl)), s.note ? h('p', { class: 'footnote' }, s.note) : null];
+      if (!COLLAPSIBLE[key]) {
+        box.append(h('div', { class: 'section-title' }, s.sec), ...body.filter(Boolean));
+        return;
+      }
+      const open = isOpen(key, s.sec, idx);
+      const wrap = h('div', { class: 'sec-body' + (open ? ' open' : '') }, ...body.filter(Boolean));
+      const btn = h('button', { type: 'button', class: 'sec-toggle' + (open ? ' open' : ''), 'aria-expanded': open ? 'true' : 'false' },
+        h('span', {}, s.sec), h('span', { class: 'sec-chev', html: icon('chevdown') }));
+      btn.addEventListener('click', () => {
+        const now = !wrap.classList.contains('open');
+        wrap.classList.toggle('open', now);
+        btn.classList.toggle('open', now);
+        btn.setAttribute('aria-expanded', now ? 'true' : 'false');
+        uiState.open = uiState.open || {};
+        uiState.open[key] = { ...(uiState.open[key] || {}), [s.sec]: now };
+        saveUi();
+      });
+      box.append(btn, wrap);
+    });
+    if (COLLAPSIBLE[key]) {
+      box.prepend(h('div', { class: 'sec-tools' },
+        h('button', { type: 'button', class: 'link-btn', onclick: () => setAllSections(key, true) }, '모두 펼치기'),
+        h('button', { type: 'button', class: 'link-btn muted', onclick: () => setAllSections(key, false) }, '모두 접기')));
     }
   }
   refreshConditions();
+}
+function setAllSections(key, open) {
+  uiState.open = uiState.open || {};
+  uiState.open[key] = Object.fromEntries(SCHEMA[key].map((s) => [s.sec, open]));
+  saveUi();
+  buildFields();
 }
 
 /* =========================================================
@@ -1973,7 +2164,7 @@ function buildQuickInsert() {
 }
 
 /* 내 양식: 디자인 · 대사 인식 설정을 저장/불러오기 (글은 제외) */
-const STYLE_KEYS = ['typo', 'head', 'bubble', 'canvas', 'parse', 'skin'];
+const STYLE_KEYS = ['typo', 'head', 'bubble', 'canvas', 'parse', 'skin', 'bgHtml'];
 let myStyles = [];
 
 function styleSnapshot(name, withChars) {
@@ -1986,7 +2177,7 @@ function applyStyle(st) {
   const data = st.data || st; // 전체 설정 파일도 받기
   for (const k of STYLE_KEYS) {
     if (!(k in data)) continue;
-    state[k] = k === 'skin' ? data.skin || '' : deepMerge(copyState(DEFAULTS[k]), data[k]);
+    state[k] = k === 'skin' || k === 'bgHtml' ? data[k] || '' : deepMerge(copyState(DEFAULTS[k]), data[k]);
   }
   if (Array.isArray(data.chars)) state.chars = copyState(data.chars);
   commit(); rebuildAll(); save();
@@ -2110,6 +2301,11 @@ function applyTemplate(t) {
   }
   Object.assign(state.canvas, keep);
   for (const k of ['ratio', 'fit', 'pageNum']) if (t.set.canvas && k in t.set.canvas) state.canvas[k] = t.set.canvas[k];
+  const th = (t.set && t.set.head) || {};
+  if (th.font && !th.creditFont) Object.assign(state.head, { creditFont: th.font, creatorFont: th.font });
+  if (th.creditColor && !th.creatorColor) state.head.creatorColor = th.creditColor;
+  if (th.creditSize && !th.creatorSize) state.head.creatorSize = th.creditSize;
+  if (th.creditAlign) state.head.creditAlign = th.creditAlign;
   state.skin = t.skin || '';
   state.chars.forEach((c, i) => {
     if (t.chars) {
@@ -2274,12 +2470,49 @@ function buildSkin() {
   chip('없음', '');
   for (const s of Object.values(SKINS)) chip(s.name, s.css);
   $('#skin-css').value = state.skin;
+  $('#html-bg').value = state.bgHtml || '';
+  setHtmlStatus(htmlBg.status);
 }
 let skinTimer;
 $('#skin-css').addEventListener('input', (e) => {
   state.skin = e.target.value;
   clearTimeout(skinTimer);
-  skinTimer = setTimeout(() => { applySkin(); changed(); }, 250);
+  skinTimer = setTimeout(() => {
+    // 다른 발췌기용 배경 코드(body 규칙 · 장식 HTML)는 HTML 배경으로 옮겨서 그림
+    if (looksLikeHtmlBg(state.skin)) {
+      state.bgHtml = state.skin;
+      state.skin = '';
+      $('#skin-css').value = '';
+      $('#html-bg').value = state.bgHtml;
+      toast('다른 발췌기용 배경 코드라서 ‘HTML 배경’으로 옮겨 적용했어요', { label: '되돌리기', fn: undo }, 3600);
+    }
+    applySkin(); changed();
+  }, 250);
+});
+let htmlTimer;
+$('#html-bg').addEventListener('input', (e) => {
+  state.bgHtml = e.target.value;
+  clearTimeout(htmlTimer);
+  htmlTimer = setTimeout(changed, 300);
+});
+$('#btn-html-example').addEventListener('click', () => {
+  if (state.bgHtml.trim() && !confirm('지금 HTML 배경을 예시로 바꿀까요?')) return;
+  state.bgHtml = `<style>
+  body { background: linear-gradient(160deg, #fdf6ec, #f3e7d9); }
+  .frame { position: absolute; inset: 14px; border: 1.5px solid rgba(120, 90, 60, .35); border-radius: 18px; }
+  .star { position: absolute; font-size: 22px; color: #e7b84a; }
+</style>
+<div class="frame"></div>
+<div class="star" style="top: 22px; right: 28px;" data-layer="top">★</div>`;
+  $('#html-bg').value = state.bgHtml;
+  changed();
+});
+$('#btn-html-clear').addEventListener('click', () => {
+  if (!state.bgHtml.trim()) return;
+  state.bgHtml = '';
+  $('#html-bg').value = '';
+  changed();
+  toast('HTML 배경을 비웠어요', { label: '되돌리기', fn: undo });
 });
 $('#skin-css').addEventListener('keydown', (e) => {
   if (e.key === 'Tab' && !e.shiftKey) {
@@ -2460,6 +2693,7 @@ async function makeImages(indices, onProgress) {
   editingKey = null;
   $$('#stage .msg.editing').forEach((m) => m.classList.remove('editing'));
   await document.fonts.ready;
+  await htmlBgReady;
   const all = $$('#stage .card');
   const cards = indices ? indices.map((i) => all[i]).filter(Boolean) : all;
   const fontCSS = await buildFontEmbedCSS(cards);

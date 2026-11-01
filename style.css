@@ -956,6 +956,17 @@ textarea.code {
   line-height: 1.5;
 }
 .credit { flex: 1; text-align: var(--credit-align); word-break: keep-all; }
+.credit-work { font-family: var(--credit-font); font-size: var(--credit-size); font-weight: var(--credit-weight); color: var(--credit-color); }
+.credit-author { font-family: var(--creator-font); font-size: var(--creator-size); font-weight: var(--creator-weight); color: var(--creator-color); }
+.credit-sep { color: var(--credit-color); opacity: .7; }
+.credit-stack .credit-work, .credit-stack .credit-author { display: block; }
+.credit-stack .credit-author { margin-top: .2em; }
+.card > .card-htmlbg, .card > .card-htmltop {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  pointer-events: none; user-select: none; display: block;
+}
+.card > .card-htmltop { z-index: 5; }
+.card > .card-htmlbg[hidden], .card > .card-htmltop[hidden] { display: none; }
 .page-num { flex: none; opacity: .8; font-variant-numeric: tabular-nums; }
 
 /* 말풍선 */
@@ -1250,3 +1261,30 @@ textarea.code {
   box-shadow: inset 0 0 0 1px var(--hair);
 }
 .bulk-chip.skip { color: var(--text-3); text-decoration: line-through; text-decoration-color: var(--text-4); }
+
+/* 접이식 섹션 (서체) */
+.sec-tools { display: flex; justify-content: flex-end; gap: 2px; padding: 14px 0 0; }
+.sec-toggle {
+  display: flex; align-items: center; justify-content: space-between; width: 100%;
+  margin-top: 10px; padding: 15px 16px;
+  border: 0; border-radius: var(--r-lg);
+  background: var(--surface); color: var(--text);
+  font-size: 15px; font-weight: 700; text-align: left;
+  transition: border-radius .2s var(--ease), background-color .15s;
+}
+.sec-toggle:hover { background: var(--fill); }
+.sec-toggle.open { border-radius: var(--r-lg) var(--r-lg) 0 0; }
+.sec-chev { color: var(--text-3); display: grid; transition: transform .2s var(--ease); }
+.sec-chev svg { width: 18px; height: 18px; }
+.sec-toggle.open .sec-chev { transform: rotate(180deg); }
+.sec-body { display: none; }
+.sec-body.open { display: block; animation: fade-in .18s var(--ease); }
+.sec-body > .section { border-radius: 0 0 var(--r-lg) var(--r-lg); border-top: 1px solid var(--hair); }
+.sec-body > .footnote { padding-bottom: 4px; }
+
+/* 스킨 탭 */
+.sec-head { display: flex; align-items: center; justify-content: space-between; }
+.sec-actions { display: flex; gap: 2px; }
+.html-status { margin: 8px 6px 0; font-size: 12.5px; color: #0e8a4f; font-weight: 600; min-height: 1em; }
+.html-status:empty { display: none; }
+.html-status.bad { color: var(--danger); }
