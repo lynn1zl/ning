@@ -1072,3 +1072,70 @@ textarea.code {
 .shape-minimal.msg-center .bubble { border-left: 0; padding: 2px 0; }
 .shape-plain .bubble { background: none; border: 0; box-shadow: none; padding: 0; border-radius: 0; }
 .shape-plain.msg-right .bubble { text-align: right; }
+
+/* =========================================================
+   대사 인식 · 내 양식 · 저장 폴더
+   ========================================================= */
+.auto-card { background: var(--accent-soft); }
+.auto-card .row-label strong { font-size: 15px; font-weight: 700; color: var(--text); }
+.auto-card .row-label small { color: var(--text-2); }
+.fmt-chips { gap: 6px; }
+.fchip {
+  display: inline-flex; align-items: center; gap: 4px;
+  border: 0; border-radius: 10px;
+  background: var(--fill); color: var(--text-2);
+  padding: 7px 11px;
+  font-size: 13.5px; font-weight: 600; font-family: var(--ui-font);
+  box-shadow: inset 0 0 0 1.5px transparent;
+  transition: background-color .15s, color .15s, box-shadow .15s, transform .12s var(--ease);
+}
+.fchip:active { transform: scale(.96); }
+.fchip.on { background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.fchip.custom { padding-right: 4px; }
+.fchip.custom button { border: 0; background: none; color: inherit; width: 20px; height: 20px; display: grid; place-items: center; border-radius: 6px; padding: 0; }
+.fchip.custom button svg { width: 13px; height: 13px; }
+.sym-row { display: flex; align-items: center; gap: 6px; }
+.sym-row .input.sym { width: 64px; text-align: center; padding: 9px 6px; font-size: 16px; }
+.sym-mid { color: var(--text-3); font-size: 13px; }
+.sym-row .btn { margin-left: auto; }
+.link-btn.danger { color: var(--danger); }
+.link-btn.danger:hover { background: rgba(240, 68, 82, .1); }
+.link-btn.muted { color: var(--text-3); }
+.narr.was-bubble { cursor: pointer; }
+.page-wrap .narr.was-bubble:hover { outline: 2px dashed rgba(49, 130, 246, .45); outline-offset: 3px; }
+.page-pick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.style-save { display: flex; gap: 8px; }
+.style-save .btn { height: 46px; padding: 0 18px; }
+.style-opt { display: flex; align-items: center; gap: 10px; font-size: 13.5px; color: var(--text-2); cursor: pointer; }
+.switch.sm { width: 40px; height: 24px; }
+.switch.sm::before { width: 20px; height: 20px; }
+.switch.sm:checked::before { transform: translateX(16px); }
+.style-row { padding: 8px 8px 8px 12px; }
+.style-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; border: 0; background: none; text-align: left; padding: 4px; border-radius: 12px; }
+.style-main:hover { background: var(--fill); }
+.style-main .row-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.style-sw {
+  width: 40px; height: 40px; border-radius: 10px; flex: none;
+  display: grid; place-items: center; font-size: 18px;
+  box-shadow: inset 0 0 0 1px var(--hair);
+}
+.style-tools { display: flex; }
+.style-files { gap: 8px; justify-content: flex-start; flex-wrap: wrap; }
+.row.empty { min-height: 64px; }
+.folder-line {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  margin: 0 24px; padding: 12px 14px;
+  background: var(--fill); border-radius: 12px;
+  font-size: 13.5px; color: var(--text-2);
+}
+.folder-line b { color: var(--text); }
+.folder-line .folder-ico { color: var(--text-3); display: grid; }
+.folder-line .folder-ico svg { width: 18px; height: 18px; }
+.folder-line .link-btn:first-of-type { margin-left: auto; }
+#btn-copy { height: 40px; }
+@media (max-width: 900px) {
+  #btn-copy { height: 36px; width: 36px; padding: 0; border-radius: 11px; }
+  #btn-copy .btn-label { display: none; }
+  .folder-line { margin: 0 16px; }
+  .sym-row .input.sym { width: 56px; }
+}

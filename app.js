@@ -27,6 +27,8 @@ const ICONS = {
   up: '<path d="m6 15 6-6 6 6"/>',
   down: '<path d="m6 9 6 6 6-6"/>',
   chevron: '<path d="m9 6 6 6-6 6"/>',
+  folder: '<path d="M3.5 7.5A2 2 0 0 1 5.5 5.5h3.6l2 2h7.4a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/>',
+  refresh: '<path d="M19 12a7 7 0 1 1-2.05-4.95M19 4.5V8h-3.5"/>',
   image: '<rect x="4" y="5" width="16" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="m5 17 4.5-4.5 3 3L15 13l4 4"/>',
 };
 const icon = (n) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ''}</svg>`;
@@ -120,14 +122,14 @@ const DEFAULTS = {
   text: SAMPLE,
   title: '비 갠 오후',
   credit: '— 「작은 찻집」 중에서',
-  parse: { quotes: true, parens: true, inline: false, strip: true, nameless: 'none', blank: 'para' },
-  typo: { font: 'Noto Serif KR', fontCustom: '', size: 16.5, lh: 1.75, ls: -0.015, weight: 400, color: '#2a2826', align: 'left', paraMode: 'gap', gap: 14, indent: 1, hl: '#ffe58a' },
-  head: { font: 'Noto Serif KR', fontCustom: '', size: 22, weight: 700, color: '#1d1c1a', align: 'left', creditSize: 12.5, creditColor: '#8a857c', creditAlign: 'right', quoteMark: false, accent: '#c8a46a' },
+  parse: { auto: true, formats: ['dq', 'sq', 'corner', 'wcorner'], custom: [], mode: 'marked', inline: false, strip: true, nameless: 'none', blank: 'para' },
+  typo: { font: 'Noto Serif KR', fontCustom: '', size: 15, lh: 1.75, ls: -0.015, weight: 400, color: '#2a2826', align: 'left', paraMode: 'gap', gap: 12, indent: 1, hl: '#ffe58a' },
+  head: { font: 'Noto Serif KR', fontCustom: '', size: 20, weight: 700, color: '#1d1c1a', align: 'left', creditSize: 11.5, creditColor: '#8a857c', creditAlign: 'right', quoteMark: false, accent: '#c8a46a' },
   bubble: {
-    speech: 'round', thought: 'thought', tail: true, side: 'left',
-    font: 'Pretendard', fontCustom: '', size: 15, lh: 1.6, ls: -0.01, weight: 400,
-    bg: '#ffffff', color: '#222222', border: '#2b2a27', bw: 0, radius: 18, px: 16, py: 10, maxw: 78, shadow: true, gap: 16,
-    avatar: true, avatarSize: 44, avatarShape: 'circle', showName: true, nameSize: 12, nameColor: '#6b665e',
+    speech: 'round', tail: true, side: 'left',
+    font: 'Pretendard', fontCustom: '', size: 14, lh: 1.6, ls: -0.01, weight: 400,
+    bg: '#ffffff', color: '#222222', border: '#2b2a27', bw: 0, radius: 16, px: 14, py: 9, maxw: 78, shadow: true, gap: 14,
+    avatar: true, avatarSize: 38, avatarShape: 'circle', showName: true, nameSize: 11, nameColor: '#6b665e',
   },
   canvas: { ratio: '4:5', width: 540, pad: 48, bgType: 'solid', bg: '#f7f3ea', bg2: '#e6dcc8', gradType: 'linear', gradAngle: 160, pattern: 'dots', patColor: '#8a7f6a', patOpacity: 0.22, patSize: 18, bgImage: '', overlay: 0, overlayColor: '#000000', valign: 'flex-start', fit: false, paginate: true, pageNum: false, scale: 2 },
   chars: [
@@ -221,21 +223,21 @@ const TEMPLATES = [
   },
   {
     id: 'book', name: '책 페이지', sub: '고운바탕 · 들여쓰기 · 2:3', pv: { bg: '#fbfaf6', fg: '#2a2826', book: true },
-    set: { typo: { font: 'Gowun Batang', size: 15.5, lh: 1.8, ls: -0.01, align: 'justify', paraMode: 'indent', indent: 1, color: '#262422' }, head: { font: 'Gowun Batang', size: 19, align: 'center', color: '#262422', creditColor: '#8f8a80', creditAlign: 'center', creditSize: 11.5 }, bubble: { speech: 'plain', thought: 'plain', font: 'Gowun Batang', size: 15.5, lh: 1.8, avatar: false, showName: false, gap: 0 }, canvas: { bg: '#fbfaf6', ratio: '2:3', pad: 52, valign: 'flex-start', pageNum: true } },
+    set: { typo: { font: 'Gowun Batang', size: 14.5, lh: 1.8, ls: -0.01, align: 'justify', paraMode: 'indent', indent: 1, color: '#262422' }, head: { font: 'Gowun Batang', size: 18, align: 'center', color: '#262422', creditColor: '#8f8a80', creditAlign: 'center', creditSize: 11.5 }, bubble: { speech: 'plain', font: 'Gowun Batang', size: 14.5, lh: 1.8, avatar: false, showName: false, gap: 0 }, canvas: { bg: '#fbfaf6', ratio: '2:3', pad: 52, valign: 'flex-start', pageNum: true } },
     parse: { strip: false }, chars: null, charSide: 'left',
   },
   {
     id: 'quote', name: '인용 카드', sub: '송명 · 1:1 · 큰 따옴표', pv: { bg: '#f4efe6', fg: '#3a3229', q: '#b08d57', center: true },
-    set: { typo: { font: 'Song Myung', size: 21, lh: 1.85, align: 'center', color: '#3a3229' }, head: { font: 'Song Myung', size: 20, align: 'center', color: '#3a3229', creditColor: '#9a8b76', creditAlign: 'center', quoteMark: true, accent: '#b08d57' }, bubble: { speech: 'plain', thought: 'plain', font: 'Song Myung', size: 19, avatar: false, showName: false, side: 'center' }, canvas: { bg: '#f4efe6', ratio: '1:1', pad: 64, fit: true, valign: 'center' } },
+    set: { typo: { font: 'Song Myung', size: 21, lh: 1.85, align: 'center', color: '#3a3229' }, head: { font: 'Song Myung', size: 20, align: 'center', color: '#3a3229', creditColor: '#9a8b76', creditAlign: 'center', quoteMark: true, accent: '#b08d57' }, bubble: { speech: 'plain', font: 'Song Myung', size: 19, avatar: false, showName: false, side: 'center' }, canvas: { bg: '#f4efe6', ratio: '1:1', pad: 64, fit: true, valign: 'center' } },
     chars: null, charSide: 'center',
   },
   {
     id: 'note', name: '손글씨 노트', sub: '나눔손글씨 펜 · 줄 노트', pv: { bg: '#fffdf6', fg: '#2f3b52', b1: '#ffffff', b2: '#fff3bf', lines: true, outline: '#9fb0c6' },
-    set: { typo: { font: 'Nanum Pen Script', size: 24, lh: 1.25, color: '#2f3b52', gap: 0, ls: 0 }, head: { font: 'Nanum Pen Script', size: 34, color: '#2f3b52', creditColor: '#7b8799', creditSize: 18 }, bubble: { speech: 'outline', font: 'Gaegu', size: 16, border: '#9fb0c6', bw: 1.5, shadow: false, nameColor: '#7b8799' }, canvas: { bg: '#fffdf6', bgType: 'pattern', pattern: 'lines', patColor: '#9fb6d0', patOpacity: 0.45, patSize: 30 } }, chars: [['#ffffff', '#2f3b52', '#9fb0c6'], ['#fff3bf', '#2f3b52', '#e6c84f']],
+    set: { typo: { font: 'Nanum Pen Script', size: 22, lh: 1.36, color: '#2f3b52', gap: 0, ls: 0 }, head: { font: 'Nanum Pen Script', size: 34, color: '#2f3b52', creditColor: '#7b8799', creditSize: 18 }, bubble: { speech: 'outline', font: 'Gaegu', size: 15, border: '#9fb0c6', bw: 1.5, shadow: false, nameColor: '#7b8799' }, canvas: { bg: '#fffdf6', bgType: 'pattern', pattern: 'lines', patColor: '#9fb6d0', patOpacity: 0.45, patSize: 30 } }, chars: [['#ffffff', '#2f3b52', '#9fb0c6'], ['#fff3bf', '#2f3b52', '#e6c84f']],
   },
   {
     id: 'film', name: '영화 자막', sub: '16:9 · 검은 화면', pv: { bg: '#000000', fg: '#9a9a9a', film: true },
-    set: { typo: { font: 'Noto Sans KR', color: '#d8d8d8', size: 15 }, head: { font: 'Noto Sans KR', color: '#ffffff', creditColor: '#777777', align: 'center', creditAlign: 'center' }, bubble: { font: 'Noto Sans KR', size: 18, color: '#ffffff', nameColor: '#ffd43b', gap: 14 }, canvas: { bg: '#000000', ratio: '16:9', pad: 40, valign: 'center' } },
+    set: { typo: { font: 'Noto Sans KR', color: '#d8d8d8', size: 14 }, head: { font: 'Noto Sans KR', color: '#ffffff', creditColor: '#777777', align: 'center', creditAlign: 'center' }, bubble: { font: 'Noto Sans KR', size: 16, color: '#ffffff', nameColor: '#ffd43b', gap: 14 }, canvas: { bg: '#000000', ratio: '16:9', pad: 40, valign: 'center' } },
     skin: SKINS.film.css, chars: [['#000000', '#ffffff', '#000000'], ['#000000', '#ffffff', '#000000']],
   },
   {
@@ -249,14 +251,14 @@ const TEMPLATES = [
   },
   {
     id: 'terminal', name: '레트로 터미널', sub: '고정폭 · 초록 글씨', pv: { bg: '#0b110b', fg: '#4dff88', b1: '#0b110b', b2: '#0b110b', outline: '#4dff88' },
-    set: { typo: { font: 'monospace', color: '#4dff88', size: 15 }, head: { font: 'monospace', color: '#8dffb0', creditColor: '#2e9e57' }, bubble: { speech: 'square', font: 'monospace', bg: '#0b110b', color: '#4dff88', border: '#4dff88', bw: 1, shadow: false, nameColor: '#2e9e57', avatar: false }, canvas: { bg: '#0b110b' } },
+    set: { typo: { font: 'monospace', color: '#4dff88', size: 14 }, head: { font: 'monospace', color: '#8dffb0', creditColor: '#2e9e57' }, bubble: { speech: 'square', font: 'monospace', bg: '#0b110b', color: '#4dff88', border: '#4dff88', bw: 1, shadow: false, nameColor: '#2e9e57', avatar: false }, canvas: { bg: '#0b110b' } },
     skin: SKINS.terminal.css, chars: [['#0b110b', '#4dff88', '#4dff88'], ['#0b110b', '#8dffb0', '#8dffb0']],
   },
 ];
 
 const PANES = [
-  { id: 'text', label: '텍스트', icon: 'text', desc: '발췌할 글을 붙여넣으세요. 따옴표와 괄호로 감싼 줄은 자동으로 말풍선이 돼요.' },
-  { id: 'template', label: '템플릿', icon: 'grid', desc: '어울리는 디자인을 한 번에 입혀요. 글과 캐릭터 이름 · 사진은 그대로예요.' },
+  { id: 'text', label: '텍스트', icon: 'text', desc: '발췌할 글을 붙여넣고, 아래 ‘대사 → 말풍선’으로 대사를 한 번에 말풍선으로 바꿔요.' },
+  { id: 'template', label: '양식', icon: 'grid', desc: '자주 쓰는 양식을 저장해 두고 불러오거나, 템플릿으로 디자인을 한 번에 바꿔요.' },
   { id: 'bubble', label: '말풍선', icon: 'bubble', desc: '말풍선 모양과 색, 프로필 표시 방식을 정해요.' },
   { id: 'chars', label: '캐릭터', icon: 'person', desc: '본문에 이름: "대사" 형식으로 쓰면 여기 등록한 캐릭터와 연결돼요.' },
   { id: 'typo', label: '서체', icon: 'type', desc: '본문, 말풍선, 제목의 글꼴과 간격을 다듬어요.' },
@@ -401,6 +403,11 @@ let state = loadState();
 function migrate(st, raw) {
   // 이전 버전: 배경 이미지만 있던 설정은 '이미지' 배경으로
   if (raw && raw.canvas && !raw.canvas.bgType && raw.canvas.bgImage) st.canvas.bgType = 'image';
+  // 이전 버전: 따옴표 / 괄호 스위치 → 대사 형식
+  if (raw && raw.parse && !raw.parse.formats) {
+    if (raw.parse.quotes === false) st.parse.auto = false;
+    if (raw.parse.parens) st.parse.formats = [...st.parse.formats, 'paren'];
+  }
   return st;
 }
 
@@ -539,9 +546,51 @@ function loadPreviewFont(f, el) {
 /* =========================================================
    텍스트 파싱
    ========================================================= */
-const PAIRS_SPEECH = [['"', '"'], ['“', '”'], ['「', '」'], ['『', '』'], ['‘', '’'], ["'", "'"], ['＂', '＂']];
-const PAIRS_THOUGHT = [['(', ')'], ['（', '）']];
-const INLINE_RE = /(“[^”]+”|"[^"]+"|「[^」]+」|『[^』]+』)/;
+/* 대사 형식: 소설마다 다른 대사 표기를 골라서 인식 */
+const DIALOGUE_FORMATS = [
+  { id: 'dq', label: '"텍스트"', pairs: [['"', '"'], ['“', '”'], ['＂', '＂']] },
+  { id: 'sq', label: "'텍스트'", pairs: [["'", "'"], ['‘', '’']] },
+  { id: 'corner', label: '「텍스트」', pairs: [['「', '」']] },
+  { id: 'wcorner', label: '『텍스트』', pairs: [['『', '』']] },
+  { id: 'star2', label: '**텍스트**', pairs: [['**', '**']] },
+  { id: 'star1', label: '*텍스트*', pairs: [['*', '*']] },
+  { id: 'paren', label: '(텍스트)', pairs: [['(', ')'], ['（', '）']] },
+  { id: 'angle', label: '<텍스트>', pairs: [['<', '>'], ['〈', '〉'], ['《', '》'], ['＜', '＞']] },
+  { id: 'bracket', label: '[텍스트]', pairs: [['[', ']'], ['【', '】']] },
+  { id: 'dash', label: '— 텍스트', prefixes: ['—', '―', '–'] },
+];
+
+function dialogueRules() {
+  const P = state.parse;
+  const pairs = [], prefixes = [];
+  for (const f of DIALOGUE_FORMATS) {
+    if (!P.formats.includes(f.id)) continue;
+    if (f.pairs) pairs.push(...f.pairs);
+    if (f.prefixes) prefixes.push(...f.prefixes);
+  }
+  for (const c of P.custom || []) {
+    if (!c.open) continue;
+    if (c.close) pairs.push([c.open, c.close]); else prefixes.push(c.open);
+  }
+  pairs.sort((a, b) => b[0].length - a[0].length); // ** 를 * 보다 먼저
+  prefixes.sort((a, b) => b.length - a.length);
+  return { pairs, prefixes };
+}
+
+function matchFormat(s, rules) {
+  const w = wrapped(s, rules.pairs);
+  if (w) return w;
+  for (const p of rules.prefixes) {
+    if (s.startsWith(p) && s.length > p.length) return { inner: s.slice(p.length).trim() };
+  }
+  return null;
+}
+
+const escRe = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function inlineRegex(rules) {
+  if (!rules.pairs.length) return null;
+  return new RegExp('(' + rules.pairs.map(([o, c]) => `${escRe(o)}.+?${escRe(c)}`).join('|') + ')');
+}
 
 function wrapped(s, pairs) {
   for (const [o, c] of pairs) {
@@ -564,8 +613,8 @@ function splitSpeaker(line) {
   if (m) return { name: m[1].trim(), rest: m[2].trim(), strong: true };
   m = line.match(/^([^\s:："“「『(（'‘\[][^:："“「『]{0,23}?)\s*[:：]\s*(.+)$/);
   if (m) return { name: m[1].trim(), rest: m[2].trim(), strong: false };
-  m = line.match(/^(\S{1,12})\s+(["“「『(（].*)$/);
-  if (m && findChar(m[1])) return { name: m[1].trim(), rest: m[2].trim(), strong: false };
+  m = line.match(/^(\S{1,12})\s+(\S.*)$/);
+  if (m && findChar(m[1])) return { name: m[1].trim(), rest: m[2].trim(), strong: false, loose: true };
   return null;
 }
 
@@ -574,10 +623,14 @@ function parseText() {
   const lines = state.text.replace(/\r/g, '').split('\n');
   const out = [];
   const occ = {};
-  const bubble = (kind, inner, full, name) => {
-    const base = `${kind}|${inner}`;
+  const rules = dialogueRules();
+  const inlineRe = inlineRegex(rules);
+  const bubble = (inner, full, name) => {
+    const base = `speech|${inner}`;
     occ[base] = (occ[base] || 0) + 1;
-    out.push({ type: 'bubble', kind, inner, full, name: name || null, key: `${base}|${occ[base]}` });
+    const key = `${base}|${occ[base]}`;
+    if ((state.overrides[key] || {}).asText) { narr(full); out[out.length - 1].key = key; return; }
+    out.push({ type: 'bubble', kind: 'speech', inner, full, name: name || null, key });
   };
 
   const narr = (text) => {
@@ -595,32 +648,29 @@ function parseText() {
 
     const sp = splitSpeaker(line);
     if (sp) {
-      const ws = wrapped(sp.rest, PAIRS_SPEECH);
-      const wt = wrapped(sp.rest, PAIRS_THOUGHT);
-      if (sp.strong || findChar(sp.name) || ws || wt) {
-        const kind = wt && !ws ? 'thought' : 'speech';
-        const w = ws || wt;
-        bubble(kind, w ? w.inner : sp.rest, sp.rest, sp.name);
+      const w = matchFormat(sp.rest, rules);
+      if (sp.strong || (!sp.loose && findChar(sp.name)) || w) {
+        bubble(w ? w.inner : sp.rest, sp.rest, sp.name);
         continue;
       }
     }
-    if (P.quotes) {
-      const w = wrapped(line, PAIRS_SPEECH);
-      if (w) { bubble('speech', w.inner, line); continue; }
-    }
-    if (P.parens) {
-      const w = wrapped(line, PAIRS_THOUGHT);
-      if (w) { bubble('thought', w.inner, line); continue; }
-    }
-    if (P.inline && P.quotes && INLINE_RE.test(line)) {
-      for (const part of line.split(INLINE_RE)) {
-        const t = part.trim();
-        if (!t) continue;
-        const w = wrapped(t, PAIRS_SPEECH);
-        if (w) bubble('speech', w.inner, t);
-        else narr(t);
+    if (P.auto) {
+      const w = matchFormat(line, rules);
+      if (P.mode === 'plain') {
+        // 기호 없는 줄이 대사, 기호로 감싼 줄은 지문
+        if (w) narr(w.inner); else bubble(line, line);
+        continue;
       }
-      continue;
+      if (w) { bubble(w.inner, line); continue; }
+      if (P.inline && inlineRe && inlineRe.test(line)) {
+        for (const part of line.split(inlineRe)) {
+          const t = part.trim();
+          if (!t) continue;
+          const wi = wrapped(t, rules.pairs);
+          if (wi) bubble(wi.inner, t); else narr(t);
+        }
+        continue;
+      }
     }
     narr(line);
   }
@@ -649,7 +699,7 @@ function resolveBubbles(blocks) {
     b.ch = ch;
     b.speaker = name || null;
     b.side = o.side || (ch && ch.side) || state.bubble.side;
-    b.shape = o.shape || (b.kind === 'thought' ? state.bubble.thought : (ch && ch.shape) || state.bubble.speech);
+    b.shape = o.shape || (ch && ch.shape) || state.bubble.speech;
   }
 }
 
@@ -797,7 +847,7 @@ let editingKey = null;
 
 function renderBlock(b) {
   if (b.type === 'narr') {
-    return h('p', { class: 'narr' + (b.ind && !b.cont ? ' ind' : '') + (b.cont ? ' cont' : ''), html: fmtNoOrphan(b.text, state.typo.align === 'justify') });
+    return h('p', { class: 'narr' + (b.ind && !b.cont ? ' ind' : '') + (b.cont ? ' cont' : '') + (b.key ? ' was-bubble' : ''), 'data-key': b.key || false, html: fmtNoOrphan(b.text, state.typo.align === 'justify') });
   }
   if (b.type === 'gap') return h('div', { class: 'gap' });
   if (b.type === 'hr') return h('hr', { class: 'divider' });
@@ -991,6 +1041,7 @@ function render() {
   });
 
   updateMeasure();
+  updateAutoCard();
   lastStats = { bubbles: blocks.filter((b) => b.type === 'bubble').length, pages: pages.length };
   updateStats();
   const sc = c.scale;
@@ -1044,6 +1095,26 @@ function stepZoom(dir) {
 
 const cardObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => requestAnimationFrame(rescale)) : null;
 
+function updateAutoCard() {
+  const btn = $('#auto-btn');
+  if (!btn) return;
+  const P = state.parse;
+  const was = P.auto;
+  P.auto = true;
+  const n = parseText().filter((b) => b.type === 'bubble').length;
+  P.auto = was;
+  const named = parseText().filter((b) => b.type === 'bubble').length;
+  if (was) {
+    $('#auto-desc').textContent = n ? `대사 ${n}개가 말풍선이에요` : '형식에 맞는 대사가 없어요 · 아래에서 형식을 골라 보세요';
+    btn.textContent = '글로 되돌리기';
+    btn.className = 'btn btn-sm';
+  } else {
+    $('#auto-desc').textContent = n > named ? `말풍선으로 바꿀 대사 ${n - named}개를 찾았어요` : '형식에 맞는 대사가 없어요 · 아래에서 형식을 골라 보세요';
+    btn.textContent = '전부 말풍선으로';
+    btn.className = 'btn btn-primary btn-sm';
+  }
+}
+
 function updateMeasure() {
   const el = $('#measure-val');
   if (!el) return;
@@ -1076,22 +1147,25 @@ const fixedRatio = () => state.canvas.ratio !== 'auto';
 
 const SCHEMA = {
   text: [
+    { sec: '대사 인식', note: '말풍선을 누르면 캐릭터 · 위치 · 모양을 바꾸거나 다시 글로 되돌릴 수 있어요.', rows: [
+      { t: 'autoDialog' },
+      { t: 'formats' },
+      { t: 'customFormats' },
+      { t: 'seg', p: 'parse.mode', l: '대사 구분 방식', o: [['marked', '기호로 감싼 줄이 대사'], ['plain', '기호 없는 줄이 대사']], block: true },
+      { t: 'switch', p: 'parse.inline', l: '문장 속 대사도 분리', sub: '지문 중간에 있는 대사도 말풍선으로 꺼내요', when: () => state.parse.mode === 'marked' },
+      { t: 'switch', p: 'parse.strip', l: '말풍선에서 기호 숨기기' },
+      { t: 'select', p: 'parse.nameless', l: '이름 없는 대사의 화자', o: () => [['none', '지정 안 함'], ['alt', '번갈아 가며'], ...state.chars.map((c) => [c.id, c.name || '(이름 없음)'])] },
+    ] },
+    { sec: '문단', rows: [
+      { t: 'select', p: 'parse.blank', l: '빈 줄 한 개', o: [['para', '문단 나눔만'], ['space', '여백으로']] },
+    ] },
     { sec: '제목 · 출처', rows: [
       { t: 'text', p: 'title', l: '제목', ph: '비워두면 표시하지 않아요' },
       { t: 'text', p: 'credit', l: '출처 · 서명', ph: '예) — 「책 제목」 중에서 / @내계정' },
     ] },
-    { sec: '대사 인식', rows: [
-      { t: 'switch', p: 'parse.quotes', l: '따옴표 줄을 말풍선으로', sub: '" "  “ ”  「 」  『 』' },
-      { t: 'switch', p: 'parse.parens', l: '괄호 줄을 생각 말풍선으로', sub: '( )' },
-      { t: 'switch', p: 'parse.inline', l: '문장 속 따옴표도 분리', sub: '서술 중간에 있는 대사도 말풍선으로 꺼내요' },
-      { t: 'switch', p: 'parse.strip', l: '따옴표 · 괄호 기호 숨기기' },
-      { t: 'select', p: 'parse.blank', l: '빈 줄 한 개', o: [['para', '문단 나눔만'], ['space', '여백으로']] },
-      { t: 'select', p: 'parse.nameless', l: '이름 없는 대사의 화자', o: () => [['none', '지정 안 함'], ['alt', '번갈아 가며'], ...state.chars.map((c) => [c.id, c.name || '(이름 없음)'])] },
-    ] },
   ],
   bubble: [
-    { sec: '대사 말풍선', rows: [{ t: 'shapes', p: 'bubble.speech' }] },
-    { sec: '생각 말풍선', rows: [{ t: 'shapes', p: 'bubble.thought' }] },
+    { sec: '말풍선 모양', rows: [{ t: 'shapes', p: 'bubble.speech' }] },
     { sec: '세부 조정', rows: [
       { t: 'switch', p: 'bubble.tail', l: '꼬리 표시' },
       { t: 'seg', p: 'bubble.side', l: '화자 없는 말풍선', o: SIDES },
@@ -1318,6 +1392,63 @@ function fieldEl(d) {
     case 'measure': {
       el = h('div', { class: 'row' }, labelEl('한 줄 글자 수', ''), h('span', { class: 'measure', id: 'measure-val' }));
       el.querySelector('small') || el.firstChild.append(h('small', { id: 'measure-hint' }));
+      break;
+    }
+
+    case 'autoDialog': {
+      const desc = h('small', { id: 'auto-desc' });
+      const btn = h('button', { type: 'button', class: 'btn btn-sm', id: 'auto-btn' });
+      btn.addEventListener('click', () => {
+        const on = !state.parse.auto;
+        setPath('parse.auto', on);
+        commit();
+        toast(on ? '대사를 모두 말풍선으로 바꿨어요' : '말풍선을 글로 되돌렸어요', { label: '되돌리기', fn: undo });
+      });
+      el = h('div', { class: 'row auto-card' }, h('div', { class: 'row-label' }, h('strong', {}, '대사 → 말풍선'), desc), btn);
+      break;
+    }
+
+    case 'formats': {
+      const row = h('div', { class: 'chip-row fmt-chips' });
+      DIALOGUE_FORMATS.forEach((f) => {
+        const on = state.parse.formats.includes(f.id);
+        const b = h('button', { type: 'button', class: 'fchip' + (on ? ' on' : ''), 'aria-pressed': on ? 'true' : 'false' }, f.label);
+        b.addEventListener('click', () => {
+          const list = state.parse.formats.slice();
+          const k = list.indexOf(f.id);
+          if (k >= 0) list.splice(k, 1); else list.push(f.id);
+          b.classList.toggle('on', k < 0);
+          b.setAttribute('aria-pressed', k < 0 ? 'true' : 'false');
+          setPath('parse.formats', list);
+        });
+        row.append(b);
+      });
+      el = h('div', { class: 'row stack' }, labelEl('대사 형식', '여러 개를 함께 고를 수 있어요'), row);
+      break;
+    }
+
+    case 'customFormats': {
+      const list = h('div', { class: 'chip-row' });
+      (state.parse.custom || []).forEach((c, idx) => {
+        list.append(h('span', { class: 'fchip on custom' }, c.close ? `${c.open} 텍스트 ${c.close}` : `${c.open} 텍스트`,
+          h('button', { type: 'button', 'aria-label': '삭제', html: icon('close'), onclick: () => {
+            const arr = state.parse.custom.slice(); arr.splice(idx, 1); setPath('parse.custom', arr); buildFields();
+          } })));
+      });
+      const open = h('input', { type: 'text', class: 'input sym', placeholder: '⧼', maxlength: 6, 'aria-label': '여는 기호' });
+      const close = h('input', { type: 'text', class: 'input sym', placeholder: '⟯', maxlength: 6, 'aria-label': '닫는 기호' });
+      const add = () => {
+        const o = open.value.trim(), c = close.value.trim();
+        if (!o) { open.focus(); return; }
+        setPath('parse.custom', [...(state.parse.custom || []), { open: o, close: c }]);
+        if (!state.parse.auto) state.parse.auto = true;
+        buildFields();
+        toast(`‘${o}${c ? ' … ' + c : ' …'}’ 형식을 추가했어요`);
+      };
+      [open, close].forEach((x) => x.addEventListener('keydown', (e) => { if (e.key === 'Enter') add(); }));
+      el = h('div', { class: 'row stack' }, labelEl('기호 직접 지정', '닫는 기호를 비우면 그 기호로 시작하는 줄을 대사로 봐요'),
+        (state.parse.custom || []).length ? list : null,
+        h('div', { class: 'sym-row' }, open, h('span', { class: 'sym-mid' }, '텍스트'), close, h('button', { type: 'button', class: 'btn btn-soft btn-sm', onclick: add }, '추가')));
       break;
     }
 
@@ -1550,7 +1681,9 @@ function openBubbleEditor(key, anchor) {
       h('div', { class: 'pop-label' }, '위치'), segEl([['', '자동'], ...SIDES], o.side || '', (v) => update('side', v), true),
       h('div', { class: 'pop-label' }, '모양'), tiles,
       h('div', { class: 'pop-foot' },
-        h('button', { type: 'button', class: 'link-btn', onclick: () => { delete state.overrides[key]; changed(); wrap.replaceWith(build()); } }, '자동으로 되돌리기'),
+        h('div', {},
+          h('button', { type: 'button', class: 'link-btn', onclick: () => { delete state.overrides[key]; changed(); wrap.replaceWith(build()); } }, '초기화'),
+          h('button', { type: 'button', class: 'link-btn danger', onclick: () => { state.overrides[key] = { asText: true }; changed(); closePop(); toast('말풍선을 글로 되돌렸어요', { label: '되돌리기', fn: undo }); } }, '말풍선 해제')),
         h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: closePop }, '완료')));
     return wrap;
   };
@@ -1562,6 +1695,18 @@ function openBubbleEditor(key, anchor) {
 }
 
 $('#stage').addEventListener('click', (e) => {
+  const wb = e.target.closest('.narr.was-bubble');
+  if (wb) {
+    const key = wb.dataset.key;
+    openPop(h('div', {},
+      h('div', { class: 'pop-title' }, '글로 되돌린 대사예요'),
+      h('button', { type: 'button', class: 'btn btn-primary btn-block', onclick: () => {
+        const o = { ...(state.overrides[key] || {}) }; delete o.asText;
+        if (Object.keys(o).length) state.overrides[key] = o; else delete state.overrides[key];
+        changed(); closePop();
+      } }, '다시 말풍선으로')), wb);
+    return;
+  }
   const msg = e.target.closest('.msg');
   if (!msg) return;
   openBubbleEditor(msg.dataset.key, msg.querySelector('.bubble') || { x: e.clientX + 12, y: e.clientY + 12 });
@@ -1654,10 +1799,108 @@ function buildQuickInsert() {
   });
   const plain = (label, title, fn) => box.append(h('button', { type: 'button', class: 'qi plain', title, onmousedown: (e) => e.preventDefault(), onclick: fn }, label));
   plain('“대사”', '이름 없는 대사', () => insertSnippet('"', '"'));
-  plain('(생각)', '생각 말풍선', () => insertSnippet('(', ')'));
   plain('==강조==', '선택한 글자에 형광펜', () => insertSnippet('==', '==', false));
   plain('구분선', '구분선 넣기', () => insertSnippet('---\n', '', true));
 }
+
+/* 내 양식: 디자인 · 대사 인식 설정을 저장/불러오기 (글은 제외) */
+const STYLE_KEYS = ['typo', 'head', 'bubble', 'canvas', 'parse', 'skin'];
+let myStyles = [];
+
+function styleSnapshot(name, withChars) {
+  const data = {};
+  for (const k of STYLE_KEYS) data[k] = copyState(state[k]);
+  if (withChars) data.chars = copyState(state.chars);
+  return { type: 'ninining-style', version: 1, name, createdAt: Date.now(), data };
+}
+function applyStyle(st) {
+  const data = st.data || st; // 전체 설정 파일도 받기
+  for (const k of STYLE_KEYS) {
+    if (!(k in data)) continue;
+    state[k] = k === 'skin' ? data.skin || '' : deepMerge(copyState(DEFAULTS[k]), data[k]);
+  }
+  if (Array.isArray(data.chars)) state.chars = copyState(data.chars);
+  commit(); rebuildAll(); save();
+  toast(`‘${st.name || '양식'}’을(를) 적용했어요`, { label: '되돌리기', fn: undo });
+}
+async function persistStyles() {
+  try { await idb.set('styles', myStyles); } catch (e) { toast('브라우저에 저장하지 못했어요 · 파일로 보관해 주세요'); }
+}
+async function downloadStyle(st) {
+  const json = JSON.stringify(st, null, 2);
+  const name = `${(st.name || '양식').replace(/[\\/:*?"<>|]+/g, '_')}.ninining.json`;
+  if (typeof window.showSaveFilePicker === 'function' && !isMobile()) {
+    try {
+      const fh = await window.showSaveFilePicker({ suggestedName: name, startIn: dirHandle || 'documents', types: [{ description: '니니닝 양식', accept: { 'application/json': ['.json'] } }] });
+      const w = await fh.createWritable(); await w.write(json); await w.close();
+      toast('양식 파일을 저장했어요');
+      return;
+    } catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+  download(url, name);
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+function styleSwatch(st) {
+  const c = (st.data && st.data.canvas) || {};
+  const t = (st.data && st.data.typo) || {};
+  const sw = h('span', { class: 'style-sw' }, '가');
+  sw.style.background = c.bgType === 'gradient' ? `linear-gradient(${c.gradAngle || 160}deg, ${c.bg}, ${c.bg2})` : (c.bg || '#fff');
+  sw.style.color = t.color || '#222';
+  sw.style.fontFamily = fontStack(t.font || 'serif', t.fontCustom);
+  return sw;
+}
+function buildMyStyles() {
+  const list = $('#style-list');
+  list.innerHTML = '';
+  if (!myStyles.length) {
+    list.append(h('div', { class: 'row empty' }, h('div', { class: 'row-label' }, '저장한 양식이 없어요', h('small', {}, '지금 화면의 서체 · 말풍선 · 배경 · 대사 형식을 이름 붙여 보관해 보세요'))));
+    return;
+  }
+  myStyles.forEach((st, i) => {
+    const d = new Date(st.createdAt || Date.now());
+    const sub = `${d.getMonth() + 1}월 ${d.getDate()}일${st.data && st.data.chars ? ' · 캐릭터 포함' : ''}`;
+    list.append(h('div', { class: 'row style-row' },
+      h('button', { type: 'button', class: 'style-main', onclick: () => applyStyle(st), title: '이 양식 적용' },
+        styleSwatch(st), h('span', { class: 'row-label' }, st.name, h('small', {}, sub))),
+      h('div', { class: 'style-tools' },
+        h('button', { type: 'button', class: 'icon-btn sm', title: '파일로 저장', 'aria-label': '파일로 저장', html: icon('download'), onclick: () => downloadStyle(st) }),
+        h('button', { type: 'button', class: 'icon-btn sm', title: '현재 설정으로 덮어쓰기', 'aria-label': '덮어쓰기', html: icon('refresh'), onclick: () => {
+          if (!confirm(`‘${st.name}’을(를) 지금 설정으로 덮어쓸까요?`)) return;
+          myStyles[i] = styleSnapshot(st.name, !!(st.data && st.data.chars)); persistStyles(); buildMyStyles(); toast('양식을 업데이트했어요');
+        } }),
+        h('button', { type: 'button', class: 'icon-btn sm danger', title: '삭제', 'aria-label': '삭제', html: icon('trash'), onclick: () => {
+          const removed = myStyles.splice(i, 1)[0]; persistStyles(); buildMyStyles();
+          toast(`‘${removed.name}’을(를) 지웠어요`, { label: '되돌리기', fn: () => { myStyles.splice(i, 0, removed); persistStyles(); buildMyStyles(); } });
+        } }))));
+  });
+}
+function currentStyleName() {
+  const v = $('#style-name').value.trim();
+  return v || `내 양식 ${myStyles.length + 1}`;
+}
+$('#btn-style-save').addEventListener('click', () => {
+  const st = styleSnapshot(currentStyleName(), $('#style-chars').checked);
+  myStyles.unshift(st);
+  persistStyles(); buildMyStyles();
+  $('#style-name').value = '';
+  toast(`‘${st.name}’ 양식을 저장했어요`);
+});
+$('#style-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#btn-style-save').click(); });
+$('#btn-style-file').addEventListener('click', () => downloadStyle(styleSnapshot(currentStyleName(), $('#style-chars').checked)));
+$('#file-style').addEventListener('change', async (e) => {
+  const f = e.target.files[0];
+  e.target.value = '';
+  if (!f) return;
+  try {
+    const obj = JSON.parse(await f.text());
+    const st = obj.type === 'ninining-style' ? obj : { type: 'ninining-style', version: 1, name: f.name.replace(/(\.ninining)?\.json$/i, ''), createdAt: Date.now(), data: obj };
+    if (!st.data || typeof st.data !== 'object') throw new Error('bad');
+    myStyles.unshift(st);
+    persistStyles(); buildMyStyles();
+    applyStyle(st);
+  } catch (err) { toast('양식 파일을 읽지 못했어요'); }
+});
 
 /* 템플릿 */
 function buildTemplates() {
@@ -1988,49 +2231,188 @@ function download(url, name) {
   a.remove();
 }
 
-const fileBase = () => (state.title || 'excerpt').replace(/[\\/:*?"<>|\s]+/g, '_').slice(0, 40) || 'excerpt';
-const fileName = (i) => `${fileBase()}_${String(i + 1).padStart(2, '0')}.png`;
+const fileBase = () => (state.title || 'ninining').replace(/[\\/:*?"<>|\s]+/g, '_').slice(0, 40) || 'ninining';
+let fileStamp = '';
+const stampNow = () => {
+  const d = new Date(), p = (n) => String(n).padStart(2, '0');
+  fileStamp = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+};
+const fileName = (i) => `${fileBase()}_${fileStamp}_${String(i + 1).padStart(2, '0')}.png`;
+
+let busy = false;
+/** 카드들을 PNG로 변환 (indices 없으면 전부). 끝나면 미리보기를 원래대로 */
+async function makeImages(indices, onProgress) {
+  closePop();
+  editingKey = null;
+  $$('#stage .msg.editing').forEach((m) => m.classList.remove('editing'));
+  await document.fonts.ready;
+  const all = $$('#stage .card');
+  const cards = indices ? indices.map((i) => all[i]).filter(Boolean) : all;
+  const fontCSS = await buildFontEmbedCSS(cards);
+  for (const card of cards) {
+    card.querySelectorAll('.narr, .bubble, .card-title, .credit').forEach((el) => {
+      try { freezeLines(el, currentScale); } catch (e) { /* 원래 상태로 둠 */ }
+    });
+  }
+  try {
+    const out = [];
+    for (let i = 0; i < cards.length; i++) {
+      if (onProgress) onProgress(i, cards.length);
+      out.push(await cardToPng(cards[i], fontCSS));
+    }
+    return out;
+  } finally {
+    render(); // 줄 고정을 풀고 원래 미리보기로
+  }
+}
+
+/* ---------- 저장 폴더 (Chrome · Edge 데스크톱) ---------- */
+const idb = (() => {
+  let dbp;
+  const open = () => dbp || (dbp = new Promise((res, rej) => {
+    const r = indexedDB.open('ninining', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('kv');
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  }));
+  const tx = async (mode, fn) => {
+    const db = await open();
+    return new Promise((res, rej) => {
+      const t = db.transaction('kv', mode);
+      const q = fn(t.objectStore('kv'));
+      t.oncomplete = () => res(q && q.result);
+      t.onerror = () => rej(t.error);
+    });
+  };
+  return {
+    get: (k) => tx('readonly', (st) => st.get(k)).catch(() => undefined),
+    set: (k, v) => tx('readwrite', (st) => st.put(v, k)),
+    del: (k) => tx('readwrite', (st) => st.delete(k)),
+  };
+})();
+
+const canPickFolder = typeof window.showDirectoryPicker === 'function' && !isMobile();
+let dirHandle = null;
+
+async function folderPermission(handle, ask) {
+  const opts = { mode: 'readwrite' };
+  try {
+    if ((await handle.queryPermission(opts)) === 'granted') return true;
+    if (!ask) return false;
+    return (await handle.requestPermission(opts)) === 'granted';
+  } catch (e) { return false; }
+}
+async function pickFolder() {
+  try {
+    const hnd = await window.showDirectoryPicker({ id: 'ninining', mode: 'readwrite', startIn: dirHandle || 'pictures' });
+    dirHandle = hnd;
+    await idb.set('dir', hnd).catch(() => {});
+    updateFolderUI();
+    toast(`이제 ‘${hnd.name}’ 폴더에 저장돼요`);
+    return true;
+  } catch (e) {
+    if (e && e.name !== 'AbortError') toast('폴더를 열지 못했어요');
+    return false;
+  }
+}
+async function clearFolder() {
+  dirHandle = null;
+  await idb.del('dir').catch(() => {});
+  updateFolderUI();
+  toast('저장 폴더 지정을 해제했어요 · 다운로드 폴더로 저장돼요');
+}
+async function uniqueName(dir, name) {
+  const dot = name.lastIndexOf('.');
+  const base = name.slice(0, dot), ext = name.slice(dot);
+  for (let n = 1; n < 1000; n++) {
+    const candidate = n === 1 ? name : `${base} (${n})${ext}`;
+    try { await dir.getFileHandle(candidate); } catch (e) { return candidate; }
+  }
+  return `${base}-${Date.now()}${ext}`;
+}
+async function saveToFolder(urls) {
+  for (let i = 0; i < urls.length; i++) {
+    const blob = await (await fetch(urls[i])).blob();
+    const fh = await dirHandle.getFileHandle(await uniqueName(dirHandle, fileName(i)), { create: true });
+    const w = await fh.createWritable();
+    await w.write(blob);
+    await w.close();
+  }
+  return urls.length;
+}
+function updateFolderUI() {
+  const line = $('#folder-line');
+  const menuItem = $('[data-act="folder"]');
+  if (menuItem) {
+    menuItem.hidden = !canPickFolder;
+    menuItem.textContent = dirHandle ? `저장 폴더: ${dirHandle.name}` : '저장 폴더 지정…';
+  }
+  if (!line) return;
+  line.hidden = !canPickFolder;
+  line.innerHTML = '';
+  if (!canPickFolder) return;
+  if (dirHandle) {
+    line.append(h('span', { class: 'folder-ico', html: icon('folder') }), h('span', {}, '저장 폴더 '), h('b', {}, dirHandle.name),
+      h('button', { type: 'button', class: 'link-btn', onclick: pickFolder }, '변경'),
+      h('button', { type: 'button', class: 'link-btn muted', onclick: clearFolder }, '해제'));
+  } else {
+    line.append(h('span', { class: 'folder-ico', html: icon('folder') }), h('span', {}, '다운로드 폴더에 저장돼요'),
+      h('button', { type: 'button', class: 'link-btn', onclick: pickFolder }, '원하는 폴더 지정'));
+  }
+  $('#btn-folder-save').hidden = !canPickFolder;
+}
 
 let lastImages = [];
-let exporting = false;
 async function exportImages() {
-  if (exporting) return;
+  if (busy) return;
   if (typeof htmlToImage === 'undefined') { toast('이미지 변환 도구를 불러오지 못했어요'); return; }
   const btn = $('#btn-save');
   const label = $('.btn-label', btn);
   const orig = label.textContent;
-  exporting = true;
+  busy = true;
   btn.disabled = true;
-  closePop();
-  editingKey = null;
-  $$('#stage .msg.editing').forEach((m) => m.classList.remove('editing'));
+  // 권한 요청은 클릭 직후에 해야 함
+  const toFolder = dirHandle ? await folderPermission(dirHandle, true) : false;
   try {
     label.textContent = '만드는 중…';
-    await document.fonts.ready;
-    const cards = $$('#stage .card');
-    const fontCSS = await buildFontEmbedCSS(cards);
-    for (const card of cards) {
-      card.querySelectorAll('.narr, .bubble, .card-title, .credit').forEach((el) => {
-        try { freezeLines(el, currentScale); } catch (e) { /* 원래 상태로 둠 */ }
-      });
-    }
-    lastImages = [];
-    for (let i = 0; i < cards.length; i++) {
-      if (cards.length > 1) label.textContent = `${i + 1} / ${cards.length}`;
-      lastImages.push(await cardToPng(cards[i], fontCSS));
-    }
-    showResult();
+    stampNow();
+    lastImages = await makeImages(null, (i, n) => { if (n > 1) label.textContent = `${i + 1} / ${n}`; });
+    if (toFolder) {
+      const n = await saveToFolder(lastImages);
+      toast(`‘${dirHandle.name}’ 폴더에 ${n}장 저장했어요`, { label: '미리보기', fn: showResult });
+    } else showResult();
   } catch (err) {
     console.error(err);
     toast('이미지를 만들지 못했어요. 다시 시도해 주세요.', null, 3600);
   } finally {
-    render(); // 줄 고정을 풀고 원래 미리보기로
-    exporting = false;
+    busy = false;
     btn.disabled = false;
     label.textContent = orig;
   }
 }
 $('#btn-save').addEventListener('click', exportImages);
+
+/* ---------- 복사 ---------- */
+const canCopyImage = !!(navigator.clipboard && window.ClipboardItem);
+function copyPage(i) {
+  if (!canCopyImage) { toast('이 브라우저는 이미지 복사를 지원하지 않아요'); return; }
+  if (busy) return;
+  busy = true;
+  const total = $$('#stage .card').length;
+  const blob = makeImages([i]).then(([u]) => fetch(u)).then((r) => r.blob());
+  navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+    .then(() => toast(total > 1 ? `${i + 1}번째 장을 복사했어요` : '이미지를 복사했어요 · 붙여넣기 하세요'))
+    .catch((e) => { console.error(e); toast('복사하지 못했어요'); })
+    .finally(() => { busy = false; });
+}
+$('#btn-copy').addEventListener('click', () => {
+  const n = $$('#stage .card').length;
+  if (n <= 1) { copyPage(0); return; }
+  openPop(h('div', {},
+    h('div', { class: 'pop-title' }, '복사할 장을 고르세요'),
+    h('div', { class: 'page-pick' }, Array.from({ length: n }, (_, i) =>
+      h('button', { type: 'button', class: 'btn', onclick: () => { closePop(); copyPage(i); } }, `${i + 1}장`)))), $('#btn-copy'));
+});
 
 async function imageFiles(urls) {
   return Promise.all(urls.map(async (u, i) => new File([await (await fetch(u)).blob()], fileName(i), { type: 'image/png' })));
@@ -2055,7 +2437,7 @@ function showResult() {
     list.append(h('div', { class: 'result-item' },
       h('img', { src: url, alt: `${i + 1}번째 이미지` }),
       h('div', { class: 'row-btns' },
-        h('a', { class: 'btn btn-sm', href: url, download: fileName(i) }, '저장'),
+        h('a', { class: 'btn btn-sm', href: url, download: fileName(i) }, '다운로드'),
         canCopy ? h('button', {
           type: 'button', class: 'btn btn-sm',
           onclick: async () => {
@@ -2071,7 +2453,8 @@ function showResult() {
   const n = lastImages.length;
   $('#result-title').textContent = n > 1 ? `이미지 ${n}장이 준비됐어요` : '이미지가 준비됐어요';
   $('#result-sub').textContent = `${state.canvas.width * state.canvas.scale}px 너비 PNG · 모바일에서는 이미지를 길게 눌러 저장할 수도 있어요`;
-  $('#btn-dl-all').lastChild.textContent = n > 1 ? '전부 저장' : '저장';
+  $('#btn-dl-all').lastChild.textContent = n > 1 ? '전부 다운로드' : '다운로드';
+  updateFolderUI();
   $('#btn-share-all').hidden = !canShareFiles;
   list.classList.toggle('single', n === 1);
   $('#result .modal-box').classList.toggle('narrow', n === 1);
@@ -2084,6 +2467,15 @@ $('#btn-dl-all').addEventListener('click', async () => {
   }
 });
 $('#btn-share-all').addEventListener('click', () => shareImages(lastImages));
+$('#btn-folder-save').addEventListener('click', async () => {
+  if (!dirHandle) { if (!(await pickFolder())) return; }
+  else if (!(await folderPermission(dirHandle, true))) { toast('폴더 접근이 허용되지 않았어요'); return; }
+  try {
+    const n = await saveToFolder(lastImages);
+    toast(`‘${dirHandle.name}’ 폴더에 ${n}장 저장했어요`);
+    closeModals();
+  } catch (e) { console.error(e); toast('폴더에 저장하지 못했어요'); }
+});
 
 /* 모달 */
 function openModal(sel) { $(sel).hidden = false; }
@@ -2102,6 +2494,7 @@ document.addEventListener('click', (e) => {
   $('#menu').hidden = true;
   const a = act.dataset.act;
   if (a === 'help') openModal('#help');
+  else if (a === 'folder') pickFolder();
   else if (a === 'export-json') {
     const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -2192,6 +2585,8 @@ if (document.fonts) {
 
 buildRail();
 buildTemplates();
+idb.get('styles').then((v) => { myStyles = Array.isArray(v) ? v : []; buildMyStyles(); });
+if (canPickFolder) idb.get('dir').then((hnd) => { if (hnd) dirHandle = hnd; updateFolderUI(); }); else updateFolderUI();
 setPane('text', false);
 if (isMobile()) setSheet(true);
 rebuildAll();
