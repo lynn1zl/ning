@@ -183,7 +183,7 @@ svg { display: block; }
 .workspace {
   flex: 1; min-height: 0;
   display: grid;
-  grid-template-columns: 84px 392px 1fr;
+  grid-template-columns: 84px var(--panel-w, 392px) 1fr;
 }
 
 /* 레일 (세로 탭) */
@@ -907,7 +907,7 @@ textarea.code {
 .flow > * + * { margin-top: var(--para-gap); }
 .flow > .msg, .flow > .msg + * { margin-top: var(--msg-gap); }
 .flow > :first-child { margin-top: 0; }
-.flow > .msg + .gap, .flow > .gap:has(+ .msg) { display: none; }
+
 
 .narr {
   font-size: var(--text-size);
@@ -935,7 +935,8 @@ textarea.code {
   color: inherit;
   padding: 0 .08em;
 }
-.gap { height: calc(var(--text-size) * var(--text-lh) * .75); }
+/* 빈 줄 하나 = 본문 한 줄 높이 */
+.gap { height: calc(var(--text-size) * var(--text-lh) * var(--gap-n, 1) - var(--para-gap)); min-height: 0; }
 .divider {
   border: 0;
   border-top: 1px solid currentColor;
@@ -1366,3 +1367,32 @@ button.char-av:focus-visible { outline: 2px solid var(--accent); outline-offset:
 .reset-item.danger .ri-ico { color: var(--danger); }
 .reset-item.danger b { color: var(--danger); }
 .list-tools { display: flex; justify-content: flex-end; padding: 12px 2px 0; }
+
+/* 편집 패널 너비 조절 */
+.panel-resizer {
+  position: absolute; top: 0; right: -5px; bottom: 0; width: 10px;
+  cursor: col-resize; z-index: 6; touch-action: none;
+}
+.panel-resizer::after {
+  content: ""; position: absolute; top: 0; bottom: 0; left: 4px; width: 2px;
+  background: var(--accent); opacity: 0; transition: opacity .15s;
+}
+.panel-resizer:hover::after, .panel-resizer:focus-visible::after, body.resizing .panel-resizer::after { opacity: .7; }
+.panel-resizer:focus-visible { outline: none; }
+body.resizing { cursor: col-resize; user-select: none; }
+body.resizing iframe, body.resizing #stage { pointer-events: none; }
+@media (max-width: 900px) { .panel-resizer { display: none; } }
+
+/* 파일 이름 */
+.file-preview { gap: 10px; justify-content: flex-start; background: var(--fill); }
+.file-preview code { background: none; padding: 0; font-size: 13px; color: var(--text); word-break: break-all; }
+.fp-ico { color: var(--accent); display: grid; flex: none; }
+.fp-ico svg { width: 18px; height: 18px; }
+.filename-line {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin: 8px 24px 0; padding: 10px 14px; border-radius: 12px; background: var(--fill);
+  font-size: 13px; color: var(--text-3);
+}
+.filename-line code { background: none; padding: 0; color: var(--text); font-size: 13px; word-break: break-all; }
+.filename-line .link-btn { margin-left: auto; }
+@media (max-width: 900px) { .filename-line { margin: 8px 16px 0; } }

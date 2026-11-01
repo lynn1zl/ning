@@ -54,6 +54,7 @@
     <nav class="rail" id="rail" aria-label="설정 메뉴"></nav>
 
     <aside class="panel" id="panel">
+      <div class="panel-resizer" id="panel-resizer" role="separator" aria-orientation="vertical" aria-label="편집 패널 너비 조절" tabindex="0" title="끌어서 너비 조절 · 두 번 누르면 원래대로"></div>
       <button type="button" class="sheet-handle" id="sheet-handle" aria-label="패널 접기"><span></span></button>
       <div class="panel-scroll" id="panel-scroll">
 
@@ -164,6 +165,10 @@
         <p class="modal-sub" id="result-sub">모바일에서는 이미지를 길게 눌러 저장할 수도 있어요.</p>
       </div>
       <button type="button" class="icon-btn" data-close aria-label="닫기"></button>
+    </div>
+    <div class="filename-line">
+      <span>파일 이름</span><code id="result-filename"></code>
+      <button type="button" class="link-btn" id="btn-filename-edit">이름 설정</button>
     </div>
     <div id="result-list" class="result-list"></div>
     <div class="folder-line" id="folder-line" hidden></div>

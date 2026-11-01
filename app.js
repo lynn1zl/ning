@@ -118,7 +118,7 @@ const DEFAULTS = {
   title: '제목',
   credit: '출처',
   creator: '제작자',
-  parse: { auto: true, formats: ['dq', 'sq', 'corner', 'wcorner'], custom: [], mode: 'marked', inline: false, strip: true, nameless: 'none', blank: 'para', mergeTl: true, autoChars: true },
+  parse: { auto: true, formats: ['dq', 'sq', 'corner', 'wcorner'], custom: [], mode: 'marked', inline: false, strip: true, nameless: 'none', blank: 'count', mergeTl: true, autoChars: true },
   typo: { font: 'Noto Serif KR', fontCustom: '', size: 13.5, lh: 1.7, ls: -0.005, weight: 400, color: '#2a2826', align: 'left', paraMode: 'gap', gap: 10, indent: 1, hl: '#ffe58a', hlStyle: 'under' },
   head: { font: 'Noto Serif KR', fontCustom: '', size: 17, weight: 700, color: '#1d1c1a', align: 'left', creditFont: 'Noto Serif KR', creditFontCustom: '', creditSize: 10.5, creditWeight: 400, creditColor: '#8a857c', creatorFont: 'Noto Serif KR', creatorFontCustom: '', creatorSize: 10.5, creatorWeight: 700, creatorColor: '#6b665e', creditAlign: 'right', creditLayout: 'inline', quoteMark: false, accent: '#c8a46a' },
   bubble: {
@@ -134,6 +134,7 @@ const DEFAULTS = {
   overrides: {},
   skin: '',
   bgHtml: '',
+  file: { prefix: true, date: true, pair: '', title: '', number: false },
 };
 
 const SKINS = {
@@ -440,6 +441,9 @@ function migrate(st, raw) {
     Object.assign(st.head, { creditFont: st.head.font, creditFontCustom: st.head.fontCustom, creatorFont: st.head.font, creatorFontCustom: st.head.fontCustom, creatorColor: st.head.creditColor, creatorSize: st.head.creditSize });
   }
   if (raw && !('creator' in raw)) st.creator = '';
+  // 이전 버전의 빈 줄 처리 → 엔터 친 만큼 여백
+  if (st.parse.blank === 'para' || st.parse.blank === 'space') st.parse.blank = 'count';
+  if (!st.file) st.file = copyState(DEFAULTS.file);
   // 이전 버전: HTML 배경 코드를 CSS 스킨 칸에 넣었던 경우 옮겨 줌
   if (st.skin && !st.bgHtml && looksLikeHtmlBg(st.skin)) { st.bgHtml = st.skin; st.skin = ''; }
   return st;
@@ -751,7 +755,9 @@ function parseText() {
     if (!line) { blanks++; continue; }
     // 빈 줄 하나는 문단 경계일 뿐, 두 줄 이상은 장면 전환(여백)으로 본다
     const adjacent = blanks === 0;
-    if (blanks && out.length && (P.blank === 'space' || blanks >= 2)) out.push({ type: 'gap' });
+    // 빈 줄 수만큼 여백 ('para1'이면 첫 빈 줄은 문단 나눔으로만 씀)
+    const gapN = P.blank === 'para1' ? blanks - 1 : blanks;
+    if (gapN > 0 && out.length) out.push({ type: 'gap', n: Math.min(gapN, 20) });
     blanks = 0;
     // 대사 바로 아랫줄의 ( ) 는 번역 · 부연으로 보고 같은 말풍선 안에 붙임
     const prevB = out[out.length - 1];
@@ -1130,7 +1136,7 @@ function renderBlock(b) {
   if (b.type === 'narr') {
     return h('p', { class: 'narr' + (b.ind && !b.cont ? ' ind' : '') + (b.cont ? ' cont' : '') + (b.key ? ' was-bubble' : ''), 'data-key': b.key || false, html: fmtNoOrphan(b.text, state.typo.align === 'justify') });
   }
-  if (b.type === 'gap') return h('div', { class: 'gap' });
+  if (b.type === 'gap') { const g = h('div', { class: 'gap' }); g.style.setProperty('--gap-n', b.n || 1); return g; }
   if (b.type === 'hr') return h('hr', { class: 'divider' });
 
   const B = state.bubble;
@@ -1337,6 +1343,7 @@ function render() {
   });
 
   updateMeasure();
+  updateFilePreview();
   updateAutoCard();
   scheduleAutoChars(blocks);
   lastStats = { bubbles: blocks.filter((b) => b.type === 'bubble').length, pages: pages.length };
@@ -1438,6 +1445,13 @@ function updateAutoCard() {
   }
 }
 
+function updateFilePreview() {
+  const el = $('#file-preview');
+  if (el) el.textContent = fileName(0, 1);
+  const r = $('#result-filename');
+  if (r && lastImages.length) r.textContent = fileName(0, lastImages.length);
+}
+
 function updateMeasure() {
   const el = $('#measure-val');
   if (!el) return;
@@ -1481,7 +1495,7 @@ const SCHEMA = {
       { t: 'select', p: 'parse.nameless', l: '이름 없는 대사의 화자', o: () => [['none', '지정 안 함'], ['alt', '번갈아 가며'], ...state.chars.map((c) => [c.id, c.name || '(이름 없음)'])] },
     ] },
     { sec: '문단', rows: [
-      { t: 'select', p: 'parse.blank', l: '빈 줄 한 개', o: [['para', '문단 나눔만'], ['space', '여백으로']] },
+      { t: 'select', p: 'parse.blank', l: '빈 줄(엔터)', o: [['count', '친 만큼 여백'], ['para1', '한 줄은 문단 나눔만']] },
     ] },
     { sec: '제목 · 출처', rows: [
       { t: 'text', p: 'title', l: '제목', ph: '비워두면 표시하지 않아요' },
@@ -1575,6 +1589,14 @@ const SCHEMA = {
       { t: 'switch', p: 'canvas.pageNum', l: '페이지 번호' },
       { t: 'seg', p: 'canvas.valign', l: '세로 정렬', o: [['flex-start', '위'], ['center', '가운데'], ['flex-end', '아래']], when: fixedRatio },
       { t: 'slider', p: 'canvas.pad', l: '바깥 여백', min: 0, max: 300, step: 2, u: 'px' },
+    ] },
+    { sec: '파일 이름', note: '로그 제목을 비우면 텍스트 탭의 제목을 써요. 여러 장일 때는 번호가 자동으로 붙어요.', rows: [
+      { t: 'filePreview' },
+      { t: 'switch', p: 'file.prefix', l: '말머리 [발췌닝]' },
+      { t: 'switch', p: 'file.date', l: '저장 날짜', sub: '예) 20261101' },
+      { t: 'text', p: 'file.pair', l: '페어명', ph: '예) 닝닝' },
+      { t: 'text', p: 'file.title', l: '로그 제목', ph: '비우면 카드 제목을 써요' },
+      { t: 'switch', p: 'file.number', l: '한 장이어도 번호 붙이기', sub: '예) _01' },
     ] },
     { sec: '배경', rows: [
       { t: 'seg', p: 'canvas.bgType', l: '종류', o: [['solid', '단색'], ['gradient', '그라데이션'], ['pattern', '패턴'], ['image', '이미지']], block: true, rebuild: true },
@@ -1785,6 +1807,11 @@ function fieldEl(d) {
       paint(isPlain ? 'plain' : 'marked');
       const seg = segEl([['marked', '대사로'], ['plain', '지문으로']], state.parse.mode, (v) => { setPath('parse.mode', v); paint(v); }, true);
       el = h('div', { class: 'row stack mode-row' }, h('div', { class: 'row-label' }, '위에서 고른 형식을', hint), seg);
+      break;
+    }
+
+    case 'filePreview': {
+      el = h('div', { class: 'row file-preview' }, h('span', { class: 'fp-ico', html: icon('image') }), h('code', { id: 'file-preview' }));
       break;
     }
 
@@ -2149,6 +2176,38 @@ function setPane(id, fromUser) {
 
 const sheetOpen = () => $('#app').classList.contains('sheet-open');
 function setSheet(open) { $('#app').classList.toggle('sheet-open', open); }
+
+/* 편집 패널 너비: 오른쪽 가장자리를 끌어서 조절 (데스크톱), 더블클릭하면 원래대로 */
+(function panelResizer() {
+  const ws = $('.workspace');
+  const grip = $('#panel-resizer');
+  const MIN = 320, MAX = 760, DEF = 392;
+  const apply = (w) => ws.style.setProperty('--panel-w', `${Math.round(Math.min(MAX, Math.max(MIN, w)))}px`);
+  if (uiState.panelW) apply(uiState.panelW);
+  let x0 = null, w0 = 0;
+  grip.addEventListener('pointerdown', (e) => {
+    if (isMobile()) return;
+    x0 = e.clientX; w0 = $('#panel').offsetWidth;
+    grip.setPointerCapture(e.pointerId);
+    document.body.classList.add('resizing');
+  });
+  grip.addEventListener('pointermove', (e) => { if (x0 != null) apply(w0 + e.clientX - x0); });
+  const end = () => {
+    if (x0 == null) return;
+    x0 = null;
+    document.body.classList.remove('resizing');
+    uiState.panelW = $('#panel').offsetWidth; saveUi();
+  };
+  grip.addEventListener('pointerup', end);
+  grip.addEventListener('pointercancel', end);
+  grip.addEventListener('dblclick', () => { apply(DEF); uiState.panelW = DEF; saveUi(); });
+  grip.addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    apply($('#panel').offsetWidth + (e.key === 'ArrowRight' ? 24 : -24));
+    uiState.panelW = $('#panel').offsetWidth; saveUi();
+  });
+})();
 
 (function sheetGestures() {
   const handle = $('#sheet-handle');
@@ -2931,16 +2990,30 @@ function download(url, name) {
   a.remove();
 }
 
-// 파일 이름: 발췌닝_저장날짜_제목.png (여러 장이면 끝에 _01, _02 …)
-const titlePart = () => (state.title || '').replace(/[\\/:*?"<>|\n\r\t]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40).trim();
+// 파일 이름: [발췌닝]날짜_페어명_로그제목_번호.png (화면 탭 '파일 이름'에서 설정)
+// 아무것도 안 정하면 [발췌닝]날짜_카드 제목 (제목이 없으면 [발췌닝]날짜)
+const cleanFilePart = (t) => (t || '').replace(/[\\/:*?"<>|\n\r\t]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40).trim();
+const titlePart = () => cleanFilePart(state.title);
 let fileStamp = '';
 const stampNow = () => {
   const d = new Date(), p = (n) => String(n).padStart(2, '0');
   fileStamp = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}`;
 };
 stampNow();
-const fileBase = () => ['발췌닝', fileStamp, titlePart()].filter(Boolean).join('_');
-const fileName = (i, n = lastImages.length) => `${fileBase()}${n > 1 ? '_' + String(i + 1).padStart(2, '0') : ''}.png`;
+function fileParts(i, n) {
+  const f = state.file || {};
+  const parts = [];
+  if (f.date !== false) parts.push(fileStamp);
+  const pair = cleanFilePart(f.pair);
+  if (pair) parts.push(pair);
+  const title = cleanFilePart(f.title) || titlePart();
+  if (title) parts.push(title);
+  if (i != null && (f.number || n > 1)) parts.push(String(i + 1).padStart(2, '0'));
+  const base = (f.prefix !== false ? '[발췌닝]' : '') + parts.join('_');
+  return base || '발췌닝';
+}
+const fileBase = () => fileParts(null, 1);
+const fileName = (i, n = lastImages.length) => `${fileParts(i, n)}.png`;
 
 let busy = false;
 /** 카드들을 PNG로 변환 (indices 없으면 전부). 끝나면 미리보기를 원래대로 */
@@ -3158,6 +3231,7 @@ function showResult() {
   const n = lastImages.length;
   $('#result-title').textContent = n > 1 ? `이미지 ${n}장이 준비됐어요` : '이미지가 준비됐어요';
   $('#result-sub').textContent = `${state.canvas.width * state.canvas.scale}px 너비 PNG · 모바일에서는 이미지를 길게 눌러 저장할 수도 있어요`;
+  $('#result-filename').textContent = fileName(0, n);
   $('#btn-dl-all').lastChild.textContent = n > 1 ? '전부 다운로드' : '다운로드';
   updateFolderUI();
   $('#btn-share-all').hidden = !canShareFiles;
@@ -3172,6 +3246,15 @@ $('#btn-dl-all').addEventListener('click', async () => {
   }
 });
 $('#btn-share-all').addEventListener('click', () => shareImages(lastImages));
+$('#btn-filename-edit').addEventListener('click', () => {
+  closeModals();
+  setPane('canvas', true);
+  uiState.open = uiState.open || {};
+  setTimeout(() => {
+    const t = [...$$('[data-fields="canvas"] .section-title')].find((x) => x.textContent === '파일 이름');
+    if (t) t.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }, 60);
+});
 $('#btn-folder-save').addEventListener('click', async () => {
   if (!dirHandle) { if (!(await pickFolder())) return; }
   else if (!(await folderPermission(dirHandle, true))) { toast('폴더 접근이 허용되지 않았어요'); return; }
