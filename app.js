@@ -118,7 +118,7 @@ const DEFAULTS = {
   title: '제목',
   credit: '출처',
   creator: '제작자',
-  parse: { auto: true, formats: ['dq', 'sq', 'corner', 'wcorner'], custom: [], mode: 'marked', inline: false, strip: true, nameless: 'none', blank: 'count', mergeTl: true, tlShow: 'both', autoChars: true },
+  parse: { auto: true, formats: ['dq', 'sq', 'corner', 'wcorner'], custom: [], mode: 'marked', inline: false, strip: true, nameless: 'none', blank: 'para1', blankV3: true, mergeTl: true, tlShow: 'both', autoChars: true },
   typo: { font: 'Noto Serif KR', fontCustom: '', size: 13.5, lh: 1.7, ls: -0.005, weight: 400, color: '#2a2826', align: 'left', paraMode: 'gap', gap: 10, indent: 1, hl: '#ffe58a', hlStyle: 'under' },
   head: { font: 'Noto Serif KR', fontCustom: '', size: 17, weight: 700, color: '#1d1c1a', align: 'left', creditFont: 'Noto Serif KR', creditFontCustom: '', creditSize: 10.5, creditWeight: 400, creditColor: '#8a857c', creatorFont: 'Noto Serif KR', creatorFontCustom: '', creatorSize: 10.5, creatorWeight: 700, creatorColor: '#6b665e', creditAlign: 'right', creditLayout: 'inline', quoteMark: false, accent: '#c8a46a' },
   bubble: {
@@ -214,34 +214,34 @@ const SKINS = {
 };
 
 const TEMPLATES = [
-  { id: 'paper', name: '따뜻한 종이', sub: '본명조 · 기본', pv: { bg: '#f7f3ea', fg: '#2b2a27', b1: '#ffffff', b2: '#33415c' }, set: {}, chars: [['#ffffff', '#222222', '#e3a6a6'], ['#33415c', '#ffffff', '#33415c']] },
+  { id: 'paper', name: '따뜻한 종이', sub: '베이지 종이', pv: { bg: '#f7f3ea', fg: '#2b2a27', b1: '#ffffff', b2: '#33415c' }, set: {}, chars: [['#ffffff', '#222222', '#e3a6a6'], ['#33415c', '#ffffff', '#33415c']] },
   {
-    id: 'clean', name: '미니멀 화이트', sub: '프리텐다드 · 메신저', pv: { bg: '#ffffff', fg: '#191f28', b1: '#f2f4f6', b2: '#3182f6' },
+    id: 'clean', name: '미니멀 화이트', sub: '흰 배경 · 회색/파랑 말풍선', pv: { bg: '#ffffff', fg: '#191f28', b1: '#f2f4f6', b2: '#3182f6' },
     set: { typo: { font: 'Pretendard', color: '#191f28', lh: 1.8, ls: -0.02 }, head: { font: 'Pretendard', color: '#191f28', creditColor: '#8b95a1' }, bubble: { speech: 'messenger', bg: '#f2f4f6', color: '#191f28', shadow: false, nameColor: '#8b95a1' }, canvas: { bg: '#ffffff' } },
     chars: [['#f2f4f6', '#191f28', '#f2f4f6'], ['#3182f6', '#ffffff', '#3182f6']],
   },
   {
-    id: 'night', name: '다크 노블', sub: '본명조 · 어두운 배경', pv: { bg: '#17171c', fg: '#e8e4dc', b1: '#2c2c36', b2: '#e8e4dc' },
+    id: 'night', name: '다크 노블', sub: '어두운 배경', pv: { bg: '#17171c', fg: '#e8e4dc', b1: '#2c2c36', b2: '#e8e4dc' },
     set: { typo: { color: '#e8e4dc' }, head: { color: '#ffffff', creditColor: '#8b8b99' }, bubble: { bg: '#26262f', color: '#f2f2f2', border: '#3a3a46', shadow: false, nameColor: '#a3a3b5' }, canvas: { bg: '#17171c' } },
     chars: [['#2c2c36', '#f2f2f2', '#5c5c70'], ['#e8e4dc', '#17171c', '#e8e4dc']],
   },
   {
-    id: 'messenger', name: '메신저', sub: '채팅 화면 스타일', pv: { bg: '#b9cde0', fg: '#4a5a6a', b1: '#ffffff', b2: '#ffe94a' },
+    id: 'messenger', name: '메신저', sub: '하늘색 배경 · 노란 말풍선', pv: { bg: '#b9cde0', fg: '#4a5a6a', b1: '#ffffff', b2: '#ffe94a' },
     set: { typo: { font: 'Pretendard', size: 12, color: '#4a5a6a', align: 'center', lh: 1.6 }, head: { font: 'Pretendard', size: 20, color: '#2c3a48', creditColor: '#5a6b7c' }, bubble: { speech: 'messenger', radius: 14, shadow: false, nameColor: '#4a5a6a', gap: 12 }, canvas: { bg: '#b9cde0' } },
     chars: [['#ffffff', '#222222', '#ffffff'], ['#ffe94a', '#222222', '#ffe94a']],
   },
   {
-    id: 'book', name: '단정한 페이지', sub: '고운바탕 · 들여쓰기 · 2:3', pv: { bg: '#fbfaf6', fg: '#2a2826', book: true },
+    id: 'book', name: '단정한 페이지', sub: '미색 종이 · 글처럼 이어지는 대사', pv: { bg: '#fbfaf6', fg: '#2a2826', book: true },
     set: { typo: { font: 'Gowun Batang', size: 13.5, lh: 1.8, ls: -0.01, align: 'justify', paraMode: 'indent', indent: 1, color: '#262422' }, head: { font: 'Gowun Batang', size: 16, align: 'center', color: '#262422', creditColor: '#8f8a80', creditAlign: 'center', creditSize: 11.5 }, bubble: { speech: 'plain', font: 'Gowun Batang', size: 13.5, lh: 1.8, avatar: false, showName: false, gap: 0 }, canvas: { bg: '#fbfaf6', ratio: '2:3', pad: 52, valign: 'flex-start', pageNum: true } },
     parse: { strip: false }, chars: null, charSide: 'left',
   },
   {
-    id: 'quote', name: '인용 카드', sub: '송명 · 1:1 · 큰 따옴표', pv: { bg: '#f4efe6', fg: '#3a3229', q: '#b08d57', center: true },
+    id: 'quote', name: '인용 카드', sub: '베이지 · 큰 따옴표 장식', pv: { bg: '#f4efe6', fg: '#3a3229', q: '#b08d57', center: true },
     set: { typo: { font: 'Song Myung', size: 21, lh: 1.85, align: 'center', color: '#3a3229' }, head: { font: 'Song Myung', size: 20, align: 'center', color: '#3a3229', creditColor: '#9a8b76', creditAlign: 'center', quoteMark: true, accent: '#b08d57' }, bubble: { speech: 'plain', font: 'Song Myung', size: 19, avatar: false, showName: false, side: 'center' }, canvas: { bg: '#f4efe6', ratio: '1:1', pad: 64, fit: true, valign: 'center' } },
     chars: null, charSide: 'center',
   },
   {
-    id: 'line', name: '라인 메신저', sub: '프로필 · 초록 말풍선', pv: { bg: '#8fabd4', fg: '#3a4a5e', b1: '#ffffff', b2: '#a6e877', center: false },
+    id: 'line', name: '라인 메신저', sub: '하늘색 · 초록 말풍선 · 프로필', pv: { bg: '#8fabd4', fg: '#3a4a5e', b1: '#ffffff', b2: '#a6e877', center: false },
     set: { typo: { font: 'Pretendard', size: 12, color: '#33475e', align: 'center', lh: 1.6 }, head: { font: 'Pretendard', size: 17, color: '#1f2d3d', creditColor: '#3f5571', creditAlign: 'center' }, bubble: { speech: 'round', font: 'Pretendard', size: 13.5, radius: 18, px: 13, py: 8, shadow: false, tail: true, gap: 10, avatar: true, avatarSize: 36, nameSize: 11, nameColor: '#33475e' }, canvas: { bg: '#8fabd4' } },
     chars: [['#ffffff', '#1d1d1d', '#ffffff'], ['#a6e877', '#1d2a10', '#a6e877']],
   },
@@ -251,21 +251,21 @@ const TEMPLATES = [
     skin: SKINS.chungking.css, chars: [['#1b1f1a', '#ffd84a', '#1b1f1a'], ['#1b1f1a', '#9ff0d6', '#1b1f1a']], charSide: 'center',
   },
   {
-    id: 'film', name: '영화 자막', sub: '16:9 · 검은 화면', pv: { bg: '#000000', fg: '#9a9a9a', film: true },
+    id: 'film', name: '영화 자막', sub: '검은 화면 · 자막형 대사', pv: { bg: '#000000', fg: '#9a9a9a', film: true },
     set: { typo: { font: 'Noto Sans KR', color: '#d8d8d8', size: 13 }, head: { font: 'Noto Sans KR', color: '#ffffff', creditColor: '#777777', align: 'center', creditAlign: 'center' }, bubble: { font: 'Noto Sans KR', size: 14.5, color: '#ffffff', nameColor: '#ffd43b', gap: 14 }, canvas: { bg: '#000000', ratio: '16:9', pad: 40, valign: 'center' } },
     skin: SKINS.film.css, chars: [['#000000', '#ffffff', '#000000'], ['#000000', '#ffffff', '#000000']],
   },
   {
-    id: 'pastel', name: '파스텔', sub: '고운돋움 · 그라데이션', pv: { bg: 'linear-gradient(160deg,#ffe3ec,#ece6ff 50%,#dff3ff)', fg: '#4a4560', b1: 'rgba(255,255,255,.9)', b2: '#b197fc' },
+    id: 'pastel', name: '파스텔', sub: '파스텔 그라데이션', pv: { bg: 'linear-gradient(160deg,#ffe3ec,#ece6ff 50%,#dff3ff)', fg: '#4a4560', b1: 'rgba(255,255,255,.9)', b2: '#b197fc' },
     set: { typo: { font: 'Gowun Dodum', color: '#4a4560' }, head: { font: 'Gowun Dodum', color: '#3b3552', creditColor: '#8a82a8' }, bubble: { speech: 'pill', font: 'Gowun Dodum', nameColor: '#8a7fb0' }, canvas: { bgType: 'gradient', bg: '#ffe3ec', bg2: '#dff3ff', gradAngle: 160 } }, chars: [['#ffffff', '#4a4560', '#ffffff'], ['#b197fc', '#ffffff', '#b197fc']],
   },
   {
-    id: 'vintage', name: '빈티지', sub: '나눔명조 · 액자', pv: { bg: '#efe4cc', fg: '#3b2f22', b1: '#f8f0de', b2: '#8a7356', frame: true },
+    id: 'vintage', name: '빈티지', sub: '빈티지 종이 · 액자', pv: { bg: '#efe4cc', fg: '#3b2f22', b1: '#f8f0de', b2: '#8a7356', frame: true },
     set: { typo: { font: 'Nanum Myeongjo', color: '#3b2f22' }, head: { font: 'Nanum Myeongjo', color: '#2a2017', creditColor: '#7a6650' }, bubble: { speech: 'square', font: 'Nanum Myeongjo', bg: '#f8f0de', color: '#3b2f22', border: '#8a7356', bw: 1, shadow: false, nameColor: '#7a6650' }, canvas: { bg: '#efe4cc', pad: 56 } },
     skin: SKINS.vintage.css, chars: [['#f8f0de', '#3b2f22', '#8a7356'], ['#8a7356', '#f8f0de', '#8a7356']],
   },
   {
-    id: 'terminal', name: '레트로 터미널', sub: '고정폭 · 초록 글씨', pv: { bg: '#0b110b', fg: '#4dff88', b1: '#0b110b', b2: '#0b110b', outline: '#4dff88' },
+    id: 'terminal', name: '레트로 터미널', sub: '검정 화면 · 초록 글씨', pv: { bg: '#0b110b', fg: '#4dff88', b1: '#0b110b', b2: '#0b110b', outline: '#4dff88' },
     set: { typo: { font: 'monospace', color: '#4dff88', size: 13 }, head: { font: 'monospace', color: '#8dffb0', creditColor: '#2e9e57' }, bubble: { speech: 'square', font: 'monospace', bg: '#0b110b', color: '#4dff88', border: '#4dff88', bw: 1, shadow: false, nameColor: '#2e9e57', avatar: false }, canvas: { bg: '#0b110b' } },
     skin: SKINS.terminal.css, chars: [['#0b110b', '#4dff88', '#4dff88'], ['#0b110b', '#8dffb0', '#8dffb0']],
   },
@@ -442,7 +442,8 @@ function migrate(st, raw) {
   }
   if (raw && !('creator' in raw)) st.creator = '';
   // 이전 버전의 빈 줄 처리 → 엔터 친 만큼 여백
-  if (st.parse.blank === 'para' || st.parse.blank === 'space') st.parse.blank = 'count';
+  // 빈 줄 기본값을 '한 줄은 문단 나눔만'으로 (한 번만 옮김, 이후 사용자가 고른 값은 유지)
+  if (raw && raw.parse && !raw.parse.blankV3) { st.parse.blank = 'para1'; st.parse.blankV3 = true; }
   if (!st.file) st.file = copyState(DEFAULTS.file);
   // 이전 버전: HTML 배경 코드를 CSS 스킨 칸에 넣었던 경우 옮겨 줌
   if (st.skin && !st.bgHtml && looksLikeHtmlBg(st.skin)) { st.bgHtml = st.skin; st.skin = ''; }
@@ -2547,21 +2548,23 @@ function buildTemplates() {
   });
 }
 
+/* 템플릿은 색 · 배경 · 말풍선 모양 · 스킨만 바꾸고, 화면 비율 · 크기와 서체 · 글자 간격은 지금 설정을 유지 */
+const TEMPLATE_KEEP = {
+  typo: ['font', 'fontCustom', 'size', 'lh', 'ls', 'weight', 'align', 'paraMode', 'gap', 'indent', 'hlStyle'],
+  head: ['font', 'fontCustom', 'size', 'weight', 'align', 'creditFont', 'creditFontCustom', 'creditSize', 'creditWeight', 'creatorFont', 'creatorFontCustom', 'creatorSize', 'creatorWeight', 'creditAlign', 'creditLayout'],
+  bubble: ['font', 'fontCustom', 'size', 'lh', 'ls', 'weight', 'avatar', 'avatarSize', 'avatarShape', 'showName', 'nameSize', 'maxw'],
+  canvas: ['ratio', 'width', 'pad', 'fit', 'valign', 'paginate', 'pageNum', 'scale', 'bgImage', 'overlay', 'overlayColor'],
+};
 function applyTemplate(t) {
-  const c0 = state.canvas;
-  const keep = { width: c0.width, scale: c0.scale, paginate: c0.paginate, pageNum: c0.pageNum, ratio: c0.ratio, fit: c0.fit, bgImage: c0.bgImage, overlay: c0.overlay, overlayColor: c0.overlayColor };
+  const prev = copyState({ typo: state.typo, head: state.head, bubble: state.bubble, canvas: state.canvas });
   state.parse.strip = t.parse && 'strip' in t.parse ? t.parse.strip : true;
   for (const k of ['typo', 'head', 'bubble', 'canvas']) {
     const base = copyState(BASE_DESIGN[k]);
     state[k] = deepMerge(base, (t.set && t.set[k]) || {});
+    for (const f of TEMPLATE_KEEP[k]) if (f in prev[k]) state[k][f] = prev[k][f];
   }
-  Object.assign(state.canvas, keep);
-  for (const k of ['ratio', 'fit', 'pageNum']) if (t.set.canvas && k in t.set.canvas) state.canvas[k] = t.set.canvas[k];
   const th = (t.set && t.set.head) || {};
-  if (th.font && !th.creditFont) Object.assign(state.head, { creditFont: th.font, creatorFont: th.font });
   if (th.creditColor && !th.creatorColor) state.head.creatorColor = th.creditColor;
-  if (th.creditSize && !th.creatorSize) state.head.creatorSize = th.creditSize;
-  if (th.creditAlign) state.head.creditAlign = th.creditAlign;
   state.skin = t.skin || '';
   state.chars.forEach((c, i) => {
     // 위치: 사용자가 정한 좌/우(homeSide)를 지킴. 가운데 정렬 같은 레이아웃 템플릿만 잠시 바꾸고, 다른 템플릿에서 원래대로
