@@ -282,7 +282,7 @@ const BASE_DESIGN = Object.fromEntries(DESIGN_KEYS.map((k) => [k, copyState(DEFA
 })();
 
 const PANES = [
-  { id: 'text', label: '텍스트', icon: 'text', desc: '발췌할 글을 붙여넣으면 말풍선이 자동으로 만들어져요. 어떤 텍스트를 말풍선으로 만들지는 아래에서 정할 수 있어요.' },
+  { id: 'text', label: '텍스트', icon: 'text', desc: '' },
   { id: 'bubble', label: '말풍선', icon: 'bubble', desc: '말풍선 모양과 색, 프로필 표시 방식을 정해요.' },
   { id: 'chars', label: '캐릭터', icon: 'person', desc: '본문에 쓴 이름이 여기 등록한 캐릭터 이름과 똑같아야(띄어쓰기까지) 말풍선에 사진과 색이 자동으로 연결돼요.' },
   { id: 'typo', label: '서체', icon: 'type', desc: '본문, 말풍선, 제목의 글꼴과 간격을 다듬어요.' },
@@ -674,6 +674,12 @@ const HAS_HANGUL = /[\uac00-\ud7a3]/;
 // 따옴표 안이 일본어 · 중국어이고 뒤가 한국어면 번역으로 봄
 const looksTranslated = (lq) => HAS_CJK.test(lq.inner) && !HAS_HANGUL.test(lq.inner) && HAS_HANGUL.test(lq.rest);
 // 이름만 있는 줄: '쿠죠 후유카 ——', '닝 :', '닝ㅣ' (다음 줄이 대사일 때만)
+// 구분 기호 없이 이름만 있는 줄: '카라츄' (짧고 문장 부호가 없을 때, 다음 줄이 대사일 때만)
+function isBareName(t) {
+  if (findChar(t)) return true;
+  if (t.length > 16 || t.split(/\s+/).length > 3) return false;
+  return !/[.,!?。、，…~"'“”‘’「」『』()（）\[\]<>《》〈〉:：;·\-—=*#]/.test(t);
+}
 const NAME_LINE = /^([^\s"“「『(（'‘\[<〈《].{0,23}?)\s*(?:[—―–]+|-{2,}|[:：|｜ㅣ│▶▷»>])\s*$/;
 
 function parseText() {
@@ -689,7 +695,11 @@ function parseText() {
     const key = `${base}|${occ[base]}`;
     if ((state.overrides[key] || {}).asText) { narr(full); out[out.length - 1].key = key; return; }
     const b = { type: 'bubble', kind: 'speech', inner, full, name: name || null, key };
-    if (tlText) b.tl = [{ inner: tlText, full: tlText }];
+    if (tlText) {
+      // 번역이 ( )로 감싸져 있으면 괄호는 '기호 숨기기' 설정을 따름
+      const w = wrapped(tlText, [['(', ')'], ['（', '）']]);
+      b.tl = [{ inner: w ? w.inner : tlText, full: tlText }];
+    }
     out.push(b);
   };
   // 이름이 붙은 대사 하나를 처리 (뒤에 번역이 이어지면 같은 말풍선에)
@@ -701,6 +711,21 @@ function parseText() {
     return false;
   };
   const isDialogueLine = (t) => !!(t && (matchFormat(t, rules) || leadQuote(t, rules)));
+  // 이름 줄 다음의 대사: 통째로 감싼 줄이거나, 따옴표 뒤가 번역(괄호 · 외국어 원문)일 때만
+  const PARENS = [['(', ')'], ['（', '）']];
+  const cleanDialogue = (t) => {
+    if (!t) return false;
+    if (matchFormat(t, rules)) return true;
+    const lq = leadQuote(t, rules);
+    return !!(lq && (looksTranslated(lq) || wrapped(lq.rest, PARENS)));
+  };
+  // 구분 기호 없는 이름 줄은 반복해서 나오거나 · 등록된 캐릭터이거나 · 다음 줄이 외국어 대사일 때만 이름으로
+  const bareCount = {};
+  for (let k = 0; k < lines.length - 1; k++) {
+    const t = lines[k].trim();
+    if (t && isBareName(t) && cleanDialogue(lines[k + 1].trim())) bareCount[t] = (bareCount[t] || 0) + 1;
+  }
+  const bareOk = (t, next) => findChar(t) || bareCount[t] >= 2 || HAS_CJK.test(next);
   let pendingName = null;
 
   const narr = (text) => {
@@ -735,8 +760,13 @@ function parseText() {
     }
     // 이름만 있는 줄 + 바로 다음 줄이 대사 → 다음 줄의 화자로
     const nl = line.match(NAME_LINE);
-    if (nl && !/[.?!。…]$/.test(nl[1]) && isDialogueLine((lines[li + 1] || '').trim())) {
+    const nextLine = (lines[li + 1] || '').trim();
+    if (nl && !/[.?!。…]$/.test(nl[1]) && isDialogueLine(nextLine)) {
       pendingName = nl[1].trim();
+      continue;
+    }
+    if (P.auto && !nl && isBareName(line) && cleanDialogue(nextLine) && bareOk(line, nextLine)) {
+      pendingName = line;
       continue;
     }
 
@@ -2045,7 +2075,7 @@ function buildRail() {
   PANES.forEach((p) => {
     rail.append(h('button', { type: 'button', class: 'rail-item', 'data-pane': p.id, html: icon(p.icon) + `<span>${p.label}</span>`, onclick: () => setPane(p.id, true) }));
     const pane = $(`[data-pane="${p.id}"].pane`);
-    pane.prepend(h('header', { class: 'pane-head' }, h('h2', {}, p.label), h('p', {}, p.desc)));
+    pane.prepend(h('header', { class: 'pane-head' }, h('h2', {}, p.label), p.desc ? h('p', {}, p.desc) : null));
   });
 }
 
