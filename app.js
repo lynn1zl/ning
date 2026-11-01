@@ -118,7 +118,7 @@ const DEFAULTS = {
   title: '제목',
   credit: '출처',
   creator: '제작자',
-  parse: { auto: true, formats: ['dq', 'sq', 'corner', 'wcorner'], custom: [], mode: 'marked', inline: false, strip: true, nameless: 'none', blank: 'para', mergeTl: true },
+  parse: { auto: true, formats: ['dq', 'sq', 'corner', 'wcorner'], custom: [], mode: 'marked', inline: false, strip: true, nameless: 'none', blank: 'para', mergeTl: true, autoChars: true },
   typo: { font: 'Noto Serif KR', fontCustom: '', size: 13.5, lh: 1.7, ls: -0.005, weight: 400, color: '#2a2826', align: 'left', paraMode: 'gap', gap: 10, indent: 1, hl: '#ffe58a', hlStyle: 'under' },
   head: { font: 'Noto Serif KR', fontCustom: '', size: 17, weight: 700, color: '#1d1c1a', align: 'left', creditFont: 'Noto Serif KR', creditFontCustom: '', creditSize: 10.5, creditWeight: 400, creditColor: '#8a857c', creatorFont: 'Noto Serif KR', creatorFontCustom: '', creatorSize: 10.5, creatorWeight: 700, creatorColor: '#6b665e', creditAlign: 'right', creditLayout: 'inline', quoteMark: false, accent: '#c8a46a' },
   bubble: {
@@ -649,7 +649,7 @@ function splitSpeaker(line) {
   if (m) return { name: m[1].trim(), rest: m[2].trim(), strong: true };
   // 이름 | 대사  (채팅 로그에서 흔한 형식)
   m = line.match(/^([^\s|｜ㅣ│"“「『(（'‘\[][^|｜ㅣ│"“「『]{0,29}?)\s*[|｜ㅣ│]\s*(.+)$/);
-  if (m) return { name: m[1].trim(), rest: m[2].trim(), strong: false };
+  if (m) return { name: m[1].trim(), rest: m[2].trim(), strong: !/[.?!。,，]$/.test(m[1].trim()) };
   m = line.match(/^([^\s:："“「『(（'‘\[][^:："“「『]{0,23}?)\s*[:：]\s*(.+)$/);
   if (m) return { name: m[1].trim(), rest: m[2].trim(), strong: false };
   m = line.match(/^(\S{1,12})\s+(\S.*)$/);
@@ -678,9 +678,21 @@ const looksTranslated = (lq) => HAS_CJK.test(lq.inner) && !HAS_HANGUL.test(lq.in
 function isBareName(t) {
   if (findChar(t)) return true;
   if (t.length > 16 || t.split(/\s+/).length > 3) return false;
-  return !/[.,!?。、，…~"'“”‘’「」『』()（）\[\]<>《》〈〉:：;·\-—=*#]/.test(t);
+  // 글자 · 숫자로 시작하고, 이름에 흔한 기호(. _ -)만 허용 (예: NO.25 CINCO)
+  return /^[\p{L}\p{N}][\p{L}\p{N}\s._-]*$/u.test(t) && !/[.]$/.test(t);
 }
-const NAME_LINE = /^([^\s"“「『(（'‘\[<〈《].{0,23}?)\s*(?:[—―–]+|-{2,}|[:：|｜ㅣ│▶▷»>])\s*$/;
+// 장식 기호로 감싼 이름 줄: '⧙ **자이든 윈터스** ⧙', '▶ 닝', '【닝】'
+function decoratedName(t) {
+  const core = t.replace(/\*\*|__|~~|==/g, '').trim();
+  const m = core.match(/^([^\p{L}\p{N}\s]+)\s*(.+?)\s*([^\p{L}\p{N}\s]*)$/u);
+  if (!m) return null;
+  const name = m[2].trim();
+  if (!name || name.length > 24 || name.split(/\s+/).length > 4) return null;
+  if (/["“”‘’「」『』()（）.?!。,，]/.test(name)) return null;
+  return name;
+}
+const cleanName = (n) => (n || '').replace(/\*\*|__|~~|==/g, '').trim();
+const NAME_LINE = /^([\p{L}\p{N}].{0,23}?)\s*(?:[—―–]+|-{2,}|[:：|｜ㅣ│▶▷»>])\s*$/u;
 
 function parseText() {
   const P = state.parse;
@@ -690,6 +702,7 @@ function parseText() {
   const rules = dialogueRules();
   const inlineRe = inlineRegex(rules);
   const bubble = (inner, full, name, tlText) => {
+    name = cleanName(name);
     const base = `speech|${inner}`;
     occ[base] = (occ[base] || 0) + 1;
     const key = `${base}|${occ[base]}`;
@@ -761,13 +774,18 @@ function parseText() {
     // 이름만 있는 줄 + 바로 다음 줄이 대사 → 다음 줄의 화자로
     const nl = line.match(NAME_LINE);
     const nextLine = (lines[li + 1] || '').trim();
-    if (nl && !/[.?!。…]$/.test(nl[1]) && isDialogueLine(nextLine)) {
+    if (nl && !/[.?!。…]$/.test(nl[1]) && cleanDialogue(nextLine)) {
       pendingName = nl[1].trim();
       continue;
     }
     if (P.auto && !nl && isBareName(line) && cleanDialogue(nextLine) && bareOk(line, nextLine)) {
       pendingName = line;
       continue;
+    }
+    // 장식 기호로 감싼 이름 줄 (그 줄 자체가 대사 형식이 아니고, 다음 줄이 깔끔한 대사일 때)
+    if (P.auto && !nl && cleanDialogue(nextLine) && !matchFormat(line, rules) && !leadQuote(line, rules)) {
+      const dn = decoratedName(line);
+      if (dn) { pendingName = dn; continue; }
     }
 
     const sp = splitSpeaker(line);
@@ -1320,6 +1338,7 @@ function render() {
 
   updateMeasure();
   updateAutoCard();
+  scheduleAutoChars(blocks);
   lastStats = { bubbles: blocks.filter((b) => b.type === 'bubble').length, pages: pages.length };
   updateStats();
   const sc = c.scale;
@@ -1373,6 +1392,31 @@ function stepZoom(dir) {
 }
 
 const cardObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => requestAnimationFrame(rescale)) : null;
+
+/* 인식된 새 이름을 캐릭터 목록에 자동 등록 (입력이 멈춘 뒤, 같은 이름은 한 세션에 한 번만) */
+const autoTried = new Set();
+let autoCharTimer;
+function scheduleAutoChars(blocks) {
+  if (!state.parse.autoChars) return;
+  const fresh = [...new Set(blocks.filter((b) => b.type === 'bubble' && b.name && !(state.overrides[b.key] || {}).speaker).map((b) => b.name))]
+    .filter((n) => !findChar(n) && !autoTried.has(n));
+  clearTimeout(autoCharTimer);
+  if (!fresh.length) return;
+  autoCharTimer = setTimeout(() => {
+    const still = new Set(parseText().filter((b) => b.type === 'bubble' && b.name).map((b) => b.name));
+    const add = fresh.filter((n) => still.has(n) && !findChar(n));
+    if (!add.length) return;
+    add.forEach((n) => autoTried.add(n));
+    const base = Date.now().toString(36);
+    add.forEach((name, i) => state.chars.push({
+      id: `a${base}${i}`, name, avatar: '', side: 'left', shape: '',
+      custom: false, bg: '#ffffff', color: '#222222', border: '#ffffff',
+    }));
+    changed(); commit();
+    buildChars(); buildFields(); buildQuickInsert();
+    toast(add.length > 2 ? `새 캐릭터 ${add.length}명을 등록했어요` : `‘${add.join('’, ‘')}’을(를) 캐릭터에 등록했어요`, { label: '되돌리기', fn: undo }, 3200);
+  }, 1500);
+}
 
 function updateAutoCard() {
   const btn = $('#auto-btn');
@@ -1434,6 +1478,7 @@ const SCHEMA = {
       { t: 'switch', p: 'parse.inline', l: '문장 속 대사도 분리', sub: '지문 중간에 있는 대사도 말풍선으로 꺼내요', when: () => state.parse.mode === 'marked' },
       { t: 'switch', p: 'parse.strip', l: '말풍선에서 기호 숨기기' },
       { t: 'switch', p: 'parse.mergeTl', l: '아랫줄 괄호는 같은 말풍선에', sub: '대사 바로 아래 ( ) 줄을 번역처럼 작게 붙여요' },
+      { t: 'switch', p: 'parse.autoChars', l: '인식된 이름을 캐릭터에 자동 등록', sub: '새 이름이 나오면 캐릭터 탭에 알아서 추가해요' },
       { t: 'select', p: 'parse.nameless', l: '이름 없는 대사의 화자', o: () => [['none', '지정 안 함'], ['alt', '번갈아 가며'], ...state.chars.map((c) => [c.id, c.name || '(이름 없음)'])] },
     ] },
     { sec: '문단', rows: [
