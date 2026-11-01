@@ -118,7 +118,7 @@ const DEFAULTS = {
   title: '제목',
   credit: '출처',
   creator: '제작자',
-  parse: { auto: true, formats: ['dq', 'sq', 'corner', 'wcorner'], custom: [], mode: 'marked', inline: false, strip: true, nameless: 'none', blank: 'count', mergeTl: true, autoChars: true },
+  parse: { auto: true, formats: ['dq', 'sq', 'corner', 'wcorner'], custom: [], mode: 'marked', inline: false, strip: true, nameless: 'none', blank: 'count', mergeTl: true, tlShow: 'both', autoChars: true },
   typo: { font: 'Noto Serif KR', fontCustom: '', size: 13.5, lh: 1.7, ls: -0.005, weight: 400, color: '#2a2826', align: 'left', paraMode: 'gap', gap: 10, indent: 1, hl: '#ffe58a', hlStyle: 'under' },
   head: { font: 'Noto Serif KR', fontCustom: '', size: 17, weight: 700, color: '#1d1c1a', align: 'left', creditFont: 'Noto Serif KR', creditFontCustom: '', creditSize: 10.5, creditWeight: 400, creditColor: '#8a857c', creatorFont: 'Noto Serif KR', creatorFontCustom: '', creatorSize: 10.5, creatorWeight: 700, creatorColor: '#6b665e', creditAlign: 'right', creditLayout: 'inline', quoteMark: false, accent: '#c8a46a' },
   bubble: {
@@ -1169,8 +1169,14 @@ function renderBlock(b) {
   if (B.showName && speaker) body.append(h('div', { class: 'name' }, speaker));
   const strip = state.parse.strip;
   let inner = fmt(strip ? b.inner : b.full);
-  // 번역 줄: 줄바꿈 뒤에 작은 글씨로 (말풍선 안 기호는 '기호 숨기기'를 따름)
-  if (b.tl) for (const t of b.tl) inner += '\n<span class="tl">' + fmt(strip ? t.inner : t.full) + '</span>';
+  const show = state.parse.tlShow || 'both';
+  if (b.tl && show === 'tl') {
+    // 번역만: 원문(외국어)을 빼고 번역을 본문 크기로
+    inner = b.tl.map((t) => fmt(strip ? t.inner : t.full)).join('\n');
+  } else if (b.tl && show === 'both') {
+    // 번역 줄: 줄바꿈 뒤에 작은 글씨로 (말풍선 안 기호는 '기호 숨기기'를 따름)
+    for (const t of b.tl) inner += '\n<span class="tl">' + fmt(strip ? t.inner : t.full) + '</span>';
+  }
   body.append(h('div', { class: 'bubble', html: inner }));
   msg.append(body);
   return msg;
@@ -1491,6 +1497,7 @@ const SCHEMA = {
       { t: 'switch', p: 'parse.inline', l: '문장 속 대사도 분리', sub: '지문 중간에 있는 대사도 말풍선으로 꺼내요', when: () => state.parse.mode === 'marked' },
       { t: 'switch', p: 'parse.strip', l: '말풍선에서 기호 숨기기' },
       { t: 'switch', p: 'parse.mergeTl', l: '아랫줄 괄호는 같은 말풍선에', sub: '대사 바로 아래 ( ) 줄을 번역처럼 작게 붙여요' },
+      { t: 'seg', p: 'parse.tlShow', l: '원문 · 번역이 함께 있는 대사', o: [['both', '둘 다'], ['tl', '번역만'], ['orig', '원문만']], block: true },
       { t: 'switch', p: 'parse.autoChars', l: '인식된 이름을 캐릭터에 자동 등록', sub: '새 이름이 나오면 캐릭터 탭에 알아서 추가해요' },
       { t: 'select', p: 'parse.nameless', l: '이름 없는 대사의 화자', o: () => [['none', '지정 안 함'], ['alt', '번갈아 가며'], ...state.chars.map((c) => [c.id, c.name || '(이름 없음)'])] },
     ] },
@@ -1592,7 +1599,6 @@ const SCHEMA = {
     ] },
     { sec: '파일 이름', note: '로그 제목을 비우면 텍스트 탭의 제목을 써요. 여러 장일 때는 번호가 자동으로 붙어요.', rows: [
       { t: 'filePreview' },
-      { t: 'switch', p: 'file.prefix', l: '말머리 [발췌닝]' },
       { t: 'switch', p: 'file.date', l: '저장 날짜', sub: '예) 20261101' },
       { t: 'text', p: 'file.pair', l: '페어명', ph: '예) 닝닝' },
       { t: 'text', p: 'file.title', l: '로그 제목', ph: '비우면 카드 제목을 써요' },
@@ -3009,7 +3015,7 @@ function fileParts(i, n) {
   const title = cleanFilePart(f.title) || titlePart();
   if (title) parts.push(title);
   if (i != null && (f.number || n > 1)) parts.push(String(i + 1).padStart(2, '0'));
-  const base = (f.prefix !== false ? '[발췌닝]' : '') + parts.join('_');
+  const base = '[발췌닝]' + parts.join('_');
   return base || '발췌닝';
 }
 const fileBase = () => fileParts(null, 1);
