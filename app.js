@@ -143,7 +143,7 @@ const DEFAULTS = {
   title: '어린 왕자',
   credit: '『어린 왕자』',
   creator: '앙투안 드 생텍쥐페리',
-  parse: { auto: true, formats: ['dq', 'sq', 'corner', 'wcorner'], custom: [], mode: 'marked', inline: false, strip: true, nameless: 'none', blank: 'para' },
+  parse: { auto: true, formats: ['dq', 'sq', 'corner', 'wcorner'], custom: [], mode: 'marked', inline: false, strip: true, nameless: 'none', blank: 'para', mergeTl: true },
   typo: { font: 'Noto Serif KR', fontCustom: '', size: 13.5, lh: 1.7, ls: -0.005, weight: 400, color: '#2a2826', align: 'left', paraMode: 'gap', gap: 10, indent: 1, hl: '#ffe58a', hlStyle: 'under' },
   head: { font: 'Noto Serif KR', fontCustom: '', size: 17, weight: 700, color: '#1d1c1a', align: 'left', creditFont: 'Noto Serif KR', creditFontCustom: '', creditSize: 10.5, creditWeight: 400, creditColor: '#8a857c', creatorFont: 'Noto Serif KR', creatorFontCustom: '', creatorSize: 10.5, creatorWeight: 700, creatorColor: '#6b665e', creditAlign: 'right', creditLayout: 'inline', quoteMark: false, accent: '#c8a46a' },
   bubble: {
@@ -641,6 +641,9 @@ const charById = (id) => state.chars.find((c) => c.id === id) || null;
 function splitSpeaker(line) {
   let m = line.match(/^\[([^\]]{1,24})\]\s*(.+)$/);
   if (m) return { name: m[1].trim(), rest: m[2].trim(), strong: true };
+  // 이름 | 대사  (채팅 로그에서 흔한 형식)
+  m = line.match(/^([^\s|｜"“「『(（'‘\[][^|｜"“「『]{0,29}?)\s*[|｜]\s*(.+)$/);
+  if (m) return { name: m[1].trim(), rest: m[2].trim(), strong: false };
   m = line.match(/^([^\s:："“「『(（'‘\[][^:："“「『]{0,23}?)\s*[:：]\s*(.+)$/);
   if (m) return { name: m[1].trim(), rest: m[2].trim(), strong: false };
   m = line.match(/^(\S{1,12})\s+(\S.*)$/);
@@ -672,8 +675,18 @@ function parseText() {
     const line = raw.trim();
     if (!line) { blanks++; continue; }
     // 빈 줄 하나는 문단 경계일 뿐, 두 줄 이상은 장면 전환(여백)으로 본다
+    const adjacent = blanks === 0;
     if (blanks && out.length && (P.blank === 'space' || blanks >= 2)) out.push({ type: 'gap' });
     blanks = 0;
+    // 대사 바로 아랫줄의 ( ) 는 번역 · 부연으로 보고 같은 말풍선 안에 붙임
+    const prevB = out[out.length - 1];
+    if (P.mergeTl && adjacent && prevB && prevB.type === 'bubble') {
+      const tl = wrapped(line, [['(', ')'], ['（', '）']]);
+      if (tl) {
+        (prevB.tl = prevB.tl || []).push({ inner: tl.inner, full: line });
+        continue;
+      }
+    }
     if (/^(-{3,}|\*{3,}|_{3,}|—{2,})$/.test(line)) { out.push({ type: 'hr' }); continue; }
 
     const sp = splitSpeaker(line);
@@ -982,8 +995,9 @@ function applyHtmlBg(pages) {
     const w = p.card.offsetWidth, hgt = p.card.offsetHeight;
     const [base, top] = await Promise.all([htmlBgURL(w, hgt, 'base'), hasTop ? htmlBgURL(w, hgt, 'top') : null]);
     if (seq !== htmlBgSeq) return;
+    if (!p.bgImg) return;
     p.bgImg.src = base; p.bgImg.hidden = false;
-    if (top) { p.topImg.src = top; p.topImg.hidden = false; }
+    if (top && p.topImg) { p.topImg.src = top; p.topImg.hidden = false; }
     return `${w} × ${hgt}px`;
   })).then((sizes) => {
     if (seq === htmlBgSeq) setHtmlStatus(`적용됨 · 카드 크기 ${[...new Set(sizes)].join(', ')}`);
@@ -1037,7 +1051,11 @@ function renderBlock(b) {
   } else msg.classList.add('no-avatar');
   const body = h('div', { class: 'msg-body' });
   if (B.showName && speaker) body.append(h('div', { class: 'name' }, speaker));
-  body.append(h('div', { class: 'bubble', html: fmt(state.parse.strip ? b.inner : b.full) }));
+  const strip = state.parse.strip;
+  let inner = fmt(strip ? b.inner : b.full);
+  // 번역 줄: 줄바꿈 뒤에 작은 글씨로 (말풍선 안 기호는 '기호 숨기기'를 따름)
+  if (b.tl) for (const t of b.tl) inner += '\n<span class="tl">' + fmt(strip ? t.inner : t.full) + '</span>';
+  body.append(h('div', { class: 'bubble', html: inner }));
   msg.append(body);
   return msg;
 }
@@ -1054,9 +1072,11 @@ function newPage(idx, W, H) {
   card.style.width = W + 'px';
   if (H) card.style.height = H + 'px';
   card.append(h('div', { class: 'card-overlay' }));
-  const bgImg = h('img', { class: 'card-htmlbg', alt: '', hidden: true, 'aria-hidden': 'true' });
-  const topImg = h('img', { class: 'card-htmltop', alt: '', hidden: true, 'aria-hidden': 'true' });
-  card.append(bgImg);
+  // HTML 배경이 있을 때만 그림 자리를 만듦 (빈 <img>는 이미지 저장을 실패시킴)
+  const useHtml = !!(state.bgHtml || '').trim();
+  const bgImg = useHtml ? h('img', { class: 'card-htmlbg', alt: '', hidden: true, 'aria-hidden': 'true' }) : null;
+  const topImg = useHtml ? h('img', { class: 'card-htmltop', alt: '', hidden: true, 'aria-hidden': 'true' }) : null;
+  if (bgImg) card.append(bgImg);
   if (idx === 0 && state.head.quoteMark) card.append(h('div', { class: 'quote-mark', 'aria-hidden': 'true' }, '“'));
   if (idx === 0 && state.title.trim()) card.append(h('h2', { class: 'card-title', html: fmt(state.title) }));
   const content = h('div', { class: 'card-content' });
@@ -1074,7 +1094,7 @@ function newPage(idx, W, H) {
     if (state.canvas.pageNum) foot.append(h('span', { class: 'page-num' }, '0 / 0'));
     card.append(foot);
   }
-  card.append(topImg);
+  if (topImg) card.append(topImg);
   const label = h('div', { class: 'page-label' });
   const wrap = h('div', { class: 'page-wrap' }, label, card);
   return { wrap, card, content, flow, label, bgImg, topImg };
@@ -1321,6 +1341,7 @@ const SCHEMA = {
       { t: 'seg', p: 'parse.mode', l: '대사 구분 방식', o: [['marked', '기호로 감싼 줄이 대사'], ['plain', '기호 없는 줄이 대사']], block: true },
       { t: 'switch', p: 'parse.inline', l: '문장 속 대사도 분리', sub: '지문 중간에 있는 대사도 말풍선으로 꺼내요', when: () => state.parse.mode === 'marked' },
       { t: 'switch', p: 'parse.strip', l: '말풍선에서 기호 숨기기' },
+      { t: 'switch', p: 'parse.mergeTl', l: '아랫줄 괄호는 같은 말풍선에', sub: '대사 바로 아래 ( ) 줄을 번역처럼 작게 붙여요' },
       { t: 'select', p: 'parse.nameless', l: '이름 없는 대사의 화자', o: () => [['none', '지정 안 함'], ['alt', '번갈아 가며'], ...state.chars.map((c) => [c.id, c.name || '(이름 없음)'])] },
     ] },
     { sec: '문단', rows: [
@@ -2686,6 +2707,8 @@ function cardToPng(card, fontCSS) {
     style: { transform: 'none', position: 'static', left: '0', top: '0', boxShadow: 'none' },
     fontEmbedCSS: fontCSS,
     cacheBust: false,
+    // 아직 그려지지 않은 그림(빈 src)은 건너뜀
+    filter: (n) => !(n.tagName === 'IMG' && !n.getAttribute('src')),
   });
 }
 

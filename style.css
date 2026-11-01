@@ -926,6 +926,7 @@ textarea.code {
 .para-indent .narr.ind { text-indent: var(--indent); }
 .narr.placeholder { opacity: .35; text-align: center; text-indent: 0; }
 .card .nobr { white-space: nowrap; }
+.bubble .tl { font-size: .86em; opacity: .72; }
 .card u { text-decoration-thickness: .07em; text-underline-offset: .22em; }
 .card s { text-decoration-thickness: .07em; }
 .card mark {
