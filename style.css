@@ -1579,3 +1579,11 @@ body.resizing iframe, body.resizing #stage { pointer-events: none; }
 .cz-ico { display: grid; place-items: center; color: var(--text-3); }
 .cz-ico svg { width: 16px; height: 16px; }
 #crop .modal-actions .btn[hidden] { display: none; }
+
+/* 이미지 그림자 조절 */
+.shadow-ctl { margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--hair); }
+.shadow-head { align-items: center; cursor: pointer; }
+.shadow-colors { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sc-dot { width: 24px; height: 24px; border-radius: 50%; border: 1px solid rgba(0,0,0,.15); cursor: pointer; padding: 0; }
+.sc-dot.on { box-shadow: 0 0 0 2px var(--bg, #fff), 0 0 0 4px var(--accent); }
+.sc-pick { width: 28px; height: 28px; padding: 0; border: 0; background: none; cursor: pointer; }

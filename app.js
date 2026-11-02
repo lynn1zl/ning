@@ -1578,6 +1578,60 @@ function renderStickers(pages) {
 }
 function placeSticker(el, st) {
   Object.assign(el.style, { left: `${st.x}px`, top: `${st.y}px`, width: `${st.w}px`, transform: `rotate(${st.rot || 0}deg)`, opacity: st.op ?? 1 });
+  const im = el.querySelector('img');
+  if (im) im.style.filter = shadowFilter(st.sh, st.rot || 0);
+}
+
+/* 이미지 그림자: { on, color, angle(0°=오른쪽 · 90°=아래), op(0~1), dist(px) } */
+const SHADOW_DEF = { on: false, color: '#000000', angle: 90, op: 0.3, dist: 8 };
+function shadowFilter(sh, rot = 0) {
+  if (!sh || !sh.on) return '';
+  const x = { ...SHADOW_DEF, ...sh };
+  const m = /^#?([0-9a-f]{6})$/i.exec(x.color || '') || [0, '000000'];
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16));
+  // 회전한 이미지도 그림자 방향은 화면 기준으로 유지
+  const a = ((x.angle - rot) * Math.PI) / 180;
+  const dx = +(Math.cos(a) * x.dist).toFixed(2), dy = +(Math.sin(a) * x.dist).toFixed(2);
+  return `drop-shadow(${dx}px ${dy}px ${(x.dist * 1.2 + 3).toFixed(1)}px rgba(${r},${g},${b},${x.op}))`;
+}
+const SHADOW_COLORS = ['#000000', '#5b4636', '#2b3a55', '#7a2e3a', '#8a7f6a', '#ffffff'];
+/** 그림자 켜기/끄기 · 색 · 각도 · 불투명도 · 거리 (켜면 아래 조절이 나타남) */
+function shadowControls(getSh, setSh) {
+  const wrap = h('div', { class: 'shadow-ctl' });
+  const draw = () => {
+    const sh = { ...SHADOW_DEF, ...(getSh() || {}) };
+    wrap.innerHTML = '';
+    const sw = h('input', { type: 'checkbox', class: 'switch', role: 'switch', checked: sh.on, 'aria-label': '그림자' });
+    sw.addEventListener('change', () => { setSh({ ...sh, on: sw.checked }); draw(); });
+    wrap.append(h('label', { class: 'pop-label row-top shadow-head' }, '그림자', sw));
+    if (!sh.on) return;
+    const colors = h('div', { class: 'shadow-colors' });
+    SHADOW_COLORS.forEach((c) => {
+      const b = h('button', { type: 'button', class: 'sc-dot' + (c.toLowerCase() === sh.color.toLowerCase() ? ' on' : ''), 'aria-label': c, title: c });
+      b.style.background = c;
+      b.addEventListener('click', () => { setSh({ ...sh, color: c }); draw(); });
+      colors.append(b);
+    });
+    const nat = h('input', { type: 'color', class: 'sc-pick', value: sh.color, 'aria-label': '그림자 색 직접 고르기', title: '직접 고르기' });
+    nat.addEventListener('input', () => setSh({ ...(getSh() || sh), on: true, color: nat.value }));
+    colors.append(nat);
+    wrap.append(h('div', { class: 'pop-label' }, '색'), colors);
+    const mk = (label, k, min, max, step, unit, toV, fromV) => {
+      const val = fromV(sh[k]);
+      const out = h('output', {}, `${val}${unit}`);
+      const sl = h('input', { type: 'range', class: 'slider', min, max, step, value: val });
+      const pct = (v) => `${((v - min) / (max - min)) * 100}%`;
+      sl.style.setProperty('--p', pct(val));
+      sl.addEventListener('input', () => { out.textContent = `${sl.value}${unit}`; sl.style.setProperty('--p', pct(sl.value)); setSh({ ...(getSh() || sh), [k]: toV(+sl.value) }); });
+      wrap.append(h('div', { class: 'pop-label row-top' }, label, out), sl);
+    };
+    const id = (v) => v;
+    mk('각도', 'angle', 0, 360, 1, '°', id, id);
+    mk('불투명도', 'op', 0, 100, 1, '%', (v) => v / 100, (v) => Math.round(v * 100));
+    mk('거리', 'dist', 0, 40, 1, 'px', id, id);
+  };
+  draw();
+  return wrap;
 }
 
 function inlineFigure(id, alt) {
@@ -1585,6 +1639,8 @@ function inlineFigure(id, alt) {
   const fig = h('figure', { class: `inline-img wrap-${info.wrap || 'block'} align-${info.align || 'center'}`, 'data-img': id },
     h('span', { class: 'img-box' }, h('img', { src: info.src, alt: alt || '', draggable: 'false' }), h('span', { class: 'stk-ui rs-handle', title: '끌어서 크기 조절' })));
   fig.style.setProperty('--img-w', `${info.w || 100}%`);
+  const f = shadowFilter(info.sh);
+  if (f) fig.querySelector('img').style.filter = f;
   return fig;
 }
 
@@ -3363,6 +3419,11 @@ function openInlineImagePop(fig, id) {
     iconTiles([['block', '자리차지'], ['float', '어울림']], info.wrap || 'block', (v) => { upd('wrap', v); if (v === 'float' && (state.images[id].w || 100) > 70) upd('w', 40); }),
     h('div', { class: 'pop-label row-top' }, '폭', out), slider,
     h('div', { class: 'pop-label' }, '위치'), segEl(ALIGN3, info.align || 'center', (v) => upd('align', v), true),
+    shadowControls(() => state.images[id] && state.images[id].sh, (v) => {
+      state.images = { ...state.images, [id]: { ...state.images[id], sh: v } };
+      const im = fig.querySelector('img'); if (im) im.style.filter = shadowFilter(v);
+      save(); commitSoon();
+    }),
     h('div', { class: 'pop-foot' },
       h('button', { type: 'button', class: 'link-btn', onclick: async () => {
         closePop();
@@ -3399,6 +3460,7 @@ function openStickerPop(el, id) {
     ...mk('투명도', 'op', 10, 100, 1, '%', Math.round((st.op ?? 1) * 100)),
     h('div', { class: 'pop-label' }, '위치'),
     segEl([['front', '글 위'], ['back', '글 뒤']], st.layer || 'front', (v) => { st.layer = v; changed(); }, true),
+    shadowControls(() => st.sh, (v) => { st.sh = v; placeSticker(el, st); save(); commitSoon(); }),
     pages > 1 ? h('div', { class: 'pop-label' }, '몇 번째 장') : null,
     pages > 1 ? segEl(Array.from({ length: Math.min(pages, 6) }, (_, i) => [i, `${i + 1}`]), st.page || 0, (v) => { st.page = +v; changed(); }, true) : null,
     h('div', { class: 'pop-foot' },
