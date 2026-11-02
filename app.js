@@ -1273,7 +1273,10 @@ async function loadBgRef(file) {
 const bgHasTitle = () => { TITLE_TOKEN.lastIndex = 0; return TITLE_TOKEN.test(bgCode()); };
 const bgUsesScene = () => /\{\{\s*(장소|생존|전체|place|alive|total)\s*\}\}/i.test(bgCode());
 const bgUsesHompy = () => /\{\{\s*(마이룸|톡톡|프레임색)\s*\}\}/.test(bgCode());
-const bgUsesDiary = () => /\{\{\s*(다이어리색|메모제목)\s*\}\}/.test(bgCode());
+const bgUsesDiary = () => /\{\{\s*(다이어리색|날짜|날씨)\s*\}\}/.test(bgCode());
+// 직접 붙여넣은 HTML도 {{메모제목}} · {{할일}} · {{키링}}만 쓰면 그 칸만 텍스트 탭에 보여 줌
+const bgUsesMemo = () => /\{\{\s*(메모제목|할일)\s*\}\}/.test(bgCode());
+const bgUsesBeads = () => /\{\{\s*키링\s*\}\}/.test(bgCode());
 const WEATHERS = [['sun', '맑음', '☀\uFE0E'], ['cloud', '흐림', '☁\uFE0E'], ['rain', '비', '☂\uFE0E'], ['snow', '눈', '❄\uFE0E']];
 function todayLabel() {
   const d = new Date();
@@ -2094,11 +2097,11 @@ const SCHEMA = {
       { t: 'text', p: 'diary.date', l: '날짜', ph: '비워두면 오늘 날짜' },
       { t: 'seg', p: 'diary.weather', l: '날씨', o: [...WEATHERS.map(([k, l]) => [k, l]), ['none', '없음']], block: true },
     ] },
-    { sec: '메모지', show: () => bgUsesDiary(), rows: [
+    { sec: '메모지', show: () => bgUsesMemo(), rows: [
       { t: 'text', p: 'diary.memoTitle', l: '메모 제목', ph: '예) to do ♡' },
       { t: 'area', p: 'diary.todo', l: '메모 내용', sub: '한 줄에 하나씩 · 최대 5줄', ph: '✓ 장보기\n☐ 헬스장 등록' },
     ] },
-    { sec: '키링', show: () => bgUsesDiary(), rows: [
+    { sec: '키링', show: () => bgUsesBeads(), rows: [
       { t: 'switch', p: 'diary.keyring', l: '키링 보이기' },
       { t: 'text', p: 'diary.beads', l: '키링 글자', ph: '예) LOVE · 이니셜 (최대 6자)', show: () => state.diary.keyring !== false },
     ] },
