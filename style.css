@@ -1474,3 +1474,30 @@ body.resizing iframe, body.resizing #stage { pointer-events: none; }
 .tour-bunny svg { width: 40px; height: 40px; }
 .tour-ask-actions { display: flex; gap: 8px; margin-top: 18px; width: 100%; }
 .tour-ask-actions .btn { flex: 1; height: 48px; border-radius: var(--r-md); font-size: 15px; }
+
+/* 본문 이미지 */
+.card .inline-img { margin: 0; display: flex; }
+.card .inline-img img { display: block; width: var(--img-w, 100%); height: auto; border-radius: 4px; }
+.card .inline-img.align-left { justify-content: flex-start; }
+.card .inline-img.align-center { justify-content: center; }
+.card .inline-img.align-right { justify-content: flex-end; }
+.page-wrap .inline-img { cursor: pointer; }
+.page-wrap .inline-img:hover img { outline: 2px dashed rgba(49, 130, 246, .55); outline-offset: 3px; }
+
+.card > .sticker { position: absolute !important; z-index: 4; transform-origin: center; touch-action: none; user-select: none; }
+.card > .sticker.layer-back { z-index: 0; }
+.card > .sticker img { display: block; width: 100%; height: auto; pointer-events: none; }
+.page-wrap .sticker { cursor: grab; }
+.page-wrap .sticker:active { cursor: grabbing; }
+.page-wrap .sticker:hover { outline: 1.5px dashed rgba(49, 130, 246, .55); outline-offset: 2px; }
+.page-wrap .sticker.sel { outline: 2px solid #3182f6; outline-offset: 2px; }
+.stk-handle { display: none; }
+.page-wrap .sticker.sel .stk-handle {
+  display: block; position: absolute; right: -9px; bottom: -9px; width: 16px; height: 16px;
+  border-radius: 50%; background: #fff; border: 2px solid #3182f6; cursor: nwse-resize;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .25);
+}
+.ft-img { gap: 5px; font-size: 13px; font-weight: 600; }
+.ft-img svg { width: 17px; height: 17px; }
+.pop-label.row-top { display: flex; justify-content: space-between; }
+.pop-label.row-top output { color: var(--text-2); font-variant-numeric: tabular-nums; }

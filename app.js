@@ -136,6 +136,8 @@ const DEFAULTS = {
   skin: '',
   bgHtml: '',
   scene: { show: true, place: '', alive: '', total: '' },
+  images: {},   // 글자처럼 넣은 이미지: id → { src, w(%), align }
+  stickers: [], // 자유 배치 이미지: { id, src, x, y, w(px), rot, layer: 'front'|'back', page, op }
   file: { prefix: true, date: true, pair: '', title: '', number: false },
 };
 
@@ -886,6 +888,8 @@ function parseText() {
       }
     }
     if (/^(-{3,}|\*{3,}|_{3,}|—{2,})$/.test(line)) { out.push({ type: 'hr' }); continue; }
+    const im = line.match(/^!\[([^\]]*)\]\(img:([\w-]+)\)$/);
+    if (im) { if (state.images[im[2]]) out.push({ type: 'img', id: im[2], alt: im[1] }); continue; }
 
     // 윗줄에서 이름만 따로 나온 경우
     if (pendingName) {
@@ -1320,6 +1324,12 @@ function renderBlock(b) {
   }
   if (b.type === 'gap') { const g = h('div', { class: 'gap' }); g.style.setProperty('--gap-n', b.n || 1); return g; }
   if (b.type === 'hr') return h('hr', { class: 'divider' });
+  if (b.type === 'img') {
+    const info = state.images[b.id];
+    const fig = h('figure', { class: `inline-img align-${info.align || 'center'}`, 'data-img': b.id }, h('img', { src: info.src, alt: b.alt || '' }));
+    fig.style.setProperty('--img-w', `${info.w || 100}%`);
+    return fig;
+  }
 
   const B = state.bubble;
   const { ch, speaker, side, shape } = b;
@@ -1469,6 +1479,24 @@ function scheduleRender() {
 
 let lastStats = { bubbles: 0, pages: 1 };
 
+/* ── 자유 배치 이미지 ── */
+let selSticker = null;
+function renderStickers(pages) {
+  (state.stickers || []).forEach((st) => {
+    const page = pages[Math.min(st.page || 0, pages.length - 1)];
+    if (!page) return;
+    const el = h('div', { class: `sticker layer-${st.layer || 'front'}${st.id === selSticker ? ' sel' : ''}`, 'data-sticker': st.id },
+      h('img', { src: st.src, alt: '', draggable: 'false' }),
+      h('span', { class: 'stk-ui stk-handle', title: '끌어서 크기 조절' }));
+    placeSticker(el, st);
+    if ((st.layer || 'front') === 'back') page.card.insertBefore(el, page.content);
+    else page.card.append(el);
+  });
+}
+function placeSticker(el, st) {
+  Object.assign(el.style, { left: `${st.x}px`, top: `${st.y}px`, width: `${st.w}px`, transform: `rotate(${st.rot || 0}deg)`, opacity: st.op ?? 1 });
+}
+
 let dropcapPending = false;
 /* 드롭캡: 첫 글자(앞의 따옴표 등 문장부호 포함)를 실제 요소로 감쌈 — 이미지 저장에도 그대로 나오게 */
 function withDropcap(on, html) {
@@ -1563,6 +1591,7 @@ function render() {
     cardObserver.disconnect();
     pages.forEach((p) => cardObserver.observe(p.card));
   }
+  renderStickers(pages);
   htmlBgReady = applyHtmlBg(pages);
   rescale();
   stage.scrollTop = scrollTop;
@@ -2360,6 +2389,9 @@ function openBubbleEditor(key, anchor) {
 }
 
 $('#stage').addEventListener('click', (e) => {
+  if (e.target.closest('.sticker')) return;
+  const fig = e.target.closest('.inline-img');
+  if (fig) { openInlineImagePop(fig, fig.dataset.img); return; }
   const wb = e.target.closest('.narr.was-bubble');
   if (wb) {
     const key = wb.dataset.key;
@@ -2578,6 +2610,9 @@ function buildFmtBar() {
   bar.append(h('span', { class: 'ft-sep' }));
   bar.append(h('button', { type: 'button', class: 'ft ft-text', title: '이름 없는 대사', onmousedown: keep, onclick: () => insertSnippet('"', '"') }, '“대사”'));
   bar.append(h('button', { type: 'button', class: 'ft ft-text', title: '구분선 넣기', onmousedown: keep, onclick: () => insertSnippet('---\n', '', true) }, '구분선'));
+  const imgBtn = h('button', { type: 'button', class: 'ft ft-img', title: '이미지 넣기', 'aria-label': '이미지 넣기', onmousedown: keep, html: icon('image') + '<span>이미지</span>' });
+  imgBtn.addEventListener('click', () => openImageInsertPop(imgBtn));
+  bar.append(imgBtn);
 }
 
 function openHighlightPop(anchor) {
@@ -2975,6 +3010,162 @@ $('#bulk-names').addEventListener('input', updateBulkPreview);
 $('#bulk-names').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); bulkAddChars(); } });
 $('#btn-bulk-add').addEventListener('click', bulkAddChars);
 
+/* ── 본문 이미지 넣기 ── */
+const newId = () => Math.random().toString(36).slice(2, 9);
+async function imageFromUrl(url) {
+  url = url.trim();
+  if (!/^(https?:|data:image\/)/i.test(url)) throw new Error('url');
+  try {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(r.status);
+    const blob = await r.blob();
+    if (!/^image\//.test(blob.type)) throw new Error('type');
+    return await shrinkImage(blob, 1600, false);
+  } catch (e) {
+    const ok = await new Promise((res) => { const im = new Image(); im.onload = () => res(true); im.onerror = () => res(false); im.src = url; });
+    if (!ok) throw new Error('load');
+    toast('이 사이트는 외부 사용을 막아 두어 저장 이미지에는 안 나올 수 있어요', null, 4000);
+    return url;
+  }
+}
+function addImage(src, mode) {
+  if (mode === 'free') {
+    const W = state.canvas.width;
+    const w = Math.round(W * 0.34);
+    const st = { id: newId(), src, x: Math.round(W - w - state.canvas.pad), y: Math.round(state.canvas.pad), w, rot: 0, layer: 'front', page: 0, op: 1 };
+    state.stickers = [...(state.stickers || []), st];
+    selSticker = st.id;
+    changed();
+    toast('카드 위에 놓았어요 · 끌어서 옮기고 모서리를 끌어 크기를 바꿔요', { label: '되돌리기', fn: undo }, 3600);
+  } else {
+    const id = newId();
+    state.images = { ...state.images, [id]: { src, w: 100, align: 'center' } };
+    insertSnippet(`![](img:${id})\n`, '', true);
+    toast('글 사이에 이미지를 넣었어요 · 미리보기에서 이미지를 누르면 크기를 바꿀 수 있어요', { label: '되돌리기', fn: undo }, 3600);
+  }
+}
+function openImageInsertPop(anchor) {
+  let mode = 'inline';
+  const file = h('input', { type: 'file', accept: 'image/*', hidden: true });
+  const urlIn = h('input', { type: 'url', class: 'input', placeholder: 'https://… 이미지 주소', 'aria-label': '이미지 링크' });
+  const take = async (getSrc) => {
+    try { const src = await getSrc(); closePop(); addImage(src, mode); }
+    catch (e) { toast('이미지를 불러오지 못했어요'); }
+  };
+  file.addEventListener('change', () => { const f = file.files[0]; if (f) take(() => shrinkImage(f, 1600, false)); });
+  const apply = () => { if (urlIn.value.trim()) take(() => imageFromUrl(urlIn.value)); else urlIn.focus(); };
+  urlIn.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) apply(); });
+  const hint = h('small', { class: 'mode-hint' });
+  const paint = () => { hint.textContent = mode === 'free' ? '카드 위 원하는 곳에 끌어다 놓고, 크기 · 회전 · 글 위/뒤를 정해요' : '글 사이 커서 자리에 들어가 글과 함께 흐르고 페이지를 넘어가요'; };
+  paint();
+  openPop(h('div', { class: 'photo-pop' },
+    h('div', { class: 'pop-title' }, '이미지 넣기'),
+    segEl([['inline', '글자처럼'], ['free', '자유 배치']], mode, (v) => { mode = v; paint(); }, true),
+    h('p', { class: 'pop-note', style: 'margin-top:8px' }, hint),
+    h('label', { class: 'photo-opt', style: 'margin-top:10px' }, h('span', { class: 'po-ico', html: icon('image') }),
+      h('span', {}, h('b', {}, '파일에서 고르기'), h('small', {}, 'JPG · PNG · GIF · WebP')), file),
+    h('div', { class: 'pop-label' }, '이미지 링크'),
+    h('div', { class: 'photo-url' }, urlIn, h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: apply }, '넣기'))), anchor);
+}
+
+/* 글자처럼 넣은 이미지 편집 */
+function removeImageToken(id) {
+  const re = new RegExp(`^!\\[[^\\]]*\\]\\(img:${id}\\)\\n?`, 'm');
+  state.text = state.text.replace(re, '');
+  src.value = state.text;
+  const { [id]: _, ...rest } = state.images;
+  state.images = rest;
+}
+function openInlineImagePop(fig, id) {
+  const info = state.images[id];
+  if (!info) return;
+  const upd = (k, v) => { state.images = { ...state.images, [id]: { ...state.images[id], [k]: v } }; changed(); };
+  const out = h('output', {}, `${info.w || 100}%`);
+  const slider = h('input', { type: 'range', class: 'slider', min: 10, max: 100, step: 1, value: info.w || 100 });
+  slider.style.setProperty('--p', `${((info.w || 100) - 10) / 90 * 100}%`);
+  slider.addEventListener('input', () => { out.textContent = `${slider.value}%`; slider.style.setProperty('--p', `${(slider.value - 10) / 90 * 100}%`); upd('w', +slider.value); });
+  openPop(h('div', {},
+    h('div', { class: 'pop-title' }, '글자처럼 넣은 이미지'),
+    h('div', { class: 'pop-label row-top' }, '폭', out), slider,
+    h('div', { class: 'pop-label' }, '정렬'), segEl(ALIGN3, info.align || 'center', (v) => upd('align', v), true),
+    h('div', { class: 'pop-foot' },
+      h('button', { type: 'button', class: 'link-btn', onclick: () => {
+        removeImageToken(id);
+        const W = state.canvas.width, w = Math.round(W * 0.34);
+        state.stickers = [...(state.stickers || []), { id: newId(), src: info.src, x: Math.round(W - w - state.canvas.pad), y: state.canvas.pad, w, rot: 0, layer: 'front', page: 0, op: 1 }];
+        changed(); closePop(); toast('자유 배치로 바꿨어요', { label: '되돌리기', fn: undo });
+      } }, '자유 배치로'),
+      h('button', { type: 'button', class: 'link-btn danger', onclick: () => { removeImageToken(id); changed(); closePop(); toast('이미지를 지웠어요', { label: '되돌리기', fn: undo }); } }, '삭제'))), fig);
+}
+
+/* 자유 배치 이미지: 끌어서 이동 · 모서리로 크기 · 눌러서 설정 */
+function openStickerPop(el, id) {
+  const st = (state.stickers || []).find((x) => x.id === id);
+  if (!st) return;
+  const upd = (k, v) => { st[k] = v; placeSticker(el, st); save(); commitSoon(); };
+  const mk = (label, k, min, max, step, unit, val) => {
+    const out = h('output', {}, `${val}${unit}`);
+    const sl = h('input', { type: 'range', class: 'slider', min, max, step, value: val });
+    const pct = (v) => `${((v - min) / (max - min)) * 100}%`;
+    sl.style.setProperty('--p', pct(val));
+    sl.addEventListener('input', () => { out.textContent = `${sl.value}${unit}`; sl.style.setProperty('--p', pct(sl.value)); upd(k, k === 'op' ? +sl.value / 100 : +sl.value); });
+    return [h('div', { class: 'pop-label row-top' }, label, out), sl];
+  };
+  const pages = $$('#stage .card').length;
+  openPop(h('div', {},
+    h('div', { class: 'pop-title' }, '자유 배치 이미지'),
+    ...mk('크기', 'w', 30, state.canvas.width * 1.2 | 0, 1, 'px', st.w),
+    ...mk('회전', 'rot', -45, 45, 1, '°', st.rot || 0),
+    ...mk('투명도', 'op', 10, 100, 1, '%', Math.round((st.op ?? 1) * 100)),
+    h('div', { class: 'pop-label' }, '위치'),
+    segEl([['front', '글 위'], ['back', '글 뒤']], st.layer || 'front', (v) => { st.layer = v; changed(); }, true),
+    pages > 1 ? h('div', { class: 'pop-label' }, '몇 번째 장') : null,
+    pages > 1 ? segEl(Array.from({ length: Math.min(pages, 6) }, (_, i) => [i, `${i + 1}`]), st.page || 0, (v) => { st.page = +v; changed(); }, true) : null,
+    h('div', { class: 'pop-foot' },
+      h('button', { type: 'button', class: 'link-btn danger', onclick: () => {
+        state.stickers = state.stickers.filter((x) => x.id !== id); selSticker = null; changed(); closePop();
+        toast('이미지를 지웠어요', { label: '되돌리기', fn: undo });
+      } }, '삭제'),
+      h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: closePop }, '완료'))), el);
+}
+
+(function stickerDrag() {
+  const stage = $('#stage');
+  let drag = null;
+  stage.addEventListener('pointerdown', (e) => {
+    const el = e.target.closest('.sticker');
+    if (!el) {
+      if (selSticker && !e.target.closest('.pop')) { selSticker = null; $$('#stage .sticker.sel').forEach((x) => x.classList.remove('sel')); }
+      return;
+    }
+    const st = state.stickers.find((x) => x.id === el.dataset.sticker);
+    if (!st) return;
+    e.preventDefault();
+    closePop();
+    selSticker = st.id;
+    $$('#stage .sticker').forEach((x) => x.classList.toggle('sel', x === el));
+    drag = { el, st, resize: e.target.classList.contains('stk-handle'), x0: e.clientX, y0: e.clientY, o: { x: st.x, y: st.y, w: st.w }, moved: false };
+    el.setPointerCapture(e.pointerId);
+  });
+  stage.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    const dx = (e.clientX - drag.x0) / currentScale, dy = (e.clientY - drag.y0) / currentScale;
+    if (Math.abs(dx) + Math.abs(dy) > 2) drag.moved = true;
+    if (drag.resize) drag.st.w = Math.max(30, Math.round(drag.o.w + dx));
+    else { drag.st.x = Math.round(drag.o.x + dx); drag.st.y = Math.round(drag.o.y + dy); }
+    placeSticker(drag.el, drag.st);
+  });
+  const end = () => {
+    if (!drag) return;
+    const d = drag;
+    drag = null;
+    if (d.moved) { save(); commitSoon(); }
+    else openStickerPop(d.el, d.st.id);
+  };
+  stage.addEventListener('pointerup', end);
+  stage.addEventListener('pointercancel', end);
+})();
+
 /* 프로필 원을 누르면: 파일에서 고르기 · 이미지 링크 · 지우기 */
 function openPhotoPop(anchor, ch, setAvatar, setAvatarUrl) {
   const file = h('input', { type: 'file', accept: 'image/*', hidden: true });
@@ -3275,7 +3466,7 @@ function cardToPng(card, fontCSS) {
     fontEmbedCSS: fontCSS,
     cacheBust: false,
     // 아직 그려지지 않은 그림(빈 src)은 건너뜀
-    filter: (n) => !(n.tagName === 'IMG' && !n.getAttribute('src')),
+    filter: (n) => !(n.tagName === 'IMG' && !n.getAttribute('src')) && !(n.classList && n.classList.contains('stk-ui')),
     // 불러오지 못한 외부 그림은 투명하게 두고 저장은 계속
     imagePlaceholder: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
   });
@@ -3317,6 +3508,8 @@ let busy = false;
 /** 카드들을 PNG로 변환 (indices 없으면 전부). 끝나면 미리보기를 원래대로 */
 async function makeImages(indices, onProgress) {
   closePop();
+  selSticker = null;
+  $$('#stage .sticker.sel').forEach((x) => x.classList.remove('sel'));
   editingKey = null;
   $$('#stage .msg.editing').forEach((m) => m.classList.remove('editing'));
   await document.fonts.ready;
@@ -3617,7 +3810,7 @@ const RESETS = [
       state.parse.nameless = 'none';
     } },
   { id: 'text', icon: 'text', title: '글 지우기', desc: '입력한 글과 제목 · 출처 · 제작자를 비워요', done: '글을 비웠어요',
-    run() { state.text = ''; state.title = ''; state.credit = ''; state.creator = ''; state.overrides = {}; } },
+    run() { state.text = ''; state.title = ''; state.credit = ''; state.creator = ''; state.overrides = {}; state.images = {}; state.stickers = []; } },
   { id: 'all', icon: 'refresh', title: '전부 처음부터', desc: '글 · 캐릭터 · 디자인 · 대사 인식 설정까지 모두 처음 상태로', done: '처음 상태로 되돌렸어요', danger: true,
     run() { state = copyState(DEFAULTS); autoTried.clear(); } },
 ];
