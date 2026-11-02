@@ -1050,8 +1050,14 @@ textarea.code {
   height: var(--th);
   background: var(--b-bg);
 }
-.tail-tri.msg-left .bubble::before, .tail-tri.msg-left .bubble::after { right: 100%; clip-path: polygon(100% 0, 0 50%, 100% 100%); }
-.tail-tri.msg-right .bubble::before, .tail-tri.msg-right .bubble::after { left: 100%; clip-path: polygon(0 0, 100% 50%, 0 100%); }
+.tail-tri.msg-left .bubble::before { right: calc(100% - var(--tin, 0px)); clip-path: polygon(100% 0, 0 50%, 100% 100%); }
+.tail-tri.msg-right .bubble::before { left: calc(100% - var(--tin, 0px)); clip-path: polygon(0 0, 100% 50%, 0 100%); }
+/* 채움 층은 말풍선 안쪽으로 2px 더 들어가 이음새 선이 생기지 않게 (기울기는 그대로) */
+.tail-tri .bubble::after { --ov: 2px; width: calc(var(--tw) + var(--tbw) + var(--ov)); }
+.tail-tri.msg-left .bubble::after { right: calc(100% - var(--tin, 0px) - var(--ov)); clip-path: polygon(calc(100% - var(--ov)) 0, 100% 0, 100% 100%, calc(100% - var(--ov)) 100%, 0 50%); }
+.tail-tri.msg-right .bubble::after { left: calc(100% - var(--tin, 0px) - var(--ov)); clip-path: polygon(0 0, var(--ov) 0, 100% 50%, var(--ov) 100%, 0 100%); }
+/* 테두리가 없으면 테두리 층을 그리지 않음 (가장자리에 테두리 색이 비쳐 보이지 않게) */
+.tail-tri .bubble.tail-nob::before { display: none; }
 .tail-tri.no-avatar.msg-left .msg-body { margin-left: calc(var(--tw, 7px) + 6px); }
 .tail-tri.no-avatar.msg-right .msg-body { margin-right: calc(var(--tw, 7px) + 6px); }
 
@@ -1526,6 +1532,7 @@ body.resizing iframe, body.resizing #stage { pointer-events: none; }
 /* 등록된 HTML 배경 사용 중 표시 */
 .html-ref { display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 16px; background: var(--surface); border-radius: var(--r-lg); }
 .html-ref-ico { width: 36px; height: 36px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-size: 16px; flex: none; }
+.html-ref-ico svg { width: 19px; height: 19px; }
 .html-ref-text { flex: 1; min-width: 0; }
 .html-ref-text b { display: block; font-size: 15px; }
 .html-ref-text small { display: block; font-size: 12.5px; color: var(--text-3); }

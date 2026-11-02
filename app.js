@@ -580,6 +580,10 @@ function migrate(st, raw) {
   // 빈 줄 기본값을 '한 줄은 문단 나눔만'으로 (한 번만 옮김, 이후 사용자가 고른 값은 유지)
   if (raw && raw.parse && !raw.parse.blankV3) { st.parse.blank = 'para1'; st.parse.blankV3 = true; }
   if (!st.file) st.file = copyState(DEFAULTS.file);
+  // 미니홈피 예전 예시 한마디 → 새 예시로
+  if (st.hompy && (st.hompy.talk || []).map((t) => t.text).join('|').startsWith('일촌 신청 받아 주세요 ♡|다이어리 잘 보고 가요~|오늘도 들렀다 갑니다 ^^*')) {
+    st.hompy.talk = [{ name: '닐', text: '뭐하냐' }, { name: '린', text: '로그 좀 올려' }, { name: '익명', text: '잘 구경했다...ㅋㅋ' }];
+  }
   // 이전 버전: HTML 배경 코드를 CSS 스킨 칸에 넣었던 경우 옮겨 줌
   if (st.skin && !st.bgHtml && looksLikeHtmlBg(st.skin)) { st.bgHtml = st.skin; st.skin = ''; }
   return st;
@@ -1313,7 +1317,8 @@ function applyHtmlBg(pages) {
   pages.forEach((p, i) => {
     if (!p.bgImg || !lastBg[i]) return;
     p.bgImg.src = lastBg[i].base; p.bgImg.hidden = false;
-    if (lastBg[i].top && p.topImg) { p.topImg.src = lastBg[i].top; p.topImg.hidden = false; }
+    // 새 배경에 위층이 없으면 이전 배경의 위층(제목 등)을 남기지 않음
+    if (hasTop && lastBg[i].top && p.topImg) { p.topImg.src = lastBg[i].top; p.topImg.hidden = false; }
   });
   const uncached = pages.some((p) => !htmlBg.cache.has(htmlBgKey(p.card.offsetWidth, p.card.offsetHeight, 'base')));
   setHtmlStatus('그리는 중…');
@@ -1325,7 +1330,9 @@ function applyHtmlBg(pages) {
     if (seq !== htmlBgSeq) return;
     if (!p.bgImg) return;
     p.bgImg.src = base; p.bgImg.hidden = false;
-    if (top && p.topImg) { p.topImg.src = top; p.topImg.hidden = false; }
+    if (p.topImg) {
+      if (top) { p.topImg.src = top; p.topImg.hidden = false; } else { p.topImg.hidden = true; p.topImg.removeAttribute('src'); }
+    }
     lastBg[i] = { base, top };
     return `${w} × ${hgt}px`;
   }))).then((sizes) => {
@@ -1346,7 +1353,7 @@ const HTML_BG_PRESETS = [
     chars: ['마왕', { name: '체페슈', avatar: 'bg/demon/tepes.webp' }, { name: '아자젤', avatar: 'bg/demon/azazel.webp' }, { name: '노먼', avatar: 'bg/demon/norman.webp' }, { name: '빌터', avatar: 'bg/demon/wilter.webp' }, { name: '한', avatar: 'bg/demon/han.webp' }, { name: '라이케', avatar: 'bg/demon/raike.webp' }] },
   // 미니홈피: 비어 있는 칸만 예시로 채움 (이미 쓴 마이룸 · 한마디는 그대로)
   { name: '미니홈피', file: 'bg/hompy.html', hompy: { today: '25', total: '1004', say: '안녕하세요', talk: [
-    { name: '니니닝', text: '일촌 신청 받아 주세요 ♡' }, { name: '토끼', text: '다이어리 잘 보고 가요~' }, { name: '익명', text: '오늘도 들렀다 갑니다 ^^*' }] } },
+    { name: '닐', text: '뭐하냐' }, { name: '린', text: '로그 좀 올려' }, { name: '익명', text: '잘 구경했다...ㅋㅋ' }] } },
 ];
 
 function applySkin() {
@@ -1650,10 +1657,35 @@ function render() {
     cardObserver.disconnect();
     pages.forEach((p) => cardObserver.observe(p.card));
   }
+  pages.forEach((p) => fitTails(p.card));
   renderStickers(pages);
   htmlBgReady = applyHtmlBg(pages);
   rescale();
   stage.scrollTop = scrollTop;
+}
+
+/* 둥근 말풍선: 꼬리가 붙는 자리의 모서리가 휘어 들어간 만큼 꼬리를 안쪽으로 당겨 틈 없이 붙임 */
+function fitTails(root) {
+  for (const bub of root.querySelectorAll('.tail-tri .bubble')) {
+    bub.style.removeProperty('--tin');
+    const cs = getComputedStyle(bub);
+    const pre = getComputedStyle(bub, '::before');
+    bub.classList.toggle('tail-nob', !(parseFloat(cs.borderTopWidth) > 0));
+    const left = bub.closest('.msg').classList.contains('msg-left');
+    const h = bub.offsetHeight, w = bub.offsetWidth;
+    const cap = (v) => Math.min(parseFloat(v) || 0, h / 2, w / 2);
+    const rt = cap(left ? cs.borderTopLeftRadius : cs.borderTopRightRadius);
+    const rb = cap(left ? cs.borderBottomLeftRadius : cs.borderBottomRightRadius);
+    const y1 = (parseFloat(pre.top) || 0) + (parseFloat(cs.borderTopWidth) || 0);
+    const y2 = y1 + (parseFloat(pre.height) || 0);
+    const inset = (r, dist) => {
+      if (r <= 0 || dist >= r) return 0;
+      const dy = Math.min(r, r - Math.max(0, dist));
+      return r - Math.sqrt(Math.max(0, r * r - dy * dy));
+    };
+    const d = Math.max(inset(rt, y1), inset(rb, h - y2));
+    if (d > 0.05) bub.style.setProperty('--tin', `${d.toFixed(2)}px`);
+  }
 }
 
 /* 확대 · 축소 */
@@ -3458,6 +3490,8 @@ function buildSkin() {
           added.push(name);
         });
         if (bp.avatars) state.bubble.avatar = true;
+        // 다른 등록 배경이 채워 둔 출처(예: 생존 게임)는 그 배경을 벗어나면 비움
+        if (!('credit' in bp) && HTML_BG_PRESETS.some((x) => x !== bp && x.credit && x.credit === state.credit)) { state.credit = ''; state.creator = ''; }
         if (bp.clearCredit) { state.credit = ''; state.creator = ''; }
         if ('credit' in bp) { state.credit = bp.credit; state.creator = bp.creator || ''; }
         if (bp.scene) for (const k of Object.keys(bp.scene)) if (!String(state.scene[k] ?? '').trim()) state.scene[k] = bp.scene[k];
@@ -3479,6 +3513,8 @@ function buildSkin() {
 }
 // 등록된 배경을 쓰는 중이면 코드 칸 대신 이름 카드를 보여 줌
 function syncHtmlEditor() {
+  const ico = $('.html-ref-ico');
+  if (ico && !ico.firstElementChild) ico.innerHTML = icon('image');
   const card = $('#html-ref');
   const ta = $('#html-bg');
   const bp = state.bgRef && HTML_BG_PRESETS.find((x) => x.file === state.bgRef);
