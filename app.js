@@ -2141,7 +2141,7 @@ const SCHEMA = {
       { t: 'slider', p: 'bubble.avatarSize', l: '사진 크기', min: 20, max: 100, step: 1, u: 'px', when: () => state.bubble.avatar },
       { t: 'seg', p: 'bubble.avatarShape', l: '사진 모양', o: [['circle', '원'], ['rounded', '둥근 사각'], ['square', '사각']], when: () => state.bubble.avatar },
       { t: 'switch', p: 'bubble.showName', l: '이름' },
-      { t: 'seg', p: 'bubble.namePos', l: '이름 위치', o: [['top', '말풍선 위'], ['side', '말풍선 왼쪽']], when: () => state.bubble.showName },
+      { t: 'seg', p: 'bubble.namePos', l: '이름 위치', o: [['top', '말풍선 위'], ['side', '말풍선 옆']], when: () => state.bubble.showName },
       { t: 'slider', p: 'bubble.nameW', l: '이름 칸 너비', sub: '0이면 이름 길이에 맞춰요', min: 0, max: 160, step: 2, u: 'px', show: () => state.bubble.namePos === 'side', when: () => state.bubble.showName },
       { t: 'slider', p: 'bubble.nameSize', l: '이름 크기', min: 8, max: 24, step: 0.5, u: 'px', when: () => state.bubble.showName , pt: true },
       { t: 'color', p: 'bubble.nameColor', l: '이름 색', when: () => state.bubble.showName },
