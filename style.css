@@ -1396,3 +1396,8 @@ body.resizing iframe, body.resizing #stage { pointer-events: none; }
 .filename-line code { background: none; padding: 0; color: var(--text); font-size: 13px; word-break: break-all; }
 .filename-line .link-btn { margin-left: auto; }
 @media (max-width: 900px) { .filename-line { margin: 8px 16px 0; } }
+
+/* 캐릭터 탭: 이름 없는 대사의 화자 */
+.nameless-card { margin-top: 12px; }
+.nameless-card .row-label small { line-height: 1.5; }
+.nameless-card .select { flex: none; }

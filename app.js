@@ -1351,6 +1351,7 @@ function render() {
 
   updateMeasure();
   updateFilePreview();
+  syncNameless();
   updateAutoCard();
   scheduleAutoChars(blocks);
   lastStats = { bubbles: blocks.filter((b) => b.type === 'bubble').length, pages: pages.length };
@@ -1500,7 +1501,7 @@ const SCHEMA = {
       { t: 'switch', p: 'parse.mergeTl', l: '아랫줄 괄호는 같은 말풍선에', sub: '대사 바로 아래 ( ) 줄을 번역처럼 작게 붙여요' },
       { t: 'seg', p: 'parse.tlShow', l: '원문 · 번역이 함께 있는 대사', o: [['both', '둘 다'], ['tl', '번역만'], ['orig', '원문만']], block: true },
       { t: 'switch', p: 'parse.autoChars', l: '인식된 이름을 캐릭터에 자동 등록', sub: '새 이름이 나오면 캐릭터 탭에 알아서 추가해요' },
-      { t: 'select', p: 'parse.nameless', l: '이름 없는 대사의 화자', o: () => [['none', '지정 안 함'], ['alt', '번갈아 가며'], ...state.chars.map((c) => [c.id, c.name || '(이름 없음)'])] },
+      { t: 'select', p: 'parse.nameless', l: '이름 없는 대사의 화자', o: () => namelessOptions() },
     ] },
     { sec: '문단', rows: [
       { t: 'select', p: 'parse.blank', l: '빈 줄(엔터)', o: [['count', '친 만큼 여백'], ['para1', '한 줄은 문단 나눔만']] },
@@ -2589,9 +2590,22 @@ function applyTemplate(t) {
 }
 
 /* 캐릭터 */
+const namelessOptions = () => [['none', '지정 안 함'], ['alt', '번갈아 가며'], ...state.chars.map((c) => [c.id, c.name || '(이름 없음)'])];
+// 텍스트 탭과 캐릭터 탭의 '이름 없는 대사의 화자'를 같은 값으로 맞춤
+function syncNameless() {
+  $$('select[data-nameless], [data-fields="text"] select[aria-label="이름 없는 대사의 화자"]').forEach((sel) => {
+    if (sel.value !== state.parse.nameless) sel.value = state.parse.nameless;
+  });
+}
+
 function buildChars() {
   const list = $('#chars-list');
   list.innerHTML = '';
+  const nlSel = h('select', { class: 'select', 'data-nameless': '', value: state.parse.nameless, 'aria-label': '이름 없는 대사의 화자',
+    onchange: (e) => { setPath('parse.nameless', e.target.value); syncNameless(); } },
+    namelessOptions().map(([v, l]) => h('option', { value: v }, l)));
+  list.append(h('div', { class: 'section nameless-card' },
+    h('div', { class: 'row' }, labelEl('이름 없는 대사의 화자', '이름 없이 따옴표만 있는 대사를 누구의 말풍선으로 할지 정해요'), nlSel)));
   if (!state.chars.length) list.append(h('p', { class: 'footnote' }, '아직 캐릭터가 없어요. 아래 버튼으로 추가해 보세요.'));
   state.chars.forEach((ch, i) => {
     const av = h('button', { type: 'button', class: 'char-av', title: '얼굴 사진 바꾸기', 'aria-label': `${ch.name || '캐릭터'} 얼굴 사진 바꾸기` });
