@@ -1336,9 +1336,12 @@ async function buildHtmlBgDoc(html) {
   doc.head.appendChild(layerStyle);
   return encodeURIComponent(new XMLSerializer().serializeToString(doc.documentElement));
 }
-async function buildHtmlBgURL(html, w, h, layer) {
+/* raster: 저장용으로 '그림 크기 = 저장 픽셀 크기'인 SVG를 만듦.
+   (사파리는 SVG 그림을 캔버스에 키워 그리지 않아서, 처음부터 그 크기로 그린 그림을 그대로 옮겨야 함) */
+async function buildHtmlBgURL(html, w, h, layer, raster) {
   const enc = await prepareHtmlBg(html);
-  const baseCss = `html,body{margin:0;padding:0;width:${w}px;height:${h}px;overflow:hidden;}body{position:relative;font-family:"Pretendard",sans-serif;}*{box-sizing:border-box;}`;
+  const zoomCss = raster ? `html{transform:scale(${raster});transform-origin:0 0;}` : '';
+  const baseCss = `html,body{margin:0;padding:0;width:${w}px;height:${h}px;overflow:hidden;}body{position:relative;font-family:"Pretendard",sans-serif;}*{box-sizing:border-box;}${zoomCss}`;
   const layerCss = layer === 'top'
     // 위층: data-layer="top" 요소만 보이게. 숨긴 요소의 SVG 필터(질감 등)가 새어 나오지 않도록 필터 · 혼합도 끔
     ? 'html,body{background:transparent !important;}body *{visibility:hidden !important;}'
@@ -1348,7 +1351,9 @@ async function buildHtmlBgURL(html, w, h, layer) {
     : '[data-layer="top"]{visibility:hidden !important;}';
   // 그림 자체 해상도를 저장 배율만큼 키워서 흐릿해지지 않게 (내용 배치는 카드 크기 그대로)
   const k = Math.max(2, Math.min(4, Math.ceil(Math.max(state.canvas.scale, window.devicePixelRatio || 1))));
-  const head = `<svg xmlns="http://www.w3.org/2000/svg" width="${w * k}" height="${h * k}" viewBox="0 0 ${w} ${h}"><foreignObject x="0" y="0" width="${w}" height="${h}">`;
+  const head = raster
+    ? `<svg xmlns="http://www.w3.org/2000/svg" width="${Math.round(w * raster)}" height="${Math.round(h * raster)}"><foreignObject x="0" y="0" width="${Math.round(w * raster)}" height="${Math.round(h * raster)}">`
+    : `<svg xmlns="http://www.w3.org/2000/svg" width="${w * k}" height="${h * k}" viewBox="0 0 ${w} ${h}"><foreignObject x="0" y="0" width="${w}" height="${h}">`;
   const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(head)
     + enc.replace('NNBASEMARK', encodeURIComponent(baseCss)).replace('NNLAYERMARK', encodeURIComponent(layerCss))
     + encodeURIComponent('</foreignObject></svg>');
@@ -4204,27 +4209,40 @@ const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r()));
    브라우저가 SVG 안의 글꼴 · 그림을 늦게 칠하면 처음 그린 결과가 비어 있을 수 있어서, 비었으면 잠깐 기다렸다 다시 그림 */
 async function rasterizeHtmlLayers(card) {
   const sc = state.canvas.scale;
+  const html = fillBgTokens(bgCode());
+  let mode = 'zoom'; // zoom: 저장 크기로 그린 SVG를 1:1로 · plain: 카드 크기 SVG를 캔버스에서 키움 (사파리 대비)
   for (const img of card.querySelectorAll('.card-htmlbg, .card-htmltop')) {
     if (!img.getAttribute('src') || img.hidden || img.src.startsWith('data:image/png')) continue;
     try {
-      const im = new Image();
-      im.src = img.src;
-      await im.decode();
       const w = card.offsetWidth, hgt = card.offsetHeight;
+      const isBase = img.classList.contains('card-htmlbg');
       const cv = document.createElement('canvas');
       cv.width = Math.round(w * sc); cv.height = Math.round(hgt * sc);
       const g = cv.getContext('2d', { willReadFrequently: true });
-      const isBase = img.classList.contains('card-htmlbg');
-      for (let tryN = 0; tryN < 4; tryN++) {
-        g.clearRect(0, 0, cv.width, cv.height);
-        g.drawImage(im, 0, 0, cv.width, cv.height);
-        if (!isBase || !looksBlank(g, cv.width, cv.height)) break;
-        await nextFrame(); await new Promise((r) => setTimeout(r, 80 * (tryN + 1)));
-      }
+      const draw = async (m) => {
+        const im = new Image();
+        im.src = await buildHtmlBgURL(html, w, hgt, isBase ? 'base' : 'top', m === 'zoom' ? sc : 1);
+        await im.decode();
+        for (let tryN = 0; tryN < 4; tryN++) {
+          g.clearRect(0, 0, cv.width, cv.height);
+          if (m === 'zoom') g.drawImage(im, 0, 0); else g.drawImage(im, 0, 0, cv.width, cv.height);
+          if (!isBase || !looksBlank(g, cv.width, cv.height)) break;
+          await nextFrame(); await new Promise((r) => setTimeout(r, 80 * (tryN + 1)));
+        }
+      };
+      await draw(mode);
+      // 배경이 왼쪽 위에만 작게 그려졌으면(크기 맞춤 실패) 다른 방식으로 다시
+      if (isBase && mode === 'zoom' && cornerEmpty(g, cv.width, cv.height)) { mode = 'plain'; await draw(mode); }
       img.src = cv.toDataURL('image/png');
       await img.decode().catch(() => {});
-    } catch (e) { /* 브라우저가 막으면(사파리 등) 원래 그림 그대로 */ }
+    } catch (e) { /* 브라우저가 막으면 원래 그림 그대로 */ }
   }
+}
+function cornerEmpty(g, w, h) {
+  try {
+    const a = (x, y) => g.getImageData(Math.floor(w * x), Math.floor(h * y), 1, 1).data[3];
+    return a(0.03, 0.03) > 8 && a(0.97, 0.97) < 8 && a(0.97, 0.5) < 8;
+  } catch (e) { return false; }
 }
 // 아래층 배경이 거의 투명하면 아직 칠해지지 않은 것으로 봄
 function looksBlank(g, w, h) {
