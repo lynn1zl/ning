@@ -1437,3 +1437,10 @@ body.resizing iframe, body.resizing #stage { pointer-events: none; }
   color: var(--title-color, inherit);
 }
 .narr.dropcap { text-indent: 0 !important; }
+
+/* 템플릿 폴더 */
+#template-grid.tpl-groups { display: block; padding-top: 4px; }
+.tpl-group-title { display: flex; align-items: center; gap: 6px; margin: 18px 4px 10px; font-size: 14px; font-weight: 700; color: var(--text); }
+.tpl-group-title:first-child { margin-top: 8px; }
+.tpl-group-title small { font-size: 11.5px; font-weight: 600; color: var(--text-3); background: var(--fill); border-radius: 999px; padding: 1px 7px; }
+.tpl-groups .template-grid { padding-top: 0; }

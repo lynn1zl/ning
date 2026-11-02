@@ -139,44 +139,6 @@ const DEFAULTS = {
   file: { prefix: true, date: true, pair: '', title: '', number: false },
 };
 
-/* 가든 프레임: 모서리에서 테두리를 따라 뻗는 덩굴 · 잎 · 파스텔 꽃 (한 장 그려서 네 방향으로 뒤집어 씀) */
-function gardenCornerSVG(fx, fy) {
-  const leaf = (x, y, r, c) => `<ellipse cx="${x}" cy="${y}" rx="9" ry="4.2" transform="rotate(${r} ${x} ${y})" fill="${c}"/>`;
-  const flower = (x, y, r, petal, center) => {
-    let g = '';
-    for (let k = 0; k < 5; k++) {
-      const a = (k * 72 - 90) * Math.PI / 180;
-      g += `<circle cx="${(x + Math.cos(a) * r * 0.6).toFixed(1)}" cy="${(y + Math.sin(a) * r * 0.6).toFixed(1)}" r="${(r * 0.5).toFixed(1)}" fill="${petal}"/>`;
-    }
-    return g + `<circle cx="${x}" cy="${y}" r="${(r * 0.32).toFixed(1)}" fill="${center}"/>`;
-  };
-  const sage = '#9fc79f', mint = '#bfe0b8', deep = '#86b38c';
-  const body = `<path d="M17 236 Q13 130 20 34 Q24 22 34 20 Q130 13 236 17" fill="none" stroke="${deep}" stroke-width="1.6" stroke-linecap="round"/>`
-    + leaf(13, 212, -70, sage) + leaf(23, 182, -110, mint) + leaf(12, 150, -75, sage) + leaf(22, 118, -105, mint) + leaf(14, 88, -78, sage) + leaf(24, 66, -112, mint)
-    + leaf(212, 12, -20, sage) + leaf(182, 23, 20, mint) + leaf(150, 12, -15, sage) + leaf(118, 22, 15, mint) + leaf(88, 13, -12, sage) + leaf(66, 24, 22, mint)
-    + flower(28, 28, 15, '#f7c3d0', '#f9e08b') + flower(58, 17, 9, '#d9c9f2', '#fff3b8') + flower(17, 60, 9, '#fde5a6', '#f7b9c8')
-    + flower(104, 12, 5.5, '#f7c3d0', '#fff3b8') + flower(12, 104, 5.5, '#c9e4f6', '#fff3b8')
-    + `<circle cx="138" cy="9" r="2.2" fill="#f7c3d0"/><circle cx="9" cy="138" r="2.2" fill="#d9c9f2"/><circle cx="170" cy="28" r="1.8" fill="#fde5a6"/><circle cx="28" cy="170" r="1.8" fill="#f7c3d0"/>`;
-  const t = `translate(${fx ? 240 : 0} ${fy ? 240 : 0}) scale(${fx ? -1 : 1} ${fy ? -1 : 1})`;
-  return `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240"><g transform="${t}">${body}</g></svg>`)}")`;
-}
-const GARDEN_CORNERS = [gardenCornerSVG(0, 0), gardenCornerSVG(1, 0), gardenCornerSVG(0, 1), gardenCornerSVG(1, 1)];
-// 위 · 아래 가운데 장식: 작은 꽃 하나와 양옆 잎
-function gardenMidSVG(fy) {
-  const leaf = (x, y, r, c) => `<ellipse cx="${x}" cy="${y}" rx="10" ry="4.4" transform="rotate(${r} ${x} ${y})" fill="${c}"/>`;
-  let petals = '';
-  for (let k = 0; k < 5; k++) {
-    const a = (k * 72 - 90) * Math.PI / 180;
-    petals += `<circle cx="${(60 + Math.cos(a) * 7.2).toFixed(1)}" cy="${(18 + Math.sin(a) * 7.2).toFixed(1)}" r="6" fill="#f7c3d0"/>`;
-  }
-  const body = `<path d="M8 17 Q60 12 112 17" fill="none" stroke="#86b38c" stroke-width="1.6" stroke-linecap="round"/>`
-    + leaf(34, 12, -12, '#9fc79f') + leaf(86, 12, 12, '#9fc79f') + leaf(22, 21, 10, '#bfe0b8') + leaf(98, 21, -10, '#bfe0b8')
-    + petals + `<circle cx="60" cy="18" r="3.8" fill="#f9e08b"/><circle cx="44" cy="25" r="2" fill="#d9c9f2"/><circle cx="76" cy="25" r="2" fill="#fde5a6"/>`;
-  const t = fy ? 'translate(0 36) scale(1 -1)' : '';
-  return `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="120" height="36" viewBox="0 0 120 36"><g transform="${t}">${body}</g></svg>`)}")`;
-}
-const GARDEN_MIDS = [gardenMidSVG(0), gardenMidSVG(1)];
-
 const SKINS = {
   note: {
     name: '줄 노트',
@@ -244,21 +206,30 @@ const SKINS = {
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .9 0 0 0 0 .8 0 0 0 .1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }`,
   },
-  garden: {
-    name: '가든 프레임',
-    css: `/* 꽃 · 잎 덩굴 모서리 장식과 둥근 안쪽 테두리 */
+  igdm: {
+    name: '인스타 DM',
+    css: `/* 보낸 메시지는 보라 → 파랑 그라데이션 알약 말풍선 */
+.msg-right .bubble { background: linear-gradient(135deg, #8a3ffc 0%, #5b5cf6 45%, #3797f0 100%); border-color: transparent; color: #fff; }
+.name { font-weight: 600; letter-spacing: .01em; }`,
+  },
+  wedding: {
+    name: '웨딩',
+    css: `/* 청첩장: 금빛 이중 선 테두리, 가운데 정렬 제목과 장식 */
 .card::before {
-  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 2;
-  background-image: ${GARDEN_CORNERS.join(', ')}, ${GARDEN_MIDS.join(', ')};
-  background-repeat: no-repeat;
-  background-size: 240px 240px, 240px 240px, 240px 240px, 240px 240px, 120px 36px, 120px 36px;
-  background-position: top left, top right, bottom left, bottom right, top 2px center, bottom 2px center;
+  content: ""; position: absolute; inset: 18px; pointer-events: none; z-index: 2;
+  border: 1px solid rgba(176, 141, 87, .55);
+  outline: 1px solid rgba(176, 141, 87, .3); outline-offset: 5px;
 }
-.card::after {
-  content: ""; position: absolute; inset: 14px; pointer-events: none;
-  border: 1.5px solid rgba(134, 179, 140, .45); border-radius: 22px;
-  box-shadow: inset 0 0 0 4px rgba(255, 255, 255, .35);
-}`,
+.card-title { letter-spacing: .28em; font-weight: 500; text-align: center; padding-left: .28em; }
+.card-footer .credit { text-align: center; }
+.card-title::before, .card-title::after {
+  content: ""; display: block; width: 44px; height: 1px; margin: 0 auto; background: #b08d57;
+}
+.card-title::before { margin-bottom: .75em; }
+.card-title::after { margin-top: .7em; }
+.name { letter-spacing: .16em; font-weight: 500; }
+.bubble { letter-spacing: .01em; }
+.credit { letter-spacing: .12em; }`,
   },
   agent: {
     name: '블랙 에이전트',
@@ -307,7 +278,7 @@ const SKINS = {
 const TEMPLATES = [
   { id: 'paper', name: '따뜻한 종이', sub: '베이지 종이', pv: { bg: '#f7f3ea', fg: '#2b2a27', b1: '#ffffff', b2: '#33415c' }, set: {}, chars: [['#ffffff', '#222222', '#e3a6a6'], ['#33415c', '#ffffff', '#33415c']] },
   {
-    id: 'clean', name: '미니멀 화이트', sub: '흰 배경 · 회색/파랑 말풍선', pv: { bg: '#ffffff', fg: '#191f28', b1: '#f2f4f6', b2: '#3182f6' },
+    id: 'clean', hidden: true, name: '미니멀 화이트', sub: '흰 배경 · 회색/파랑 말풍선', pv: { bg: '#ffffff', fg: '#191f28', b1: '#f2f4f6', b2: '#3182f6' },
     set: { typo: { font: 'Pretendard', color: '#191f28', lh: 1.8, ls: -0.02 }, head: { font: 'Pretendard', color: '#191f28', creditColor: '#8b95a1' }, bubble: { speech: 'messenger', bg: '#f2f4f6', color: '#191f28', shadow: false, nameColor: '#8b95a1' }, canvas: { bg: '#ffffff' } },
     chars: [['#f2f4f6', '#191f28', '#f2f4f6'], ['#3182f6', '#ffffff', '#3182f6']],
   },
@@ -317,9 +288,9 @@ const TEMPLATES = [
     chars: [['#2c2c36', '#f2f2f2', '#5c5c70'], ['#e8e4dc', '#17171c', '#e8e4dc']],
   },
   {
-    id: 'messenger', name: '메신저', sub: '하늘색 배경 · 노란 말풍선', pv: { bg: '#b9cde0', fg: '#4a5a6a', b1: '#ffffff', b2: '#ffe94a' },
-    set: { typo: { font: 'Pretendard', size: 12, color: '#4a5a6a', align: 'center', lh: 1.6 }, head: { font: 'Pretendard', size: 20, color: '#2c3a48', creditColor: '#5a6b7c' }, bubble: { speech: 'messenger', radius: 14, shadow: false, nameColor: '#4a5a6a', gap: 12 }, canvas: { bg: '#b9cde0' } },
-    chars: [['#ffffff', '#222222', '#ffffff'], ['#ffe94a', '#222222', '#ffe94a']],
+    id: 'messenger', name: '카카오톡', sub: '하늘색 배경 · 노란 말풍선', pv: { bg: '#bacee0', fg: '#4a5a6a', b1: '#ffffff', b2: '#fee500' },
+    set: { typo: { font: 'Pretendard', size: 12, color: '#4a5a6a', align: 'center', lh: 1.6 }, head: { font: 'Pretendard', size: 20, color: '#2c3a48', creditColor: '#5a6b7c' }, bubble: { speech: 'messenger', radius: 14, shadow: false, nameColor: '#4a5a6a', gap: 12 }, canvas: { bg: '#bacee0' } },
+    chars: [['#ffffff', '#222222', '#ffffff'], ['#fee500', '#222222', '#fee500']],
   },
   {
     id: 'book', name: '단정한 페이지', sub: '미색 종이 · 글처럼 이어지는 대사', pv: { bg: '#fbfaf6', fg: '#2a2826', book: true },
@@ -332,7 +303,7 @@ const TEMPLATES = [
     chars: null, charSide: 'center',
   },
   {
-    id: 'line', name: '라인 메신저', sub: '하늘색 · 초록 말풍선 · 프로필', pv: { bg: '#8fabd4', fg: '#3a4a5e', b1: '#ffffff', b2: '#a6e877', center: false },
+    id: 'line', name: '라인', sub: '하늘색 · 초록 말풍선 · 프로필', pv: { bg: '#8fabd4', fg: '#3a4a5e', b1: '#ffffff', b2: '#a6e877', center: false },
     set: { typo: { font: 'Pretendard', size: 12, color: '#33475e', align: 'center', lh: 1.6 }, head: { font: 'Pretendard', size: 17, color: '#1f2d3d', creditColor: '#3f5571', creditAlign: 'center' }, bubble: { speech: 'round', font: 'Pretendard', size: 13.5, radius: 18, px: 13, py: 8, shadow: false, tail: true, gap: 10, avatar: true, avatarSize: 36, nameSize: 11, nameColor: '#33475e' }, canvas: { bg: '#8fabd4' } },
     chars: [['#ffffff', '#1d1d1d', '#ffffff'], ['#a6e877', '#1d2a10', '#a6e877']],
   },
@@ -347,14 +318,24 @@ const TEMPLATES = [
     skin: SKINS.mafia.css, chars: [['#1f1b18', '#efe6d4', '#c9a35e'], ['#5a1a1f', '#f5e6dc', '#8a2a30']],
   },
   {
-    id: 'garden', name: '가든 프레임', sub: '연두 배경 · 꽃과 잎 테두리 · 파스텔', pv: { bg: '#eef6e6', fg: '#5b6f5d', b1: '#ffffff', b2: '#fde3ea', garden: true },
-    set: { typo: { color: '#4a5a4c' }, head: { color: '#5f8a64', creditColor: '#8fa891', creatorColor: '#5f8a64', accent: '#f2a7bb' }, bubble: { speech: 'round', bg: '#ffffff', color: '#3f4f42', border: '#d7ead0', bw: 1, radius: 16, shadow: false, nameColor: '#6f9a74' }, canvas: { bg: '#eef6e6', bgType: 'solid' } },
-    skin: SKINS.garden.css, chars: [['#ffffff', '#3f4f42', '#d7ead0'], ['#fde3ea', '#4f3f45', '#f6c9d6']],
-  },
-  {
     id: 'agent', name: '블랙 에이전트', sub: '흑백 정장 · 가는 흰 선 · 플래시', pv: { bg: 'linear-gradient(115deg,#050505,#1a1a1a 55%,#050505)', fg: '#e8e8e8', b1: '#ffffff', b2: '#000000', outline: '#ffffff' },
     set: { typo: { color: '#d7d7d7' }, head: { color: '#ffffff', creditColor: '#8a8a8a', creatorColor: '#ffffff', accent: '#ffffff' }, bubble: { speech: 'square', bg: '#ffffff', color: '#0a0a0a', border: '#ffffff', bw: 1, radius: 0, shadow: false, nameColor: '#bdbdbd' }, canvas: { bgType: 'gradient', gradType: 'linear', gradAngle: 160, bg: '#141414', bg2: '#020202' } },
     skin: SKINS.agent.css, chars: [['#ffffff', '#0a0a0a', '#ffffff'], ['#000000', '#ffffff', '#ffffff']],
+  },
+  {
+    id: 'imessage', name: '아이메시지', sub: '흰 배경 · 회색 / 파랑 말풍선', pv: { bg: '#ffffff', fg: '#1c1c1e', b1: '#e9e9eb', b2: '#0a84ff' },
+    set: { typo: { color: '#1c1c1e' }, head: { color: '#1c1c1e', creditColor: '#8e8e93', creatorColor: '#1c1c1e' }, bubble: { speech: 'round', radius: 18, bg: '#e9e9eb', color: '#000000', border: '#e9e9eb', bw: 0, shadow: false, tail: true, nameColor: '#8e8e93' }, canvas: { bg: '#ffffff' } },
+    chars: [['#e9e9eb', '#000000', '#e9e9eb'], ['#0a84ff', '#ffffff', '#0a84ff']],
+  },
+  {
+    id: 'igdm', name: '인스타 DM', sub: '흰 배경 · 그라데이션 말풍선', pv: { bg: '#ffffff', fg: '#262626', b1: '#efefef', b2: 'linear-gradient(135deg,#8a3ffc,#3797f0)' },
+    set: { typo: { color: '#262626' }, head: { color: '#262626', creditColor: '#8e8e8e', creatorColor: '#262626' }, bubble: { speech: 'pill', bg: '#efefef', color: '#262626', border: '#efefef', bw: 0, shadow: false, tail: false, nameColor: '#8e8e8e' }, canvas: { bg: '#ffffff' } },
+    skin: SKINS.igdm.css, chars: [['#efefef', '#262626', '#efefef'], ['#5b5cf6', '#ffffff', '#5b5cf6']],
+  },
+  {
+    id: 'wedding', name: '웨딩', sub: '아이보리 · 금빛 선 · 청첩장', pv: { bg: '#fbf8f2', fg: '#6b5a44', b1: '#ffffff', b2: '#f4ece0', outline: '#cdb68f', frame: true },
+    set: { typo: { color: '#5e5040' }, head: { color: '#6b5232', creditColor: '#a8957a', creatorColor: '#8a6d45', align: 'center', creditAlign: 'center', accent: '#b08d57' }, bubble: { speech: 'square', radius: 2, bg: '#ffffff', color: '#4f4436', border: '#d9c7a6', bw: 1, shadow: false, nameColor: '#a0875f' }, canvas: { bg: '#fbf8f2' } },
+    skin: SKINS.wedding.css, chars: [['#ffffff', '#4f4436', '#d9c7a6'], ['#f4ece0', '#4f4436', '#d9c7a6']],
   },
   {
     id: 'film', name: '영화 자막', sub: '검은 화면 · 자막형 대사', pv: { bg: '#000000', fg: '#9a9a9a', film: true },
@@ -2730,14 +2711,33 @@ $('#file-style').addEventListener('change', async (e) => {
 });
 
 /* 템플릿 */
+const TEMPLATE_GROUPS = [
+  ['기본', ['paper', 'night', 'book', 'quote', 'pastel', 'vintage']],
+  ['메신저', ['imessage', 'messenger', 'line', 'igdm']],
+  ['스페셜', ['chungking', 'mafia', 'agent', 'film', 'terminal', 'wedding']],
+];
 function buildTemplates() {
-  const grid = $('#template-grid');
-  grid.innerHTML = '';
-  TEMPLATES.forEach((t) => {
+  const root = $('#template-grid');
+  root.innerHTML = '';
+  root.classList.add('tpl-groups');
+  const byId = Object.fromEntries(TEMPLATES.map((t) => [t.id, t]));
+  const listed = new Set(TEMPLATE_GROUPS.flatMap(([, ids]) => ids));
+  const groups = TEMPLATE_GROUPS.map(([name, ids]) => [name, ids.map((id) => byId[id]).filter(Boolean)]);
+  const rest = TEMPLATES.filter((t) => !t.hidden && !listed.has(t.id));
+  if (rest.length) groups.push(['기타', rest]);
+  let grid;
+  const items = [];
+  groups.forEach(([name, list]) => {
+    root.append(h('div', { class: 'tpl-group-title' }, name, h('small', {}, `${list.length}`)));
+    grid = h('div', { class: 'template-grid' });
+    root.append(grid);
+    list.forEach((t) => items.push([grid, t]));
+  });
+  items.forEach(([grid, t]) => {
     const pv = h('div', { class: 'tpl-pv' });
     const p = t.pv;
     pv.style.background = p.bg;
-    if (p.garden) { pv.style.backgroundImage = GARDEN_CORNERS.join(', '); pv.style.backgroundSize = '58% auto'; pv.style.backgroundRepeat = 'no-repeat'; pv.style.backgroundPosition = 'top left, top right, bottom left, bottom right'; }
+    if (/gradient/.test(p.b2 || '')) p.b2bg = p.b2;
     if (p.lines) pv.style.backgroundImage = 'repeating-linear-gradient(transparent 0 13px, rgba(120,150,190,.25) 13px 14px)';
     if (p.frame) pv.style.boxShadow = 'inset 0 0 0 6px ' + p.bg + ', inset 0 0 0 7px rgba(80,55,30,.35)';
     const line = (w, center) => { const l = h('i', { class: 'l' }); l.style.cssText = `display:block;width:${w}%;background:${p.fg};${center ? 'align-self:center' : ''}`; return l; };
@@ -3569,7 +3569,7 @@ document.addEventListener('click', (e) => {
 const RESETS = [
   { id: 'skin', icon: 'code', title: '스킨만 초기화', desc: 'CSS 스킨과 HTML 배경을 비워요', done: '스킨을 초기화했어요',
     run() { state.skin = ''; state.bgHtml = ''; } },
-  { id: 'design', icon: 'type', title: '디자인 초기화', desc: '서체 · 말풍선 · 화면 · 스킨을 기본(미니멀 화이트)으로. 글과 캐릭터는 그대로예요', done: '디자인을 기본으로 되돌렸어요',
+  { id: 'design', icon: 'type', title: '디자인 초기화', desc: '서체 · 말풍선 · 화면 · 스킨을 기본 디자인으로. 글과 캐릭터는 그대로예요', done: '디자인을 기본으로 되돌렸어요',
     run() {
       for (const k of DESIGN_KEYS) state[k] = copyState(DEFAULTS[k]);
       state.skin = ''; state.bgHtml = '';
