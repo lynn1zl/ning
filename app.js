@@ -134,7 +134,7 @@ const DEFAULTS = {
   overrides: {},
   skin: '',
   bgHtml: '',
-  scene: { place: '', alive: '', total: '' },
+  scene: { show: true, place: '', alive: '', total: '' },
   file: { prefix: true, date: true, pair: '', title: '', number: false },
 };
 
@@ -1208,6 +1208,8 @@ const bgUsesScene = () => /\{\{\s*(장소|생존|전체|place|alive|total)\s*\}\
 function fillBgTokens(html) {
   const e = (t) => esc((t || '').trim());
   const sc = state.scene || {};
+  // 상황판 끄기: data-scene 이 붙은 요소를 숨김
+  if (sc.show === false) html = (html || '') + '<style>[data-scene]{display:none !important}</style>';
   return (html || '')
     .replace(TITLE_TOKEN, () => e(state.title))
     .replace(/\{\{\s*(출처|credit)\s*\}\}/gi, () => e(state.credit))
@@ -1678,10 +1680,11 @@ const SCHEMA = {
       { t: 'text', p: 'credit', l: '출처 · 작품명', ph: '예) 채팅방 이름 · 날짜' },
       { t: 'text', p: 'creator', l: '출처 · 제작자', ph: '예) @내계정' },
     ] },
-    { sec: '상황판', note: '지금 HTML 배경의 상황판에 보여요. 생존 게이지는 생존 인원 ÷ 전체 인원으로 채워져요.', show: () => bgUsesScene(), rows: [
-      { t: 'text', p: 'scene.place', l: '현재 장소', ph: '예) 골목길' },
-      { t: 'text', p: 'scene.alive', l: '생존 인원', ph: '예) 31' },
-      { t: 'text', p: 'scene.total', l: '전체 인원', ph: '예) 31' },
+    { sec: '상황판', note: '생존 게이지는 생존 인원 ÷ 전체 인원으로 채워져요. 직접 만든 HTML 배경에서는 숨길 요소에 data-scene 을 붙이면 이 스위치로 켜고 꺼져요.', show: () => bgUsesScene(), rows: [
+      { t: 'switch', p: 'scene.show', l: '상황판 보이기', sub: '끄면 배경에서 상황판을 숨겨요' },
+      { t: 'text', p: 'scene.place', l: '현재 장소', ph: '예) 골목길', show: () => state.scene.show !== false },
+      { t: 'text', p: 'scene.alive', l: '생존 인원', ph: '예) 31', show: () => state.scene.show !== false },
+      { t: 'text', p: 'scene.total', l: '전체 인원', ph: '예) 31', show: () => state.scene.show !== false },
     ] },
   ],
   bubble: [
