@@ -206,6 +206,29 @@ const SKINS = {
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .9 0 0 0 0 .8 0 0 0 .1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }`,
   },
+  pager: {
+    name: '삐삐',
+    css: `/* 옛날 휴대폰 · 삐삐: 두꺼운 플라스틱 테두리, 회녹색 베젤, 옅은 초록 LCD 화면, 픽셀 그리드 */
+.card { border-radius: 30px; }
+.card-overlay {
+  opacity: 1 !important; background: transparent !important; border-radius: 30px;
+  box-shadow: inset 0 0 0 16px #34383d, inset 0 0 0 26px #8e9a93, inset 0 0 0 27px rgba(0, 0, 0, .3), inset 0 6px 22px 27px rgba(30, 50, 25, .2);
+}
+.card::before {
+  content: ""; position: absolute; inset: 27px; pointer-events: none; border-radius: 6px;
+  background:
+    repeating-linear-gradient(0deg, rgba(40, 60, 35, .05) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(40, 60, 35, .04) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at 30% 20%, rgba(255, 255, 255, .25), transparent 55%);
+}
+.card::after {
+  content: "■■■■□  12:00"; position: absolute; top: 36px; right: 42px;
+  font: 700 10px/1 ui-monospace, Menlo, monospace; letter-spacing: .12em; color: rgba(38, 56, 34, .7);
+}
+.card-title { letter-spacing: .08em; }
+.name { letter-spacing: .06em; }
+.bubble { letter-spacing: .02em; }`,
+  },
   igdm: {
     name: '인스타 DM',
     css: `/* 보낸 메시지는 보라 → 파랑 그라데이션 알약 말풍선 */
@@ -336,6 +359,11 @@ const TEMPLATES = [
     id: 'wedding', name: '웨딩', sub: '아이보리 · 금빛 선 · 청첩장', pv: { bg: '#fbf8f2', fg: '#6b5a44', b1: '#ffffff', b2: '#f4ece0', outline: '#cdb68f', frame: true },
     set: { typo: { color: '#5e5040' }, head: { color: '#6b5232', creditColor: '#a8957a', creatorColor: '#8a6d45', align: 'center', creditAlign: 'center', accent: '#b08d57' }, bubble: { speech: 'square', radius: 2, bg: '#ffffff', color: '#4f4436', border: '#d9c7a6', bw: 1, shadow: false, nameColor: '#a0875f' }, canvas: { bg: '#fbf8f2' } },
     skin: SKINS.wedding.css, chars: [['#ffffff', '#4f4436', '#d9c7a6'], ['#f4ece0', '#4f4436', '#d9c7a6']],
+  },
+  {
+    id: 'pager', name: '삐삐', sub: '옛날 휴대폰 프레임 · 옅은 초록 화면', pv: { bg: '#c9d8b3', fg: '#2f3f2a', b1: '#dfe9cc', b2: '#b3c69a', outline: '#4a5a40', frame: true },
+    set: { typo: { color: '#2b3a27' }, head: { color: '#22301f', creditColor: '#4f6147', creatorColor: '#2b3a27' }, bubble: { speech: 'square', radius: 3, bg: '#dbe6c7', color: '#22301f', border: '#53664a', bw: 1.5, shadow: false, nameColor: '#3e5137' }, canvas: { bg: '#c9d8b3', pad: 64 } },
+    skin: SKINS.pager.css, chars: [['#dbe6c7', '#22301f', '#53664a'], ['#b5c99a', '#22301f', '#53664a']],
   },
   {
     id: 'film', name: '영화 자막', sub: '검은 화면 · 자막형 대사', pv: { bg: '#000000', fg: '#9a9a9a', film: true },
@@ -1683,7 +1711,7 @@ const SCHEMA = {
       { t: 'text', p: 'credit', l: '출처 · 작품명', ph: '예) 채팅방 이름 · 날짜' },
       { t: 'text', p: 'creator', l: '출처 · 제작자', ph: '예) @내계정' },
     ] },
-    { sec: '상황판', note: '생존 게이지는 생존 인원 ÷ 전체 인원으로 채워져요. 직접 만든 HTML 배경에서는 숨길 요소에 data-scene 을 붙이면 이 스위치로 켜고 꺼져요.', show: () => bgUsesScene(), rows: [
+    { sec: '상황판', note: '생존 게이지는 생존 인원 ÷ 전체 인원으로 채워져요.', show: () => bgUsesScene(), rows: [
       { t: 'switch', p: 'scene.show', l: '상황판 보이기', sub: '끄면 배경에서 상황판을 숨겨요' },
       { t: 'text', p: 'scene.place', l: '현재 장소', ph: '예) 골목길', show: () => state.scene.show !== false },
       { t: 'text', p: 'scene.alive', l: '생존 인원', ph: '예) 31', show: () => state.scene.show !== false },
@@ -2714,7 +2742,7 @@ $('#file-style').addEventListener('change', async (e) => {
 const TEMPLATE_GROUPS = [
   ['기본', ['paper', 'night', 'book', 'quote', 'pastel', 'vintage']],
   ['메신저', ['imessage', 'messenger', 'line', 'igdm']],
-  ['스페셜', ['chungking', 'mafia', 'agent', 'film', 'terminal', 'wedding']],
+  ['스페셜', ['chungking', 'mafia', 'agent', 'film', 'terminal', 'wedding', 'pager']],
 ];
 function buildTemplates() {
   const root = $('#template-grid');
@@ -3706,10 +3734,10 @@ const TOUR = [
   { pane: 'bubble', title: '말풍선', body: '말풍선 모양 · 크기 · 색을 바꾸고, 말풍선 옆 사진과 이름 표시를 정해요.' },
   { pane: 'chars', title: '캐릭터', body: '말풍선 캐릭터를 설정해요. 따로 입력하지 않아도 로그에서 인식된 캐릭터는 자동으로 추가돼요.' },
   { pane: 'typo', title: '서체', body: '글꼴 · 크기 · 행간 · 자간부터 줄바꿈 · 드롭캡 같은 세세한 조판까지 다듬어요.' },
-  { pane: 'canvas', title: '화면', body: '배경색과 화면 비율을 정해요. ‘자유’(기본)는 길이 상관없이 한 장으로, 비율을 고르면 넘치는 글은 다음 장으로 넘어가요.' },
-  { pane: 'skin', title: '스킨', body: 'HTML · CSS를 넣어 자유롭게 꾸밀 수 있어요. 바로 쓸 수 있는 배경도 있어요.' },
+  { pane: 'canvas', title: '화면', body: '배경색과 화면 비율을 정해요. ‘자유’(기본)는 길이 상관없이 한 장으로, 비율을 고르면 넘치는 글은 다음 장으로 넘어가요. 저장할 이미지의 파일 이름도 여기서 정해요.' },
+  { pane: 'skin', title: '스킨', body: 'HTML · CSS를 넣어 자유롭게 꾸밀 수 있어요.' },
   { pane: 'template', title: '프리셋', body: '지금 쓰는 설정을 저장해 두고 불러와요. 바로 입혀 볼 수 있는 기본 템플릿 테마도 있어요.' },
-  { target: '#btn-save', title: '저장 · 복사', body: '다 꾸몄다면 이미지로 저장하거나 복사해서 바로 붙여넣으세요. 그럼, 니니닝!' },
+  { target: '#btn-save', title: '저장 · 복사', body: '다 꾸몄다면 이미지로 저장하거나 복사해서 바로 붙여넣으세요.' },
 ];
 let tourIdx = -1;
 const tourEls = {};
@@ -3781,7 +3809,6 @@ function askTour() {
     h('div', { class: 'modal-box narrow tour-ask' },
       h('div', { class: 'tour-bunny', html: BRAND }),
       h('h3', {}, '튜토리얼 볼까요?'),
-      h('p', { class: 'modal-sub' }, '메뉴가 어디에 뭐가 있는지 1분 만에 알려 드릴게요.'),
       h('div', { class: 'tour-ask-actions' },
         h('button', { type: 'button', class: 'btn', onclick: () => { m.remove(); uiState.tourSeen = true; saveUi(); } }, 'ㄴㄴㄴ'),
         h('button', { type: 'button', class: 'btn btn-primary', onclick: () => { m.remove(); showTour(0); } }, '니니닝!'))));
