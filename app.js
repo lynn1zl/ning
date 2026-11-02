@@ -137,6 +137,44 @@ const DEFAULTS = {
   file: { prefix: true, date: true, pair: '', title: '', number: false },
 };
 
+/* 가든 프레임: 모서리에서 테두리를 따라 뻗는 덩굴 · 잎 · 파스텔 꽃 (한 장 그려서 네 방향으로 뒤집어 씀) */
+function gardenCornerSVG(fx, fy) {
+  const leaf = (x, y, r, c) => `<ellipse cx="${x}" cy="${y}" rx="9" ry="4.2" transform="rotate(${r} ${x} ${y})" fill="${c}"/>`;
+  const flower = (x, y, r, petal, center) => {
+    let g = '';
+    for (let k = 0; k < 5; k++) {
+      const a = (k * 72 - 90) * Math.PI / 180;
+      g += `<circle cx="${(x + Math.cos(a) * r * 0.6).toFixed(1)}" cy="${(y + Math.sin(a) * r * 0.6).toFixed(1)}" r="${(r * 0.5).toFixed(1)}" fill="${petal}"/>`;
+    }
+    return g + `<circle cx="${x}" cy="${y}" r="${(r * 0.32).toFixed(1)}" fill="${center}"/>`;
+  };
+  const sage = '#9fc79f', mint = '#bfe0b8', deep = '#86b38c';
+  const body = `<path d="M17 236 Q13 130 20 34 Q24 22 34 20 Q130 13 236 17" fill="none" stroke="${deep}" stroke-width="1.6" stroke-linecap="round"/>`
+    + leaf(13, 212, -70, sage) + leaf(23, 182, -110, mint) + leaf(12, 150, -75, sage) + leaf(22, 118, -105, mint) + leaf(14, 88, -78, sage) + leaf(24, 66, -112, mint)
+    + leaf(212, 12, -20, sage) + leaf(182, 23, 20, mint) + leaf(150, 12, -15, sage) + leaf(118, 22, 15, mint) + leaf(88, 13, -12, sage) + leaf(66, 24, 22, mint)
+    + flower(28, 28, 15, '#f7c3d0', '#f9e08b') + flower(58, 17, 9, '#d9c9f2', '#fff3b8') + flower(17, 60, 9, '#fde5a6', '#f7b9c8')
+    + flower(104, 12, 5.5, '#f7c3d0', '#fff3b8') + flower(12, 104, 5.5, '#c9e4f6', '#fff3b8')
+    + `<circle cx="138" cy="9" r="2.2" fill="#f7c3d0"/><circle cx="9" cy="138" r="2.2" fill="#d9c9f2"/><circle cx="170" cy="28" r="1.8" fill="#fde5a6"/><circle cx="28" cy="170" r="1.8" fill="#f7c3d0"/>`;
+  const t = `translate(${fx ? 240 : 0} ${fy ? 240 : 0}) scale(${fx ? -1 : 1} ${fy ? -1 : 1})`;
+  return `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240"><g transform="${t}">${body}</g></svg>`)}")`;
+}
+const GARDEN_CORNERS = [gardenCornerSVG(0, 0), gardenCornerSVG(1, 0), gardenCornerSVG(0, 1), gardenCornerSVG(1, 1)];
+// 위 · 아래 가운데 장식: 작은 꽃 하나와 양옆 잎
+function gardenMidSVG(fy) {
+  const leaf = (x, y, r, c) => `<ellipse cx="${x}" cy="${y}" rx="10" ry="4.4" transform="rotate(${r} ${x} ${y})" fill="${c}"/>`;
+  let petals = '';
+  for (let k = 0; k < 5; k++) {
+    const a = (k * 72 - 90) * Math.PI / 180;
+    petals += `<circle cx="${(60 + Math.cos(a) * 7.2).toFixed(1)}" cy="${(18 + Math.sin(a) * 7.2).toFixed(1)}" r="6" fill="#f7c3d0"/>`;
+  }
+  const body = `<path d="M8 17 Q60 12 112 17" fill="none" stroke="#86b38c" stroke-width="1.6" stroke-linecap="round"/>`
+    + leaf(34, 12, -12, '#9fc79f') + leaf(86, 12, 12, '#9fc79f') + leaf(22, 21, 10, '#bfe0b8') + leaf(98, 21, -10, '#bfe0b8')
+    + petals + `<circle cx="60" cy="18" r="3.8" fill="#f9e08b"/><circle cx="44" cy="25" r="2" fill="#d9c9f2"/><circle cx="76" cy="25" r="2" fill="#fde5a6"/>`;
+  const t = fy ? 'translate(0 36) scale(1 -1)' : '';
+  return `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="120" height="36" viewBox="0 0 120 36"><g transform="${t}">${body}</g></svg>`)}")`;
+}
+const GARDEN_MIDS = [gardenMidSVG(0), gardenMidSVG(1)];
+
 const SKINS = {
   note: {
     name: '줄 노트',
@@ -204,16 +242,27 @@ const SKINS = {
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .9 0 0 0 0 .8 0 0 0 .1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }`,
   },
+  garden: {
+    name: '가든 프레임',
+    css: `/* 꽃 · 잎 덩굴 모서리 장식과 둥근 안쪽 테두리 */
+.card::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 2;
+  background-image: ${GARDEN_CORNERS.join(', ')}, ${GARDEN_MIDS.join(', ')};
+  background-repeat: no-repeat;
+  background-size: 240px 240px, 240px 240px, 240px 240px, 240px 240px, 120px 36px, 120px 36px;
+  background-position: top left, top right, bottom left, bottom right, top 2px center, bottom 2px center;
+}
+.card::after {
+  content: ""; position: absolute; inset: 14px; pointer-events: none;
+  border: 1.5px solid rgba(134, 179, 140, .45); border-radius: 22px;
+  box-shadow: inset 0 0 0 4px rgba(255, 255, 255, .35);
+}`,
+  },
   agent: {
     name: '블랙 에이전트',
-    css: `/* 흑백 정장 · 기밀 문서 무드: 위아래 가는 흰 선, 빛이 번쩍이는 하이라이트, 'CLASSIFIED' 꼬리표 */
+    css: `/* 흑백 정장 무드: 위아래 가는 흰 선, 빛이 번쩍이는 하이라이트 */
 .card-title { letter-spacing: .32em; text-transform: uppercase; font-weight: 800; }
 .name { letter-spacing: .22em; text-transform: uppercase; font-size: calc(var(--name-size) * .92); }
-.card::before {
-  content: "CLASSIFIED · EYES ONLY"; position: absolute; top: 18px; right: 22px; z-index: 2;
-  font: 700 9px/1 ui-monospace, Menlo, monospace; letter-spacing: .28em; color: rgba(255,255,255,.55);
-  padding: 5px 8px; border: 1px solid rgba(255,255,255,.35);
-}
 .card::after {
   content: ""; position: absolute; inset: 0; pointer-events: none;
   background:
@@ -296,12 +345,12 @@ const TEMPLATES = [
     skin: SKINS.mafia.css, chars: [['#1f1b18', '#efe6d4', '#c9a35e'], ['#5a1a1f', '#f5e6dc', '#8a2a30']],
   },
   {
-    id: 'flower', name: '보태니컬', sub: '선으로 그린 꽃 · 크림 · 더스티 로즈', pv: { bg: '#faf6f0', fg: '#6b5552', b1: '#ffffff', b2: '#efdcd6', flower: true },
-    set: { typo: { color: '#5f4d4a' }, head: { color: '#8a4e55', creditColor: '#a99590', creatorColor: '#8a4e55', accent: '#b9898a' }, bubble: { speech: 'round', bg: '#ffffff', color: '#4f3f3d', border: '#ffffff', bw: 0, radius: 14, shadow: true, nameColor: '#9a6a6c' }, canvas: { bg: '#faf6f0', bgType: 'pattern', pattern: 'flower', patColor: '#b98a87', patOpacity: 0.3, patSize: 54 } },
-    chars: [['#ffffff', '#4f3f3d', '#ffffff'], ['#f1e2dd', '#4f3f3d', '#f1e2dd']],
+    id: 'garden', name: '가든 프레임', sub: '연두 배경 · 꽃과 잎 테두리 · 파스텔', pv: { bg: '#eef6e6', fg: '#5b6f5d', b1: '#ffffff', b2: '#fde3ea', garden: true },
+    set: { typo: { color: '#4a5a4c' }, head: { color: '#5f8a64', creditColor: '#8fa891', creatorColor: '#5f8a64', accent: '#f2a7bb' }, bubble: { speech: 'round', bg: '#ffffff', color: '#3f4f42', border: '#d7ead0', bw: 1, radius: 16, shadow: false, nameColor: '#6f9a74' }, canvas: { bg: '#eef6e6', bgType: 'solid' } },
+    skin: SKINS.garden.css, chars: [['#ffffff', '#3f4f42', '#d7ead0'], ['#fde3ea', '#4f3f45', '#f6c9d6']],
   },
   {
-    id: 'agent', name: '블랙 에이전트', sub: '흑백 정장 · 기밀 문서 · 플래시', pv: { bg: 'linear-gradient(115deg,#050505,#1a1a1a 55%,#050505)', fg: '#e8e8e8', b1: '#ffffff', b2: '#000000', outline: '#ffffff' },
+    id: 'agent', name: '블랙 에이전트', sub: '흑백 정장 · 가는 흰 선 · 플래시', pv: { bg: 'linear-gradient(115deg,#050505,#1a1a1a 55%,#050505)', fg: '#e8e8e8', b1: '#ffffff', b2: '#000000', outline: '#ffffff' },
     set: { typo: { color: '#d7d7d7' }, head: { color: '#ffffff', creditColor: '#8a8a8a', creatorColor: '#ffffff', accent: '#ffffff' }, bubble: { speech: 'square', bg: '#ffffff', color: '#0a0a0a', border: '#ffffff', bw: 1, radius: 0, shadow: false, nameColor: '#bdbdbd' }, canvas: { bgType: 'gradient', gradType: 'linear', gradAngle: 160, bg: '#141414', bg2: '#020202' } },
     skin: SKINS.agent.css, chars: [['#ffffff', '#0a0a0a', '#ffffff'], ['#000000', '#ffffff', '#ffffff']],
   },
@@ -496,6 +545,7 @@ function migrate(st, raw) {
     Object.assign(st.head, { creditFont: st.head.font, creditFontCustom: st.head.fontCustom, creatorFont: st.head.font, creatorFontCustom: st.head.fontCustom, creatorColor: st.head.creditColor, creatorSize: st.head.creditSize });
   }
   if (raw && !('creator' in raw)) st.creator = '';
+  if (st.canvas.pattern === 'flower') st.canvas.pattern = 'dots';
   // 이전 버전의 빈 줄 처리 → 엔터 친 만큼 여백
   // 빈 줄 기본값을 '한 줄은 문단 나눔만'으로 (한 번만 옮김, 이후 사용자가 고른 값은 유지)
   if (raw && raw.parse && !raw.parse.blankV3) { st.parse.blank = 'para1'; st.parse.blankV3 = true; }
@@ -1005,37 +1055,8 @@ function hexToRgba(hex, a) {
 }
 const svgUrl = (svg) => `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 
-const PATTERNS = [['dots', '점'], ['grid', '격자'], ['lines', '줄 노트'], ['diagonal', '사선'], ['check', '체크'], ['plus', '플러스'], ['paper', '종이 질감'], ['manuscript', '원고지'], ['flower', '꽃']];
+const PATTERNS = [['dots', '점'], ['grid', '격자'], ['lines', '줄 노트'], ['diagonal', '사선'], ['check', '체크'], ['plus', '플러스'], ['paper', '종이 질감'], ['manuscript', '원고지']];
 
-// 꽃 패턴 타일: 가는 선으로 그린 보태니컬 일러스트 (데이지 · 작은 가지 · 꽃봉오리)를 크기 · 각도를 달리해 흩뿌림
-function flowerTile(color, op, s) {
-  const t = Math.round(s * 4);
-  const sw = Math.max(0.8, s / 30).toFixed(2);
-  const fillOp = (op * 0.28).toFixed(3);
-  const st = `stroke="${color}" stroke-opacity="${op}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"`;
-  const daisy = (x, y, r, rot) => {
-    let g = '';
-    for (let k = 0; k < 8; k++) g += `<ellipse cx="0" cy="${(-r * 0.62).toFixed(2)}" rx="${(r * 0.2).toFixed(2)}" ry="${(r * 0.42).toFixed(2)}" transform="rotate(${k * 45})"/>`;
-    return `<g transform="translate(${x} ${y}) rotate(${rot})" fill="${color}" fill-opacity="${fillOp}" ${st}>${g}<circle r="${(r * 0.2).toFixed(2)}" fill="${color}" fill-opacity="${(op * 0.7).toFixed(3)}" stroke="none"/></g>`;
-  };
-  const sprig = (x, y, len, rot) => {
-    const L = len;
-    let leaves = '';
-    for (let k = 1; k <= 3; k++) {
-      const yy = (-L * k / 4).toFixed(2), lw = (L * 0.11).toFixed(2), lh = (L * 0.2).toFixed(2);
-      leaves += `<ellipse cx="${-L * 0.1}" cy="${yy}" rx="${lw}" ry="${lh}" transform="rotate(-40 ${-L * 0.1} ${yy})"/><ellipse cx="${L * 0.1}" cy="${yy}" rx="${lw}" ry="${lh}" transform="rotate(40 ${L * 0.1} ${yy})"/>`;
-    }
-    return `<g transform="translate(${x} ${y}) rotate(${rot})" fill="${color}" fill-opacity="${fillOp}" ${st}><path d="M0 0 Q${L * 0.06} ${-L * 0.5} 0 ${-L}" fill="none"/>${leaves}</g>`;
-  };
-  const bud = (x, y, r, rot) => `<g transform="translate(${x} ${y}) rotate(${rot})" ${st} fill="none"><path d="M0 0 C${r} ${-r * 0.4} ${r * 0.6} ${-r * 1.6} 0 ${-r * 2} C${-r * 0.6} ${-r * 1.6} ${-r} ${-r * 0.4} 0 0Z" fill="${color}" fill-opacity="${fillOp}"/><path d="M0 0 L0 ${r * 1.4}"/></g>`;
-  const dot = (x, y) => `<circle cx="${x}" cy="${y}" r="${(s * 0.035).toFixed(2)}" fill="${color}" fill-opacity="${(op * 0.6).toFixed(3)}"/>`;
-  const u = s;
-  const body = daisy(u * 0.8, u * 0.9, u * 0.42, 10) + daisy(u * 2.9, u * 2.6, u * 0.3, 32) + daisy(u * 1.6, u * 3.4, u * 0.22, 5)
-    + sprig(u * 2.4, u * 1.35, u * 0.95, 28) + sprig(u * 0.55, u * 3.3, u * 0.75, -35) + sprig(u * 3.65, u * 0.65, u * 0.6, 160)
-    + bud(u * 1.75, u * 1.95, u * 0.17, -20) + bud(u * 3.4, u * 3.55, u * 0.14, 25)
-    + dot(u * 1.3, u * 0.3) + dot(u * 3.2, u * 1.7) + dot(u * 0.3, u * 2.1) + dot(u * 2.2, u * 2.9) + dot(u * 3.75, u * 2.95);
-  return { image: svgUrl(`<svg xmlns="http://www.w3.org/2000/svg" width="${t}" height="${t}">${body}</svg>`), size: `${t}px ${t}px` };
-}
 
 function patternCSS(type, color, op, s) {
   const C = hexToRgba(color, op);
@@ -1062,8 +1083,6 @@ function patternCSS(type, color, op, s) {
       const t = 140 + s * 4;
       return { image: svgUrl(`<svg xmlns="http://www.w3.org/2000/svg" width="${t}" height="${t}"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="${(1.4 - s / 100).toFixed(2)}" numOctaves="3" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 ${r} 0 0 0 0 ${g} 0 0 0 0 ${b} ${(op * 1.6).toFixed(2)} 0 0 0 0"/></filter><rect width="100%" height="100%" filter="url(#n)"/></svg>`), size: `${t}px ${t}px` };
     }
-    case 'flower':
-      return flowerTile(color, op, s);
     case 'manuscript': {
       // 원고지: 정사각 칸 + 줄 사이 여백
       const cell = s, gap = Math.round(s * 0.35), hgt = cell + gap;
@@ -2662,7 +2681,7 @@ function buildTemplates() {
     const pv = h('div', { class: 'tpl-pv' });
     const p = t.pv;
     pv.style.background = p.bg;
-    if (p.flower) { const fp = flowerTile('#b98a87', 0.55, 22); pv.style.backgroundImage = fp.image; pv.style.backgroundSize = fp.size; }
+    if (p.garden) { pv.style.backgroundImage = GARDEN_CORNERS.join(', '); pv.style.backgroundSize = '58% auto'; pv.style.backgroundRepeat = 'no-repeat'; pv.style.backgroundPosition = 'top left, top right, bottom left, bottom right'; }
     if (p.lines) pv.style.backgroundImage = 'repeating-linear-gradient(transparent 0 13px, rgba(120,150,190,.25) 13px 14px)';
     if (p.frame) pv.style.boxShadow = 'inset 0 0 0 6px ' + p.bg + ', inset 0 0 0 7px rgba(80,55,30,.35)';
     const line = (w, center) => { const l = h('i', { class: 'l' }); l.style.cssText = `display:block;width:${w}%;background:${p.fg};${center ? 'align-self:center' : ''}`; return l; };
