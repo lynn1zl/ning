@@ -19,6 +19,7 @@ const ICONS = {
   copy: '<rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V6.5A2.5 2.5 0 0 1 7.5 4H15"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   minus: '<path d="M5 12h14"/>',
+  rotate: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
   fit: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
   check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
   close: '<path d="M6 6l12 12M18 6 6 18"/>',
@@ -1568,7 +1569,8 @@ function renderStickers(pages) {
     if (!page) return;
     const el = h('div', { class: `sticker layer-${st.layer || 'front'}${st.id === selSticker ? ' sel' : ''}`, 'data-sticker': st.id },
       h('img', { src: st.src, alt: '', draggable: 'false' }),
-      h('span', { class: 'stk-ui stk-handle', title: '끌어서 크기 조절' }));
+      h('span', { class: 'stk-ui stk-handle', title: '끌어서 크기 조절' }),
+      h('span', { class: 'stk-ui stk-rot', title: '끌어서 회전 (Shift: 15° 단위)', html: icon('rotate') }));
     placeSticker(el, st);
     if ((st.layer || 'front') === 'back') page.card.insertBefore(el, page.content);
     else page.card.append(el);
@@ -3113,7 +3115,10 @@ function buildChars() {
     const file = h('input', { type: 'file', accept: 'image/*', hidden: true });
     const setAvatar = async (f) => {
       try {
-        ch.avatar = await shrinkImage(f, 256, true);
+        // 보일 부분을 고른 뒤 정사각형으로 저장
+        const out = await cropImage(await shrinkImage(f, 1400, false), { avatar: true });
+        if (!out) return;
+        ch.avatar = out;
         changed(); buildChars(); buildQuickInsert();
       } catch (e) { toast('이미지를 읽지 못했어요'); }
     };
@@ -3126,7 +3131,9 @@ function buildChars() {
         if (!r.ok) throw new Error(r.status);
         const blob = await r.blob();
         if (!/^image\//.test(blob.type)) throw new Error('type');
-        ch.avatar = await shrinkImage(blob, 256, true);
+        const out = await cropImage(await shrinkImage(blob, 1400, false), { avatar: true });
+        if (!out) return;
+        ch.avatar = out;
         toast('링크의 사진을 넣었어요');
       } catch (e) {
         const ok = await new Promise((res) => { const im = new Image(); im.onload = () => res(true); im.onerror = () => res(false); im.src = url; });
@@ -3244,9 +3251,10 @@ function bubblePhotoRow(key, o, rebuild) {
     state.overrides[key] = next; changed(); rebuild();
   };
   const file = h('input', { type: 'file', accept: 'image/*', hidden: true });
-  file.addEventListener('change', async () => { const f = file.files[0]; if (f) { try { setImg(await shrinkImage(f, 1200, false)); } catch (e) { toast('이미지를 읽지 못했어요'); } } });
+  const cropSet = async (srcv) => { const out = await cropImage(srcv); if (out) setImg(out); };
+  file.addEventListener('change', async () => { const f = file.files[0]; if (f) { try { await cropSet(await shrinkImage(f, 1600, false)); } catch (e) { toast('이미지를 읽지 못했어요'); } } });
   const urlIn = h('input', { type: 'url', class: 'input', placeholder: 'https://… 이미지 주소' });
-  const go = async () => { try { setImg(await imageFromUrl(urlIn.value)); } catch (e) { toast('이미지를 불러오지 못했어요'); } };
+  const go = async () => { try { await cropSet(await imageFromUrl(urlIn.value)); } catch (e) { toast('이미지를 불러오지 못했어요'); } };
   urlIn.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) go(); });
   const row = h('div', { class: 'bphoto' },
     h('div', { class: 'photo-url' }, h('label', { class: 'btn btn-sm' }, '파일', file), urlIn, h('button', { type: 'button', class: 'btn btn-sm', onclick: go }, '링크')));
@@ -3316,8 +3324,11 @@ function openImageInsertPop(anchor) {
   const file = h('input', { type: 'file', accept: 'image/*', hidden: true });
   const urlIn = h('input', { type: 'url', class: 'input', placeholder: 'https://… 이미지 주소', 'aria-label': '이미지 링크' });
   const take = async (getSrc) => {
-    try { const src = await getSrc(); closePop(); addImage(src, mode); }
-    catch (e) { toast('이미지를 불러오지 못했어요'); }
+    let src;
+    try { src = await getSrc(); } catch (e) { toast('이미지를 불러오지 못했어요'); return; }
+    closePop();
+    const out = await cropImage(src);
+    if (out) addImage(out, mode);
   };
   file.addEventListener('change', () => { const f = file.files[0]; if (f) take(() => shrinkImage(f, 1600, false)); });
   const apply = () => { if (urlIn.value.trim()) take(() => imageFromUrl(urlIn.value)); else urlIn.focus(); };
@@ -3353,6 +3364,11 @@ function openInlineImagePop(fig, id) {
     h('div', { class: 'pop-label row-top' }, '폭', out), slider,
     h('div', { class: 'pop-label' }, '위치'), segEl(ALIGN3, info.align || 'center', (v) => upd('align', v), true),
     h('div', { class: 'pop-foot' },
+      h('button', { type: 'button', class: 'link-btn', onclick: async () => {
+        closePop();
+        const out = await cropImage(info.src);
+        if (out && out !== info.src) { upd('src', out); commit(); }
+      } }, '자르기'),
       h('button', { type: 'button', class: 'link-btn', onclick: () => {
         removeImageToken(id);
         const W = state.canvas.width, w = Math.round(W * 0.34);
@@ -3379,13 +3395,18 @@ function openStickerPop(el, id) {
   openPop(h('div', {},
     h('div', { class: 'pop-title' }, '자유 배치 이미지'),
     ...mk('크기', 'w', 30, state.canvas.width * 1.2 | 0, 1, 'px', st.w),
-    ...mk('회전', 'rot', -45, 45, 1, '°', st.rot || 0),
+    ...mk('회전', 'rot', -180, 180, 1, '°', Math.round(st.rot || 0)),
     ...mk('투명도', 'op', 10, 100, 1, '%', Math.round((st.op ?? 1) * 100)),
     h('div', { class: 'pop-label' }, '위치'),
     segEl([['front', '글 위'], ['back', '글 뒤']], st.layer || 'front', (v) => { st.layer = v; changed(); }, true),
     pages > 1 ? h('div', { class: 'pop-label' }, '몇 번째 장') : null,
     pages > 1 ? segEl(Array.from({ length: Math.min(pages, 6) }, (_, i) => [i, `${i + 1}`]), st.page || 0, (v) => { st.page = +v; changed(); }, true) : null,
     h('div', { class: 'pop-foot' },
+      h('button', { type: 'button', class: 'link-btn', onclick: async () => {
+        closePop();
+        const out = await cropImage(st.src);
+        if (out && out !== st.src) { st.src = out; changed(); commit(); }
+      } }, '자르기'),
       h('button', { type: 'button', class: 'link-btn danger', onclick: () => {
         state.stickers = state.stickers.filter((x) => x.id !== id); selSticker = null; changed(); closePop();
         toast('이미지를 지웠어요', { label: '되돌리기', fn: undo });
@@ -3446,14 +3467,24 @@ function openStickerPop(el, id) {
     closePop();
     selSticker = st.id;
     $$('#stage .sticker').forEach((x) => x.classList.toggle('sel', x === el));
-    drag = { el, st, resize: e.target.classList.contains('stk-handle'), x0: e.clientX, y0: e.clientY, o: { x: st.x, y: st.y, w: st.w }, moved: false };
+    const r = el.getBoundingClientRect();
+    const c = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    drag = { el, st, resize: e.target.classList.contains('stk-handle'), rotate: !!e.target.closest('.stk-rot'), c,
+      a0: Math.atan2(e.clientY - c.y, e.clientX - c.x), x0: e.clientX, y0: e.clientY, o: { x: st.x, y: st.y, w: st.w, rot: st.rot || 0 }, moved: false };
     el.setPointerCapture(e.pointerId);
   });
   stage.addEventListener('pointermove', (e) => {
     if (!drag) return;
     const dx = (e.clientX - drag.x0) / currentScale, dy = (e.clientY - drag.y0) / currentScale;
     if (Math.abs(dx) + Math.abs(dy) > 2) drag.moved = true;
-    if (drag.resize) drag.st.w = Math.max(30, Math.round(drag.o.w + dx));
+    if (drag.rotate) {
+      // 가운데를 기준으로 돌린 각도만큼 회전 · 0 / ±90 / 180° 근처는 붙고, Shift는 15° 단위
+      let a = drag.o.rot + (Math.atan2(e.clientY - drag.c.y, e.clientX - drag.c.x) - drag.a0) * 180 / Math.PI;
+      a = ((a + 540) % 360) - 180;
+      if (e.shiftKey) a = Math.round(a / 15) * 15;
+      else { const snap = Math.round(a / 90) * 90; if (Math.abs(a - snap) < 4) a = snap; }
+      drag.st.rot = Math.round(a * 10) / 10;
+    } else if (drag.resize) drag.st.w = Math.max(30, Math.round(drag.o.w + dx));
     else { drag.st.x = Math.round(drag.o.x + dx); drag.st.y = Math.round(drag.o.y + dy); }
     placeSticker(drag.el, drag.st);
   });
@@ -4097,6 +4128,125 @@ $('#btn-folder-save').addEventListener('click', async () => {
     closeModals();
   } catch (e) { console.error(e); toast('폴더에 저장하지 못했어요'); }
 });
+
+/* =========================================================
+   사진 자르기: 끌어서 위치 · 확대로 보일 부분 고르기, 모양(정사각형 · 직사각형 · 원) 선택
+   ========================================================= */
+const CROP_SHAPES = [['free', '원본'], ['1:1', '정사각형'], ['4:3', '가로 4:3'], ['3:4', '세로 3:4'], ['16:9', '와이드'], ['circle', '원']];
+let cropJob = null;
+function loadImg(src) {
+  return new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = src; });
+}
+/** src를 잘라 dataURL로 돌려줌. 취소하면 null, '자르지 않고 넣기'면 원래 src.
+ *  opts: { avatar: true } — 원형 미리보기 · 정사각형 256px 고정 */
+async function cropImage(src, opts = {}) {
+  if (!/^data:/i.test(src)) return src; // 외부에서 막힌 링크는 자를 수 없음
+  let im;
+  try { im = await loadImg(src); } catch (e) { return src; }
+  if (cropJob) cropJob.resolve(null);
+  return new Promise((resolve) => {
+    const stage = $('#crop-stage'), img = $('#crop-img'), frame = $('#crop-frame'), zoom = $('#crop-zoom');
+    const job = cropJob = { resolve: (v) => { if (cropJob === job) cropJob = null; $('#crop').hidden = true; resolve(v); } };
+    const iw = im.naturalWidth, ih = im.naturalHeight;
+    let shape = opts.avatar ? 'circle' : (opts.shape || '1:1');
+    let fr, base, s, tx, ty;
+    $('#crop-title').textContent = opts.avatar ? '프로필 사진 위치' : '사진 자르기';
+    $('#crop-sub').textContent = opts.avatar ? '끌어서 얼굴이 원 안에 오도록 맞추고, 확대해서 크기를 골라요.' : '모양을 고르고, 끌어서 위치를 옮기고 확대해서 보일 부분을 골라요.';
+    $('#crop-skip').hidden = !!opts.avatar;
+    img.src = src;
+    const box = $('#crop-shapes');
+    box.innerHTML = '';
+    box.hidden = !!opts.avatar;
+    if (!opts.avatar) {
+      box.append(segEl(CROP_SHAPES, shape, (v) => { shape = v; layout(true); }, true));
+    }
+    const aspect = () => {
+      if (shape === 'free') return iw / ih;
+      if (shape === 'circle') return 1;
+      const [a, b] = shape.split(':').map(Number);
+      return a / b;
+    };
+    const clamp = () => {
+      s = Math.max(base, s);
+      tx = Math.min(fr.x, Math.max(fr.x + fr.w - iw * s, tx));
+      ty = Math.min(fr.y, Math.max(fr.y + fr.h - ih * s, ty));
+    };
+    const paint = () => {
+      clamp();
+      img.style.width = `${iw * s}px`; img.style.height = `${ih * s}px`;
+      img.style.transform = `translate(${tx}px, ${ty}px)`;
+      zoom.value = String(s / base);
+      zoom.style.setProperty('--p', `${((s / base - 1) / 3) * 100}%`);
+    };
+    const layout = (reset) => {
+      const SW = stage.clientWidth, SH = stage.clientHeight, m = 22;
+      const ar = aspect();
+      let w = SW - m * 2, hh = w / ar;
+      if (hh > SH - m * 2) { hh = SH - m * 2; w = hh * ar; }
+      const cx = fr ? fr.x + fr.w / 2 : 0, cy = fr ? fr.y + fr.h / 2 : 0;
+      const keep = !reset && fr && s ? { rx: (cx - tx) / s, ry: (cy - ty) / s, z: s / base } : null;
+      fr = { x: (SW - w) / 2, y: (SH - hh) / 2, w, h: hh };
+      Object.assign(frame.style, { left: `${fr.x}px`, top: `${fr.y}px`, width: `${w}px`, height: `${hh}px` });
+      frame.classList.toggle('round', shape === 'circle');
+      base = Math.max(w / iw, hh / ih);
+      // 모양을 바꿔도 보던 곳의 가운데를 유지
+      const prev = keep || (reset && s ? { rx: (cx - tx) / s, ry: (cy - ty) / s, z: 1 } : null);
+      s = base * (prev ? prev.z : 1);
+      const rx = prev ? prev.rx : iw / 2, ry = prev ? prev.ry : ih / 2;
+      tx = fr.x + w / 2 - rx * s; ty = fr.y + hh / 2 - ry * s;
+      paint();
+    };
+    const zoomAt = (ns, px, py) => {
+      ns = Math.min(base * 4, Math.max(base, ns));
+      tx = px - ((px - tx) / s) * ns; ty = py - ((py - ty) / s) * ns; s = ns; paint();
+    };
+    // 끌기 · 두 손가락 확대
+    const pts = new Map();
+    let last = null;
+    stage.onpointerdown = (e) => { e.preventDefault(); stage.setPointerCapture(e.pointerId); pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); last = null; };
+    stage.onpointermove = (e) => {
+      if (!pts.has(e.pointerId)) return;
+      const prev = pts.get(e.pointerId);
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pts.size === 1) { tx += e.clientX - prev.x; ty += e.clientY - prev.y; paint(); return; }
+      const [a, b] = [...pts.values()];
+      const dist = Math.hypot(a.x - b.x, a.y - b.y);
+      const r = stage.getBoundingClientRect();
+      if (last) zoomAt(s * (dist / last), (a.x + b.x) / 2 - r.left, (a.y + b.y) / 2 - r.top);
+      last = dist;
+    };
+    stage.onpointerup = stage.onpointercancel = (e) => { pts.delete(e.pointerId); last = null; };
+    stage.onwheel = (e) => {
+      e.preventDefault();
+      const r = stage.getBoundingClientRect();
+      zoomAt(s * Math.exp(-e.deltaY * 0.0015), e.clientX - r.left, e.clientY - r.top);
+    };
+    zoom.oninput = () => zoomAt(base * +zoom.value, fr.x + fr.w / 2, fr.y + fr.h / 2);
+    $('#crop-skip').onclick = () => job.resolve(src);
+    $('#crop-ok').onclick = () => {
+      const sx = (fr.x - tx) / s, sy = (fr.y - ty) / s, sw = fr.w / s, sh = fr.h / s;
+      const max = opts.avatar ? 256 : 1600;
+      const k = Math.min(1, max / Math.max(sw, sh));
+      const cw = Math.max(1, Math.round(sw * k)), ch = Math.max(1, Math.round(sh * k));
+      const cv = document.createElement('canvas');
+      cv.width = cw; cv.height = ch;
+      const g = cv.getContext('2d');
+      if (shape === 'circle' && !opts.avatar) { g.beginPath(); g.arc(cw / 2, ch / 2, Math.min(cw, ch) / 2, 0, Math.PI * 2); g.clip(); }
+      g.imageSmoothingQuality = 'high';
+      g.drawImage(im, sx, sy, sw, sh, 0, 0, cw, ch);
+      let out;
+      try {
+        if (shape === 'circle' && !opts.avatar) out = cv.toDataURL('image/png');
+        else { out = cv.toDataURL('image/webp', 0.9); if (!out.startsWith('data:image/webp')) out = cv.toDataURL('image/jpeg', 0.92); }
+      } catch (err) { out = src; }
+      job.resolve(out);
+    };
+    $('#crop').hidden = false;
+    requestAnimationFrame(() => layout(true));
+  });
+}
+// 닫기 버튼 · 바깥 누르기로 닫으면 취소
+new MutationObserver(() => { if ($('#crop').hidden && cropJob) cropJob.resolve(null); }).observe($('#crop'), { attributes: true, attributeFilter: ['hidden'] });
 
 /* 모달 */
 function openModal(sel) { $(sel).hidden = false; }

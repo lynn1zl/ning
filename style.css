@@ -1549,3 +1549,33 @@ body.resizing iframe, body.resizing #stage { pointer-events: none; }
 .talk-row .talk-text { flex: 1; min-width: 0; }
 .talk-row .talk-name { width: 30%; min-width: 0; }
 .area-input { width: 100%; min-height: 108px; resize: vertical; line-height: 1.5; font: inherit; font-size: 14px; }
+
+/* 자유 배치 이미지: 회전 손잡이 (선택했을 때 위쪽 가운데) */
+.stk-rot { display: none; }
+.page-wrap .sticker.sel .stk-rot {
+  display: grid; place-items: center; position: absolute; left: 50%; top: -38px; width: 24px; height: 24px; margin-left: -12px;
+  border-radius: 50%; background: #fff; border: 2px solid #3182f6; color: #3182f6; cursor: grab;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .25); touch-action: none;
+}
+.page-wrap .sticker.sel .stk-rot svg { width: 13px; height: 13px; pointer-events: none; }
+.page-wrap .sticker.sel .stk-rot::after { content: ""; position: absolute; left: 50%; top: 100%; width: 2px; height: 14px; margin-left: -1px; background: #3182f6; }
+.page-wrap .sticker.sel .stk-rot:active { cursor: grabbing; }
+
+/* 사진 자르기 */
+.crop-shapes { padding: 4px 24px 12px; }
+.crop-shapes .seg { flex-wrap: wrap; }
+.crop-stage {
+  position: relative; margin: 0 24px; height: min(380px, 52vh); overflow: hidden; border-radius: var(--r-md);
+  background: repeating-conic-gradient(#e9ecef 0 25%, #f8f9fa 0 50%) 0 0 / 16px 16px; touch-action: none; cursor: grab; user-select: none;
+}
+.crop-stage:active { cursor: grabbing; }
+.crop-stage img { position: absolute; left: 0; top: 0; max-width: none; transform-origin: 0 0; pointer-events: none; }
+.crop-frame { position: absolute; box-shadow: 0 0 0 9999px rgba(0, 0, 0, .5); outline: 2px solid #fff; pointer-events: none;
+  background-image: linear-gradient(rgba(255,255,255,.35) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.35) 1px, transparent 1px);
+  background-size: 33.333% 33.333%; background-position: -1px -1px; }
+.crop-frame.round { border-radius: 50%; outline: 0; box-shadow: 0 0 0 2px #fff, 0 0 0 9999px rgba(0, 0, 0, .5); background-image: none; }
+.crop-zoom { display: flex; align-items: center; gap: 10px; padding: 14px 24px 14px; }
+.crop-zoom .slider { flex: 1; }
+.cz-ico { display: grid; place-items: center; color: var(--text-3); }
+.cz-ico svg { width: 16px; height: 16px; }
+#crop .modal-actions .btn[hidden] { display: none; }
