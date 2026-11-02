@@ -184,6 +184,26 @@ const SKINS = {
   background: repeating-linear-gradient(rgba(0,0,0,.22) 0 1px, transparent 1px 3px);
 }`,
   },
+  mafia: {
+    name: '마피아 누아르',
+    css: `/* 금빛 이중 테두리 · 담배 연기 같은 비네팅 · 필름 그레인 */
+.card-title { letter-spacing: .18em; text-transform: uppercase; }
+.card-title::after { content: ""; display: block; width: 48px; height: 1px; margin-top: .55em; background: #c9a35e; }
+.name { letter-spacing: .14em; text-transform: uppercase; }
+.bubble { border-left-width: 2px; }
+.card::before {
+  content: ""; position: absolute; inset: 14px; pointer-events: none; z-index: 2;
+  border: 1px solid rgba(201, 163, 94, .55);
+  outline: 1px solid rgba(201, 163, 94, .25); outline-offset: 5px;
+}
+.card::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    radial-gradient(ellipse at 30% 20%, rgba(255, 240, 210, .06), transparent 45%),
+    radial-gradient(ellipse at 50% 50%, transparent 40%, rgba(0, 0, 0, .6) 100%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .9 0 0 0 0 .8 0 0 0 .1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}`,
+  },
   chungking: {
     name: '중경삼림 무드',
     css: `/* 네온 번짐 · 필름 그레인 · 비네팅 */
@@ -249,6 +269,16 @@ const TEMPLATES = [
     id: 'chungking', name: '중경삼림 무드', sub: '네온 · 필름 그레인 · 노란 자막', pv: { bg: 'linear-gradient(160deg,#103129,#1b1f1a 55%,#3d1a17)', fg: '#e9dcc0', film: true, subtitle: '#ffd84a' },
     set: { typo: { font: 'Noto Serif KR', size: 13.5, color: '#e6dcc4', lh: 1.8, ls: 0.01 }, head: { font: 'Noto Serif KR', size: 19, weight: 700, color: '#ff5a4e', creditColor: '#7fd1b9', creatorColor: '#7fd1b9', align: 'left' }, bubble: { speech: 'plain', font: 'Noto Sans KR', size: 14, weight: 500, color: '#ffd84a', side: 'center', avatar: false, nameColor: '#ff8a7a', nameSize: 10.5, gap: 14 }, canvas: { bgType: 'gradient', bg: '#103129', bg2: '#3d1a17', gradAngle: 160, pad: 52 } },
     skin: SKINS.chungking.css, chars: [['#1b1f1a', '#ffd84a', '#1b1f1a'], ['#1b1f1a', '#9ff0d6', '#1b1f1a']], charSide: 'center',
+  },
+  {
+    id: 'mafia', name: '마피아 누아르', sub: '검정 · 금빛 테두리 · 와인색 말풍선', pv: { bg: 'radial-gradient(ellipse at 30% 20%,#2a2420,#0d0b0a 70%)', fg: '#d9cdb6', b1: '#1f1b18', b2: '#5a1a1f', outline: '#c9a35e' },
+    set: { typo: { color: '#d9cdb6' }, head: { color: '#e8d5a8', creditColor: '#8f7a55', creatorColor: '#c9a35e', accent: '#c9a35e' }, bubble: { speech: 'square', bg: '#1f1b18', color: '#efe6d4', border: '#c9a35e', bw: 1, radius: 2, shadow: false, nameColor: '#c9a35e' }, canvas: { bgType: 'gradient', gradType: 'radial', bg: '#2a2420', bg2: '#0b0a09' } },
+    skin: SKINS.mafia.css, chars: [['#1f1b18', '#efe6d4', '#c9a35e'], ['#5a1a1f', '#f5e6dc', '#8a2a30']],
+  },
+  {
+    id: 'flower', name: '꽃밭 피크닉', sub: '꽃 패턴 · 몽글한 파스텔 말풍선', pv: { bg: '#fff6f8', fg: '#7a5560', b1: '#ffffff', b2: '#ffd6e2', flower: true },
+    set: { typo: { color: '#6e4d57' }, head: { color: '#d4577a', creditColor: '#b78a96', creatorColor: '#d4577a', accent: '#ff8fab' }, bubble: { speech: 'pill', bg: '#ffffff', color: '#5e3f48', border: '#ffc2d1', bw: 1.5, shadow: true, nameColor: '#d4577a' }, canvas: { bg: '#fff6f8', bgType: 'pattern', pattern: 'flower', patColor: '#ff9db8', patOpacity: 0.32, patSize: 40 } },
+    chars: [['#ffffff', '#5e3f48', '#ffc2d1'], ['#ffe1ea', '#5e3f48', '#ffb3c7']],
   },
   {
     id: 'film', name: '영화 자막', sub: '검은 화면 · 자막형 대사', pv: { bg: '#000000', fg: '#9a9a9a', film: true },
@@ -950,7 +980,27 @@ function hexToRgba(hex, a) {
 }
 const svgUrl = (svg) => `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 
-const PATTERNS = [['dots', '점'], ['grid', '격자'], ['lines', '줄 노트'], ['diagonal', '사선'], ['check', '체크'], ['plus', '플러스'], ['paper', '종이 질감'], ['manuscript', '원고지']];
+const PATTERNS = [['dots', '점'], ['grid', '격자'], ['lines', '줄 노트'], ['diagonal', '사선'], ['check', '체크'], ['plus', '플러스'], ['paper', '종이 질감'], ['manuscript', '원고지'], ['flower', '꽃']];
+
+// 꽃 패턴 타일: 다섯 잎 꽃(패턴 색) + 노란 꽃술 + 작은 잎 · 점, 엇갈리게 배치
+function flowerTile(color, op, s) {
+  const t = s * 2;
+  const flower = (cx, cy, r) => {
+    let petals = '';
+    for (let k = 0; k < 5; k++) {
+      const a = (k * 72 - 90) * Math.PI / 180;
+      petals += `<circle cx="${(cx + Math.cos(a) * r * 0.62).toFixed(2)}" cy="${(cy + Math.sin(a) * r * 0.62).toFixed(2)}" r="${(r * 0.48).toFixed(2)}"/>`;
+    }
+    return `<g fill="${color}" fill-opacity="${op}">${petals}</g><circle cx="${cx}" cy="${cy}" r="${(r * 0.32).toFixed(2)}" fill="#ffd25e" fill-opacity="${Math.min(1, op + 0.25)}"/>`;
+  };
+  const leaf = (x, y, rot) => `<ellipse cx="${x}" cy="${y}" rx="${(s * 0.11).toFixed(2)}" ry="${(s * 0.05).toFixed(2)}" transform="rotate(${rot} ${x} ${y})" fill="#8cc79a" fill-opacity="${op}"/>`;
+  const dot = (x, y) => `<circle cx="${x}" cy="${y}" r="${(s * 0.04).toFixed(2)}" fill="${color}" fill-opacity="${op * 0.7}"/>`;
+  const r = s * 0.28;
+  const body = flower(s * 0.5, s * 0.5, r) + flower(s * 1.5, s * 1.5, r)
+    + leaf(s * 0.5 + r * 1.15, s * 0.5 + r * 0.9, 35) + leaf(s * 1.5 - r * 1.15, s * 1.5 - r * 0.9, 215)
+    + dot(s * 1.5, s * 0.5) + dot(s * 0.5, s * 1.5) + dot(s * 1.1, s * 0.15) + dot(s * 0.15, s * 1.05);
+  return { image: svgUrl(`<svg xmlns="http://www.w3.org/2000/svg" width="${t}" height="${t}">${body}</svg>`), size: `${t}px ${t}px` };
+}
 
 function patternCSS(type, color, op, s) {
   const C = hexToRgba(color, op);
@@ -977,6 +1027,8 @@ function patternCSS(type, color, op, s) {
       const t = 140 + s * 4;
       return { image: svgUrl(`<svg xmlns="http://www.w3.org/2000/svg" width="${t}" height="${t}"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="${(1.4 - s / 100).toFixed(2)}" numOctaves="3" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 ${r} 0 0 0 0 ${g} 0 0 0 0 ${b} ${(op * 1.6).toFixed(2)} 0 0 0 0"/></filter><rect width="100%" height="100%" filter="url(#n)"/></svg>`), size: `${t}px ${t}px` };
     }
+    case 'flower':
+      return flowerTile(color, op, s);
     case 'manuscript': {
       // 원고지: 정사각 칸 + 줄 사이 여백
       const cell = s, gap = Math.round(s * 0.35), hgt = cell + gap;
@@ -2575,6 +2627,7 @@ function buildTemplates() {
     const pv = h('div', { class: 'tpl-pv' });
     const p = t.pv;
     pv.style.background = p.bg;
+    if (p.flower) { const fp = flowerTile('#ff9db8', 0.5, 16); pv.style.backgroundImage = fp.image; pv.style.backgroundSize = fp.size; }
     if (p.lines) pv.style.backgroundImage = 'repeating-linear-gradient(transparent 0 13px, rgba(120,150,190,.25) 13px 14px)';
     if (p.frame) pv.style.boxShadow = 'inset 0 0 0 6px ' + p.bg + ', inset 0 0 0 7px rgba(80,55,30,.35)';
     const line = (w, center) => { const l = h('i', { class: 'l' }); l.style.cssText = `display:block;width:${w}%;background:${p.fg};${center ? 'align-self:center' : ''}`; return l; };
