@@ -1161,7 +1161,8 @@ let htmlBgReady = Promise.resolve();
 // HTML 배경 프리셋: 고를 때만 불러와서 사이트는 가볍게 유지
 const HTML_BG_PRESETS = [
   // 언덕 시리즈: 출처 · 제작자는 비우고, 지문 형식은 '*텍스트*'를 나레이션으로
-  { name: '언덕 위의 마녀', file: 'bg/witch.html', chars: ['마녀', '노엘', '륜', '악셀', '루카'], clearCredit: true, parse: { formats: ['star1'], mode: 'plain' } },
+  { name: '언덕 위의 마녀', file: 'bg/witch.html', clearCredit: true, parse: { formats: ['star1'], mode: 'plain' }, avatars: true,
+    chars: ['마녀', { name: '노엘', avatar: 'bg/witch/noel.webp' }, { name: '륜', avatar: 'bg/witch/ryun.webp' }, { name: '악셀', avatar: 'bg/witch/axel.webp' }, { name: '루카', avatar: 'bg/witch/luka.webp' }] },
   { name: '언덕 위의 마왕', file: 'bg/demon.html', chars: ['마왕', '체페슈', '아자젤', '노먼', '빌터', '한', '라이케'], clearCredit: true, parse: { formats: ['star1'], mode: 'plain' } },
 ];
 
@@ -2840,13 +2841,21 @@ function buildSkin() {
         state.bgHtml = html;
         $('#html-bg').value = html;
         // 이 배경의 기본 캐릭터 등록 (기본 모양: 하얀 배경 · 검은 글씨 · 하얀 테두리 · 왼쪽, 이미 있는 이름은 건너뜀)
+        // 프로필 사진이 있으면 받아서 넣음 (이미 있는 캐릭터도 사진이 비어 있으면 채움)
+        const list = (bp.chars || []).map((c) => (typeof c === 'string' ? { name: c } : c));
+        const photos = {};
+        await Promise.all(list.filter((c) => c.avatar).map(async (c) => {
+          try { photos[c.name] = await readFileAsDataURL(await (await fetch(c.avatar)).blob()); } catch (err) { /* 사진 없이 */ }
+        }));
         const added = [];
         const base = Date.now().toString(36);
-        (bp.chars || []).forEach((name, i) => {
-          if (findChar(name)) return;
-          state.chars.push({ id: `p${base}${i}`, name, avatar: '', side: 'left', homeSide: 'left', shape: '', custom: true, bg: '#ffffff', color: '#222222', border: '#ffffff' });
+        list.forEach(({ name }, i) => {
+          const ex = findChar(name);
+          if (ex) { if (!ex.avatar && photos[name]) ex.avatar = photos[name]; return; }
+          state.chars.push({ id: `p${base}${i}`, name, avatar: photos[name] || '', side: 'left', homeSide: 'left', shape: '', custom: true, bg: '#ffffff', color: '#222222', border: '#ffffff' });
           added.push(name);
         });
+        if (bp.avatars) state.bubble.avatar = true;
         if (bp.clearCredit) { state.credit = ''; state.creator = ''; }
         if (bp.parse) Object.assign(state.parse, copyState(bp.parse), { auto: true });
         changed(); commit();
