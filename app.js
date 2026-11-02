@@ -1579,7 +1579,7 @@ function renderStickers(pages) {
 function placeSticker(el, st) {
   Object.assign(el.style, { left: `${st.x}px`, top: `${st.y}px`, width: `${st.w}px`, transform: `rotate(${st.rot || 0}deg)`, opacity: st.op ?? 1 });
   const im = el.querySelector('img');
-  if (im) im.style.filter = shadowFilter(st.sh, st.rot || 0);
+  if (im) { im.style.filter = shadowFilter(st.sh, st.rot || 0); applyImgBorder(im, st); }
 }
 
 /* 이미지 그림자: { on, color, angle(0°=오른쪽 · 90°=아래), op(0~1), dist(px) } */
@@ -1634,13 +1634,57 @@ function shadowControls(getSh, setSh) {
   return wrap;
 }
 
+/* 이미지 테두리: { on, color, w(px) } — 원으로 자른 이미지는 동그랗게 */
+const BORDER_DEF = { on: false, color: '#ffffff', w: 4 };
+const BORDER_COLORS = ['#ffffff', '#000000', '#8a8f98', '#e9dcc6', '#f4b6c2', '#2b3a55'];
+function applyImgBorder(im, info) {
+  const bd = info && info.bd;
+  if (bd && bd.on) {
+    const x = { ...BORDER_DEF, ...bd };
+    im.style.border = `${x.w}px solid ${x.color}`;
+    im.style.boxSizing = 'border-box';
+  } else { im.style.border = ''; }
+  im.style.borderRadius = info && info.round ? '50%' : '';
+}
+function borderControls(getBd, setBd) {
+  const wrap = h('div', { class: 'shadow-ctl' });
+  const draw = () => {
+    const bd = { ...BORDER_DEF, ...(getBd() || {}) };
+    wrap.innerHTML = '';
+    const sw = h('input', { type: 'checkbox', class: 'switch', role: 'switch', checked: bd.on, 'aria-label': '테두리' });
+    sw.addEventListener('change', () => { setBd({ ...bd, on: sw.checked }); draw(); });
+    wrap.append(h('label', { class: 'pop-label row-top shadow-head' }, '테두리', sw));
+    if (!bd.on) return;
+    const colors = h('div', { class: 'shadow-colors' });
+    BORDER_COLORS.forEach((c) => {
+      const b = h('button', { type: 'button', class: 'sc-dot' + (c.toLowerCase() === bd.color.toLowerCase() ? ' on' : ''), 'aria-label': c, title: c });
+      b.style.background = c;
+      b.addEventListener('click', () => { setBd({ ...bd, color: c }); draw(); });
+      colors.append(b);
+    });
+    const nat = h('input', { type: 'color', class: 'sc-pick', value: bd.color, 'aria-label': '테두리 색 직접 고르기', title: '직접 고르기' });
+    nat.addEventListener('input', () => setBd({ ...(getBd() || bd), on: true, color: nat.value }));
+    colors.append(nat);
+    const out = h('output', {}, `${bd.w}px`);
+    const sl = h('input', { type: 'range', class: 'slider', min: 1, max: 24, step: 1, value: bd.w });
+    const pct = (v) => `${((v - 1) / 23) * 100}%`;
+    sl.style.setProperty('--p', pct(bd.w));
+    sl.addEventListener('input', () => { out.textContent = `${sl.value}px`; sl.style.setProperty('--p', pct(sl.value)); setBd({ ...(getBd() || bd), w: +sl.value }); });
+    wrap.append(h('div', { class: 'pop-label' }, '색'), colors, h('div', { class: 'pop-label row-top' }, '두께', out), sl);
+  };
+  draw();
+  return wrap;
+}
+
 function inlineFigure(id, alt) {
   const info = state.images[id];
   const fig = h('figure', { class: `inline-img wrap-${info.wrap || 'block'} align-${info.align || 'center'}`, 'data-img': id },
     h('span', { class: 'img-box' }, h('img', { src: info.src, alt: alt || '', draggable: 'false' }), h('span', { class: 'stk-ui rs-handle', title: '끌어서 크기 조절' })));
   fig.style.setProperty('--img-w', `${info.w || 100}%`);
   const f = shadowFilter(info.sh);
-  if (f) fig.querySelector('img').style.filter = f;
+  const im = fig.querySelector('img');
+  if (f) im.style.filter = f;
+  applyImgBorder(im, info);
   return fig;
 }
 
@@ -3358,11 +3402,11 @@ async function imageFromUrl(url) {
     return url;
   }
 }
-function addImage(src, mode) {
+function addImage(src, mode, round) {
   if (mode === 'free') {
     const W = state.canvas.width;
     const w = Math.round(W * 0.34);
-    const st = { id: newId(), src, x: Math.round(W - w - state.canvas.pad), y: Math.round(state.canvas.pad), w, rot: 0, layer: 'front', page: 0, op: 1 };
+    const st = { id: newId(), src, x: Math.round(W - w - state.canvas.pad), y: Math.round(state.canvas.pad), w, rot: 0, layer: 'front', page: 0, op: 1, round: !!round };
     state.stickers = [...(state.stickers || []), st];
     selSticker = st.id;
     changed();
@@ -3370,28 +3414,29 @@ function addImage(src, mode) {
   } else {
     const id = newId();
     const float = mode === 'float';
-    state.images = { ...state.images, [id]: { src, w: float ? 40 : 100, align: float ? 'left' : 'center', wrap: float ? 'float' : 'block' } };
+    state.images = { ...state.images, [id]: { src, w: float ? 40 : 100, align: float ? 'left' : 'center', wrap: float ? 'float' : 'block', round: !!round } };
     insertSnippet(`![](img:${id})\n`, '', true);
     toast('글 사이에 이미지를 넣었어요 · 미리보기에서 이미지를 누르면 크기를 바꿀 수 있어요', { label: '되돌리기', fn: undo }, 3600);
   }
 }
 function openImageInsertPop(anchor) {
-  let mode = 'block';
+  let mode = 'free';
   const file = h('input', { type: 'file', accept: 'image/*', hidden: true });
   const urlIn = h('input', { type: 'url', class: 'input', placeholder: 'https://… 이미지 주소', 'aria-label': '이미지 링크' });
   const take = async (getSrc) => {
     let src;
     try { src = await getSrc(); } catch (e) { toast('이미지를 불러오지 못했어요'); return; }
     closePop();
+    lastCropShape = '';
     const out = await cropImage(src);
-    if (out) addImage(out, mode);
+    if (out) addImage(out, mode, lastCropShape === 'circle');
   };
   file.addEventListener('change', () => { const f = file.files[0]; if (f) take(() => shrinkImage(f, 1600, false)); });
   const apply = () => { if (urlIn.value.trim()) take(() => imageFromUrl(urlIn.value)); else urlIn.focus(); };
   urlIn.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) apply(); });
   openPop(h('div', { class: 'photo-pop' },
     h('div', { class: 'pop-title' }, '이미지 넣기'),
-    iconTiles([['block', '자리차지'], ['float', '어울림'], ['free', '자유 배치']], 'block', (v) => { mode = v; }),
+    iconTiles([['free', '자유 배치'], ['block', '자리차지'], ['float', '어울림']], 'free', (v) => { mode = v; }),
     h('label', { class: 'photo-opt', style: 'margin-top:10px' }, h('span', { class: 'po-ico', html: icon('image') }),
       h('span', {}, h('b', {}, '파일에서 고르기'), h('small', {}, 'JPG · PNG · GIF · WebP')), file),
     h('div', { class: 'pop-label' }, '이미지 링크'),
@@ -3424,16 +3469,21 @@ function openInlineImagePop(fig, id) {
       const im = fig.querySelector('img'); if (im) im.style.filter = shadowFilter(v);
       save(); commitSoon();
     }),
+    borderControls(() => state.images[id] && state.images[id].bd, (v) => {
+      state.images = { ...state.images, [id]: { ...state.images[id], bd: v } };
+      const im = fig.querySelector('img'); if (im) applyImgBorder(im, state.images[id]);
+      save(); commitSoon();
+    }),
     h('div', { class: 'pop-foot' },
       h('button', { type: 'button', class: 'link-btn', onclick: async () => {
         closePop();
         const out = await cropImage(info.src);
-        if (out && out !== info.src) { upd('src', out); commit(); }
+        if (out && out !== info.src) { state.images = { ...state.images, [id]: { ...state.images[id], src: out, round: lastCropShape === 'circle' } }; changed(); commit(); }
       } }, '자르기'),
       h('button', { type: 'button', class: 'link-btn', onclick: () => {
         removeImageToken(id);
         const W = state.canvas.width, w = Math.round(W * 0.34);
-        state.stickers = [...(state.stickers || []), { id: newId(), src: info.src, x: Math.round(W - w - state.canvas.pad), y: state.canvas.pad, w, rot: 0, layer: 'front', page: 0, op: 1 }];
+        state.stickers = [...(state.stickers || []), { id: newId(), src: info.src, x: Math.round(W - w - state.canvas.pad), y: state.canvas.pad, w, rot: 0, layer: 'front', page: 0, op: 1, sh: info.sh, bd: info.bd, round: info.round }];
         changed(); closePop(); toast('자유 배치로 바꿨어요', { label: '되돌리기', fn: undo });
       } }, '자유 배치로'),
       h('button', { type: 'button', class: 'link-btn danger', onclick: () => { removeImageToken(id); changed(); closePop(); toast('이미지를 지웠어요', { label: '되돌리기', fn: undo }); } }, '삭제'))), fig);
@@ -3461,13 +3511,14 @@ function openStickerPop(el, id) {
     h('div', { class: 'pop-label' }, '위치'),
     segEl([['front', '글 위'], ['back', '글 뒤']], st.layer || 'front', (v) => { st.layer = v; changed(); }, true),
     shadowControls(() => st.sh, (v) => { st.sh = v; placeSticker(el, st); save(); commitSoon(); }),
+    borderControls(() => st.bd, (v) => { st.bd = v; placeSticker(el, st); save(); commitSoon(); }),
     pages > 1 ? h('div', { class: 'pop-label' }, '몇 번째 장') : null,
     pages > 1 ? segEl(Array.from({ length: Math.min(pages, 6) }, (_, i) => [i, `${i + 1}`]), st.page || 0, (v) => { st.page = +v; changed(); }, true) : null,
     h('div', { class: 'pop-foot' },
       h('button', { type: 'button', class: 'link-btn', onclick: async () => {
         closePop();
         const out = await cropImage(st.src);
-        if (out && out !== st.src) { st.src = out; changed(); commit(); }
+        if (out && out !== st.src) { st.src = out; st.round = lastCropShape === 'circle'; changed(); commit(); }
       } }, '자르기'),
       h('button', { type: 'button', class: 'link-btn danger', onclick: () => {
         state.stickers = state.stickers.filter((x) => x.id !== id); selSticker = null; changed(); closePop();
@@ -4196,6 +4247,7 @@ $('#btn-folder-save').addEventListener('click', async () => {
    ========================================================= */
 const CROP_SHAPES = [['free', '원본'], ['1:1', '정사각형'], ['4:3', '가로 4:3'], ['3:4', '세로 3:4'], ['16:9', '와이드'], ['circle', '원']];
 let cropJob = null;
+let lastCropShape = ''; // 마지막으로 자른 모양 (원이면 테두리도 동그랗게)
 function loadImg(src) {
   return new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = src; });
 }
@@ -4284,7 +4336,7 @@ async function cropImage(src, opts = {}) {
       zoomAt(s * Math.exp(-e.deltaY * 0.0015), e.clientX - r.left, e.clientY - r.top);
     };
     zoom.oninput = () => zoomAt(base * +zoom.value, fr.x + fr.w / 2, fr.y + fr.h / 2);
-    $('#crop-skip').onclick = () => job.resolve(src);
+    $('#crop-skip').onclick = () => { lastCropShape = ''; job.resolve(src); };
     $('#crop-ok').onclick = () => {
       const sx = (fr.x - tx) / s, sy = (fr.y - ty) / s, sw = fr.w / s, sh = fr.h / s;
       const max = opts.avatar ? 256 : 1600;
@@ -4301,6 +4353,7 @@ async function cropImage(src, opts = {}) {
         if (shape === 'circle' && !opts.avatar) out = cv.toDataURL('image/png');
         else { out = cv.toDataURL('image/webp', 0.9); if (!out.startsWith('data:image/webp')) out = cv.toDataURL('image/jpeg', 0.92); }
       } catch (err) { out = src; }
+      lastCropShape = shape;
       job.resolve(out);
     };
     $('#crop').hidden = false;
