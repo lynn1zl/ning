@@ -1164,7 +1164,7 @@ const HTML_BG_PRESETS = [
   { name: '언덕 위의 마녀', file: 'bg/witch.html', clearCredit: true, parse: { formats: ['star1'], mode: 'plain' }, avatars: true,
     chars: ['마녀', { name: '노엘', avatar: 'bg/witch/noel.webp' }, { name: '륜', avatar: 'bg/witch/ryun.webp' }, { name: '악셀', avatar: 'bg/witch/axel.webp' }, { name: '루카', avatar: 'bg/witch/luka.webp' }] },
   { name: '언덕 위의 마왕', file: 'bg/demon.html', clearCredit: true, parse: { formats: ['star1'], mode: 'plain' }, avatars: true,
-    chars: ['마왕', { name: '체페슈', avatar: 'bg/demon/tepes.webp' }, { name: '아자젤', avatar: 'bg/demon/azazel.webp' }, { name: '노먼', avatar: 'bg/demon/norman.webp' }, { name: '빌터', avatar: 'bg/demon/wilter.webp' }, { name: '한', avatar: 'bg/demon/han.webp' }, '라이케'] },
+    chars: ['마왕', { name: '체페슈', avatar: 'bg/demon/tepes.webp' }, { name: '아자젤', avatar: 'bg/demon/azazel.webp' }, { name: '노먼', avatar: 'bg/demon/norman.webp' }, { name: '빌터', avatar: 'bg/demon/wilter.webp' }, { name: '한', avatar: 'bg/demon/han.webp' }, { name: '라이케', avatar: 'bg/demon/raike.webp' }] },
 ];
 
 function applySkin() {
