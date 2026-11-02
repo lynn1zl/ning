@@ -1160,8 +1160,8 @@ function applyHtmlBg(pages) {
 let htmlBgReady = Promise.resolve();
 // HTML 배경 프리셋: 고를 때만 불러와서 사이트는 가볍게 유지
 const HTML_BG_PRESETS = [
-  { name: '언덕 위의 마녀', file: 'bg/witch.html' },
-  { name: '언덕 위의 마왕', file: 'bg/demon.html' },
+  { name: '언덕 위의 마녀', file: 'bg/witch.html', chars: ['마녀', '노엘', '륜', '악셀', '루카'] },
+  { name: '언덕 위의 마왕', file: 'bg/demon.html', chars: ['마왕', '체페슈', '아자젤', '노먼', '빌터', '한', '라이케'] },
 ];
 
 function applySkin() {
@@ -2835,10 +2835,20 @@ function buildSkin() {
     onclick: async () => {
       try {
         const html = await (await fetch(bp.file)).text();
+        commit();
         state.bgHtml = html;
         $('#html-bg').value = html;
-        changed();
-        toast(`‘${bp.name}’ 배경을 적용했어요 · 제목은 텍스트 탭의 제목과 연동돼요`, { label: '되돌리기', fn: undo }, 3600);
+        // 이 배경의 기본 캐릭터 등록 (기본 모양: 하얀 배경 · 검은 글씨 · 하얀 테두리 · 왼쪽, 이미 있는 이름은 건너뜀)
+        const added = [];
+        const base = Date.now().toString(36);
+        (bp.chars || []).forEach((name, i) => {
+          if (findChar(name)) return;
+          state.chars.push({ id: `p${base}${i}`, name, avatar: '', side: 'left', homeSide: 'left', shape: '', custom: true, bg: '#ffffff', color: '#222222', border: '#ffffff' });
+          added.push(name);
+        });
+        changed(); commit();
+        if (added.length) { buildChars(); buildFields(); buildQuickInsert(); }
+        toast(`‘${bp.name}’ 배경을 적용했어요${added.length ? ` · 캐릭터 ${added.length}명 등록` : ''}`, { label: '되돌리기', fn: undo }, 3600);
       } catch (e) { toast('배경을 불러오지 못했어요'); }
     },
   }, bp.name)));
