@@ -1631,3 +1631,13 @@ body.resizing iframe, body.resizing #stage { pointer-events: none; }
 .msg.name-side .bubble { min-width: 0; }
 .tail-tri.msg-left.name-side .msg-body, .tail-tri.msg-right.name-side .msg-body { gap: calc(var(--tw, 7px) + 10px); }
 .shape-plain.name-side .name, .msg.name-side.shape-plain .name { padding-top: calc((var(--b-size) * var(--b-lh) - var(--name-size) * 1.3) / 2); }
+img[src^="nnimg:"] { visibility: hidden; }
+
+/* 화면 탭: 저장 폴더 */
+.folder-row { gap: 10px; }
+.folder-now { display: flex; align-items: flex-start; gap: 10px; }
+.folder-now .folder-ico { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); flex: none; }
+.folder-now .folder-ico svg { width: 18px; height: 18px; }
+.folder-now b { display: block; font-size: 14.5px; }
+.folder-now small { display: block; margin-top: 2px; font-size: 12.5px; color: var(--text-3); line-height: 1.5; }
+.folder-actions { display: flex; align-items: center; gap: 10px; }

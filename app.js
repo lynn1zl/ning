@@ -606,20 +606,93 @@ function loadState() {
   return copyState(DEFAULTS);
 }
 
+/* ── 자동 저장: 글 · 설정은 localStorage, 사진은 IndexedDB에 따로 (localStorage 5MB 한도를 사진이 채우지 않게)
+   - 설정 안의 사진 자리에는 'nnimg:<키>'만 남기고, 불러올 때 다시 사진으로 바꿔 넣음 ── */
+const IMG_REF = 'nnimg:';
+const imgKeyOf = new Map();      // 사진 dataURL → 저장 키 (한 번 계산한 키는 다시 계산하지 않음)
+const imgStored = new Set();     // IndexedDB에 이미 들어 있는 키
+let imagesRestored = false;      // 시작할 때 사진을 다 불러오기 전에는 지우기(정리)를 하지 않음
+const isBigImage = (v) => typeof v === 'string' && v.length > 2048 && v.startsWith('data:image/');
+function imgKey(v) {
+  let k = imgKeyOf.get(v);
+  if (k) return k;
+  let h1 = 0x811c9dc5, h2 = 0x1b873593;
+  // 긴 문자열은 앞 · 뒤 · 띄엄띄엄 뽑은 글자로 지문을 만듦 (길이도 함께 넣어 충돌 방지)
+  const step = Math.max(1, Math.floor(v.length / 60000));
+  for (let i = 0; i < v.length; i += (i < 4096 || i > v.length - 4096) ? 1 : step) {
+    const c = v.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 16777619);
+    h2 = Math.imul(h2 ^ c, 2246822507) ^ (h2 >>> 13);
+  }
+  k = `${(h1 >>> 0).toString(36)}${(h2 >>> 0).toString(36)}${v.length.toString(36)}`;
+  imgKeyOf.set(v, k);
+  return k;
+}
 let saveTimer;
 let warnedQuota = false;
+let saving = Promise.resolve();
 function save() {
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    try {
-      localStorage.setItem(STORE_KEY, JSON.stringify(state));
-    } catch (e) {
-      if (!warnedQuota) {
-        warnedQuota = true;
-        toast('이미지가 커서 자동 저장이 안 됐어요. 메뉴에서 설정 파일로 내보내 두세요.', null, 4200);
-      }
+  saveTimer = setTimeout(() => { saving = saving.then(saveNow, saveNow); }, 300);
+}
+async function saveNow() {
+  const fresh = new Map(), used = new Set();
+  let json = JSON.stringify(state, (k, v) => {
+    if (isBigImage(v)) { const key = imgKey(v); used.add(key); if (!imgStored.has(key)) fresh.set(key, v); return IMG_REF + key; }
+    if (typeof v === 'string' && v.startsWith(IMG_REF)) used.add(v.slice(IMG_REF.length));
+    return v;
+  });
+  try {
+    for (const [key, v] of fresh) { await idb.set('img:' + key, v); imgStored.add(key); }
+  } catch (e) {
+    json = JSON.stringify(state); // 사진 저장소를 못 쓰는 브라우저(사생활 보호 모드 등)는 예전처럼 한 곳에
+  }
+  try {
+    localStorage.setItem(STORE_KEY, json);
+    warnedQuota = false;
+  } catch (e) {
+    if (!warnedQuota) {
+      warnedQuota = true;
+      toast('저장 공간이 꽉 차서 자동 저장이 안 됐어요. 메뉴에서 설정 파일로 내보내 두세요.', null, 4600);
     }
-  }, 300);
+    return;
+  }
+  // 이제 어디에도 쓰이지 않는 사진은 정리
+  if (imagesRestored) {
+    for (const key of [...imgStored]) if (!used.has(key)) { imgStored.delete(key); idb.del('img:' + key).catch(() => {}); }
+  }
+}
+/** 시작할 때: 설정 안의 'nnimg:' 자리를 사진으로 되돌림. 바꾼 개수를 돌려줌 */
+async function restoreImages() {
+  let n = 0;
+  try {
+    for (const k of await idb.keys()) if (String(k).startsWith('img:')) imgStored.add(String(k).slice(4));
+    const refs = new Set();
+    const walk = (o) => {
+      if (!o || typeof o !== 'object') return;
+      for (const k of Object.keys(o)) {
+        const v = o[k];
+        if (typeof v === 'string' && v.startsWith(IMG_REF)) refs.add(v.slice(IMG_REF.length));
+        else if (v && typeof v === 'object') walk(v);
+      }
+    };
+    walk(state);
+    if (refs.size) {
+      const data = new Map();
+      await Promise.all([...refs].map(async (key) => { const v = await idb.get('img:' + key); if (v) { data.set(key, v); imgKeyOf.set(v, key); } }));
+      const fill = (o) => {
+        if (!o || typeof o !== 'object') return;
+        for (const k of Object.keys(o)) {
+          const v = o[k];
+          if (typeof v === 'string' && v.startsWith(IMG_REF)) { o[k] = data.get(v.slice(IMG_REF.length)) || ''; n++; }
+          else if (v && typeof v === 'object') fill(v);
+        }
+      };
+      fill(state);
+    }
+  } catch (e) { /* 사진 저장소를 못 쓰면 그대로 */ }
+  imagesRestored = true;
+  return n;
 }
 
 const hist = { past: [], future: [], last: null, timer: null };
@@ -1184,14 +1257,21 @@ function looksLikeHtmlBg(code) {
 
 const htmlBg = { cache: new Map(), status: '' };
 const blobToDataURL = (blob) => readFileAsDataURL(blob);
+// 배경에 쓰는 외부 파일(웹폰트 · 그림 · CSS)은 한 번 받은 것을 다시 받지 않음
+const inlineCache = new Map();
+const textCache = new Map();
+function fetchText(url) {
+  if (!textCache.has(url)) textCache.set(url, fetch(url).then((r) => (r.ok ? r.text() : '')).catch(() => ''));
+  return textCache.get(url);
+}
 async function inlineUrl(u, base) {
   if (!u || /^(data:|#)/i.test(u)) return u;
-  try {
-    const abs = new URL(u, base || location.href).href;
-    const r = await fetch(abs);
-    if (!r.ok) return u;
-    return await blobToDataURL(await r.blob());
-  } catch (e) { return u; }
+  let abs;
+  try { abs = new URL(u, base || location.href).href; } catch (e) { return u; }
+  if (!inlineCache.has(abs)) {
+    inlineCache.set(abs, fetch(abs).then((r) => (r.ok ? r.blob().then(blobToDataURL) : null)).catch(() => null));
+  }
+  return (await inlineCache.get(abs)) || u;
 }
 async function inlineCssUrls(css, base) {
   const urls = [...new Set([...css.matchAll(/url\(\s*(['"]?)([^'")]+)\1\s*\)/g)].map((m) => m[2]))];
@@ -1208,9 +1288,8 @@ async function expandImports(css, text) {
   for (const m of found) {
     let inner = '';
     try {
-      const r = await fetch(new URL(m[1], location.href).href);
-      if (r.ok) {
-        inner = await r.text();
+      inner = await fetchText(new URL(m[1], location.href).href);
+      if (inner) {
         inner = inner.replace(/@font-face\s*{[^}]*}/g, (face) => {
           const ur = (face.match(/unicode-range:\s*([^;}]+)/) || [])[1];
           if (!ur) return codes.size ? face : '';
@@ -1225,7 +1304,17 @@ async function expandImports(css, text) {
   return out;
 }
 
-async function buildHtmlBgURL(html, w, h, layer) {
+/* 배경 문서 준비(웹폰트 · 그림을 안에 넣는 무거운 일)는 코드 · 글자가 같으면 한 번만.
+   카드 크기 · 층(아래/위)만 다를 때는 준비된 문서에 크기만 끼워 넣어 바로 그림 */
+const htmlPrep = new Map();
+function prepareHtmlBg(html) {
+  if (!htmlPrep.has(html)) {
+    if (htmlPrep.size > 12) htmlPrep.clear();
+    htmlPrep.set(html, buildHtmlBgDoc(html).catch((e) => { htmlPrep.delete(html); throw e; }));
+  }
+  return htmlPrep.get(html);
+}
+async function buildHtmlBgDoc(html) {
   const doc = new DOMParser().parseFromString(html || '', 'text/html');
   doc.querySelectorAll('script, iframe, object, embed, meta, base, link:not([rel="stylesheet"])').forEach((el) => el.remove());
   const text = doc.body ? doc.body.textContent : '';
@@ -1240,22 +1329,29 @@ async function buildHtmlBgURL(html, w, h, layer) {
   for (const el of doc.querySelectorAll('[style]')) el.setAttribute('style', await inlineCssUrls(el.getAttribute('style')));
   for (const img of doc.querySelectorAll('img[src]')) img.setAttribute('src', await inlineUrl(img.getAttribute('src')));
   const baseStyle = doc.createElement('style');
-  baseStyle.textContent = `html,body{margin:0;padding:0;width:${w}px;height:${h}px;overflow:hidden;}body{position:relative;font-family:"Pretendard",sans-serif;}*{box-sizing:border-box;}`;
+  baseStyle.textContent = 'NNBASEMARK';
   doc.head.insertBefore(baseStyle, doc.head.firstChild);
   const layerStyle = doc.createElement('style');
-  layerStyle.textContent = layer === 'top'
+  layerStyle.textContent = 'NNLAYERMARK';
+  doc.head.appendChild(layerStyle);
+  return encodeURIComponent(new XMLSerializer().serializeToString(doc.documentElement));
+}
+async function buildHtmlBgURL(html, w, h, layer) {
+  const enc = await prepareHtmlBg(html);
+  const baseCss = `html,body{margin:0;padding:0;width:${w}px;height:${h}px;overflow:hidden;}body{position:relative;font-family:"Pretendard",sans-serif;}*{box-sizing:border-box;}`;
+  const layerCss = layer === 'top'
     // 위층: data-layer="top" 요소만 보이게. 숨긴 요소의 SVG 필터(질감 등)가 새어 나오지 않도록 필터 · 혼합도 끔
     ? 'html,body{background:transparent !important;}body *{visibility:hidden !important;}'
       + 'body *:not([data-layer="top"], [data-layer="top"] *){filter:none !important;mix-blend-mode:normal !important;}'
       + 'body svg:not([data-layer="top"] svg) rect[filter]{display:none !important;}'
       + '[data-layer="top"],[data-layer="top"] *{visibility:visible !important;}'
     : '[data-layer="top"]{visibility:hidden !important;}';
-  doc.head.appendChild(layerStyle);
-  const xhtml = new XMLSerializer().serializeToString(doc.documentElement);
   // 그림 자체 해상도를 저장 배율만큼 키워서 흐릿해지지 않게 (내용 배치는 카드 크기 그대로)
   const k = Math.max(2, Math.min(4, Math.ceil(Math.max(state.canvas.scale, window.devicePixelRatio || 1))));
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w * k}" height="${h * k}" viewBox="0 0 ${w} ${h}"><foreignObject x="0" y="0" width="${w}" height="${h}">${xhtml}</foreignObject></svg>`;
-  const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  const head = `<svg xmlns="http://www.w3.org/2000/svg" width="${w * k}" height="${h * k}" viewBox="0 0 ${w} ${h}"><foreignObject x="0" y="0" width="${w}" height="${h}">`;
+  const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(head)
+    + enc.replace('NNBASEMARK', encodeURIComponent(baseCss)).replace('NNLAYERMARK', encodeURIComponent(layerCss))
+    + encodeURIComponent('</foreignObject></svg>');
   await new Promise((res, rej) => { const im = new Image(); im.onload = res; im.onerror = () => rej(new Error('draw')); im.src = url; });
   return url;
 }
@@ -1356,12 +1452,14 @@ function applyHtmlBg(pages) {
   const uncached = pages.some((p) => !htmlBg.cache.has(htmlBgKey(p.card.offsetWidth, p.card.offsetHeight, 'base')));
   setHtmlStatus('그리는 중…');
   // 글자를 치는 동안 매번 다시 그리지 않도록 잠깐 기다렸다가 그림
-  const wait = uncached ? new Promise((r) => setTimeout(r, 350)) : Promise.resolve();
+  // 문서가 이미 준비돼 있으면(크기만 바뀜) 거의 바로, 처음 그리는 배경이면 입력이 멈출 때까지 잠깐 기다림
+  const prepped = htmlPrep.has(fillBgTokens(code));
+  const wait = uncached ? new Promise((r) => setTimeout(r, prepped ? 60 : 350)) : Promise.resolve();
   return wait.then(() => seq !== htmlBgSeq ? null : Promise.all(pages.map(async (p, i) => {
     const w = p.card.offsetWidth, hgt = p.card.offsetHeight;
     const [base, top] = await Promise.all([htmlBgURL(w, hgt, 'base'), hasTop ? htmlBgURL(w, hgt, 'top') : null]);
     if (seq !== htmlBgSeq) return;
-    if (!p.bgImg) return;
+    if (!p.bgImg || (exporting && p.bgImg.src.startsWith('data:image/png'))) return;
     p.bgImg.src = base; p.bgImg.hidden = false;
     if (p.topImg) {
       if (top) { p.topImg.src = top; p.topImg.hidden = false; } else { p.topImg.hidden = true; p.topImg.removeAttribute('src'); }
@@ -1564,10 +1662,13 @@ const trimGaps = (flow) => {
 };
 
 let renderQueued = false;
+let exporting = false;      // 이미지를 만드는 동안에는 미리보기를 다시 그리지 않음 (만들던 카드가 바뀌지 않게)
+let renderAfterExport = false;
 function scheduleRender() {
+  if (exporting) { renderAfterExport = true; return; }
   if (renderQueued) return;
   renderQueued = true;
-  requestAnimationFrame(() => { renderQueued = false; render(); });
+  requestAnimationFrame(() => { renderQueued = false; if (exporting) { renderAfterExport = true; return; } render(); });
 }
 
 let lastStats = { bubbles: 0, pages: 1 };
@@ -1809,7 +1910,9 @@ function withDropcap(on, html) {
   if (!m) return html;
   return m[1] + `<span class="dc">${m[2]}${m[3]}</span>` + html.slice(m[0].length);
 }
+let lastRenderMs = 0;
 function render() {
+  const t0 = performance.now();
   dropcapPending = !!state.typo.dropcap;
   ensureFonts();
   $('#gen-style').textContent = genCSS();
@@ -1841,14 +1944,18 @@ function render() {
     stage.append(page.wrap);
     pages.push(page);
   };
-  while (queue.length) {
+  // 다음 덩어리 꺼내기 (어울림 이미지는 바로 다음 나레이션 문단 안에 띄워서 글이 옆으로 흐르게)
+  const takeNext = () => {
     const b = queue.shift();
-    if (b.type === 'gap' && !page.flow.childElementCount) continue;
-    // 어울림 이미지는 바로 다음 나레이션 문단 안에 띄워서 글이 옆으로 흐르게
     if (b.type === 'img' && (state.images[b.id] || {}).wrap === 'float' && queue[0] && queue[0].type === 'narr' && !queue[0].floatImg) {
       queue[0] = { ...queue[0], floatImg: b };
-      continue;
+      return null;
     }
+    return b;
+  };
+  while (queue.length) {
+    const b = takeNext();
+    if (!b || (b.type === 'gap' && !page.flow.childElementCount)) continue;
     const el = renderBlock(b);
     page.flow.append(el);
     if (!split || !overflows(page)) continue;
@@ -1905,31 +2012,37 @@ function render() {
   htmlBgReady = applyHtmlBg(pages);
   rescale();
   if (selSticker || selInline) requestAnimationFrame(drawImgBar);
+  lastRenderMs = performance.now() - t0;
   stage.scrollTop = scrollTop;
 }
 
 /* 둥근 말풍선: 꼬리가 붙는 자리의 모서리가 휘어 들어간 만큼 꼬리를 안쪽으로 당겨 틈 없이 붙임 */
 function fitTails(root) {
-  for (const bub of root.querySelectorAll('.tail-tri .bubble')) {
-    bub.style.removeProperty('--tin');
+  // 먼저 모두 읽고(측정) 나중에 한꺼번에 씀 — 말풍선마다 다시 배치를 계산하지 않도록
+  const bubs = [...root.querySelectorAll('.tail-tri .bubble')];
+  const inset = (r, dist) => {
+    if (r <= 0 || dist >= r) return 0;
+    const dy = Math.min(r, r - Math.max(0, dist));
+    return r - Math.sqrt(Math.max(0, r * r - dy * dy));
+  };
+  const res = bubs.map((bub) => {
     const cs = getComputedStyle(bub);
     const pre = getComputedStyle(bub, '::before');
-    bub.classList.toggle('tail-nob', !(parseFloat(cs.borderTopWidth) > 0));
+    const bw = parseFloat(cs.borderTopWidth) || 0;
     const left = bub.closest('.msg').classList.contains('msg-left');
     const h = bub.offsetHeight, w = bub.offsetWidth;
     const cap = (v) => Math.min(parseFloat(v) || 0, h / 2, w / 2);
     const rt = cap(left ? cs.borderTopLeftRadius : cs.borderTopRightRadius);
     const rb = cap(left ? cs.borderBottomLeftRadius : cs.borderBottomRightRadius);
-    const y1 = (parseFloat(pre.top) || 0) + (parseFloat(cs.borderTopWidth) || 0);
+    const y1 = (parseFloat(pre.top) || 0) + bw;
     const y2 = y1 + (parseFloat(pre.height) || 0);
-    const inset = (r, dist) => {
-      if (r <= 0 || dist >= r) return 0;
-      const dy = Math.min(r, r - Math.max(0, dist));
-      return r - Math.sqrt(Math.max(0, r * r - dy * dy));
-    };
-    const d = Math.max(inset(rt, y1), inset(rb, h - y2));
-    if (d > 0.05) bub.style.setProperty('--tin', `${d.toFixed(2)}px`);
-  }
+    return { nob: !(bw > 0), d: Math.max(inset(rt, y1), inset(rb, h - y2)) };
+  });
+  bubs.forEach((bub, i) => {
+    bub.classList.toggle('tail-nob', res[i].nob);
+    if (res[i].d > 0.05) bub.style.setProperty('--tin', `${res[i].d.toFixed(2)}px`);
+    else bub.style.removeProperty('--tin');
+  });
 }
 
 /* 확대 · 축소 */
@@ -2225,6 +2338,7 @@ const SCHEMA = {
       { t: 'text', p: 'file.title', l: '로그 제목', ph: '비우면 카드 제목을 써요' },
       { t: 'switch', p: 'file.number', l: '한 장이어도 번호 붙이기', sub: '예) _01' },
     ] },
+    { sec: '저장 폴더', rows: [{ t: 'folder' }] },
     { sec: '배경', rows: [
       { t: 'seg', p: 'canvas.bgType', l: '종류', o: [['solid', '단색'], ['gradient', '그라데이션'], ['pattern', '패턴'], ['image', '이미지']], block: true, rebuild: true },
       { t: 'gradients', show: () => state.canvas.bgType === 'gradient' },
@@ -2503,6 +2617,12 @@ function fieldEl(d) {
       paint(isPlain ? 'plain' : 'marked');
       const seg = segEl([['marked', '대사로'], ['plain', '나레이션으로']], state.parse.mode, (v) => { setPath('parse.mode', v); paint(v); }, true);
       el = h('div', { class: 'row stack mode-row' }, h('div', { class: 'row-label' }, '위에서 고른 형식을', hint), seg);
+      break;
+    }
+
+    case 'folder': {
+      el = h('div', { class: 'row stack folder-row', id: 'folder-row' });
+      setTimeout(updateFolderUI);
       break;
     }
 
@@ -2953,7 +3073,8 @@ src.addEventListener('input', () => {
   state.text = src.value;
   updateStats();
   clearTimeout(srcTimer);
-  srcTimer = setTimeout(changed, 120);
+  // 긴 글이라 그리는 데 오래 걸리면 입력이 멈출 때까지 조금 더 기다렸다 그림 (글자 입력이 끊기지 않게)
+  srcTimer = setTimeout(changed, Math.min(450, 120 + lastRenderMs * 2));
 });
 dropTarget($('.editor-card'), isTextFile, async (f) => insertSnippet(await f.text(), '', false));
 
@@ -4059,21 +4180,74 @@ function freezeLines(E, scale) {
 }
 
 /* HTML 배경 그림을 저장 배율 그대로 PNG로 바꿔 둠 (SVG 그림이 한 번 더 확대되며 흐려지는 것 방지) */
+/* 저장 직전: 지금 카드 크기에 맞는 HTML 배경을 기다리지 않고 바로 만들어 끼움 (미리보기의 늦은 그리기와 상관없이) */
+async function ensureHtmlBg(cards) {
+  const code = bgCode().trim();
+  if (!code) return;
+  const hasTop = /data-layer\s*=\s*["']?top/i.test(code);
+  for (const card of cards) {
+    const w = card.offsetWidth, hgt = card.offsetHeight;
+    const bg = card.querySelector('.card-htmlbg'), top = card.querySelector('.card-htmltop');
+    try {
+      const [base, upper] = await Promise.all([htmlBgURL(w, hgt, 'base'), hasTop ? htmlBgURL(w, hgt, 'top') : null]);
+      if (bg) { bg.src = base; bg.hidden = false; await bg.decode().catch(() => {}); }
+      if (top) {
+        if (upper) { top.src = upper; top.hidden = false; await top.decode().catch(() => {}); } else { top.hidden = true; top.removeAttribute('src'); }
+      }
+    } catch (e) { console.warn(e); }
+  }
+}
+const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r()));
+/* HTML 배경(SVG 그림)을 보통 그림(PNG)으로 바꿔 둠.
+   브라우저가 SVG 안의 글꼴 · 그림을 늦게 칠하면 처음 그린 결과가 비어 있을 수 있어서, 비었으면 잠깐 기다렸다 다시 그림 */
 async function rasterizeHtmlLayers(card) {
   const sc = state.canvas.scale;
   for (const img of card.querySelectorAll('.card-htmlbg, .card-htmltop')) {
-    if (!img.getAttribute('src') || img.hidden) continue;
+    if (!img.getAttribute('src') || img.hidden || img.src.startsWith('data:image/png')) continue;
     try {
-      if (!img.complete) await new Promise((r) => { img.onload = r; img.onerror = r; });
+      const im = new Image();
+      im.src = img.src;
+      await im.decode();
       const w = card.offsetWidth, hgt = card.offsetHeight;
       const cv = document.createElement('canvas');
       cv.width = Math.round(w * sc); cv.height = Math.round(hgt * sc);
-      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      const g = cv.getContext('2d', { willReadFrequently: true });
+      const isBase = img.classList.contains('card-htmlbg');
+      for (let tryN = 0; tryN < 4; tryN++) {
+        g.clearRect(0, 0, cv.width, cv.height);
+        g.drawImage(im, 0, 0, cv.width, cv.height);
+        if (!isBase || !looksBlank(g, cv.width, cv.height)) break;
+        await nextFrame(); await new Promise((r) => setTimeout(r, 80 * (tryN + 1)));
+      }
       img.src = cv.toDataURL('image/png');
       await img.decode().catch(() => {});
-    } catch (e) { /* 브라우저가 막으면 원래 그림 그대로 */ }
+    } catch (e) { /* 브라우저가 막으면(사파리 등) 원래 그림 그대로 */ }
   }
 }
+// 아래층 배경이 거의 투명하면 아직 칠해지지 않은 것으로 봄
+function looksBlank(g, w, h) {
+  try {
+    const pts = [[0.5, 0.5], [0.1, 0.1], [0.9, 0.1], [0.1, 0.9], [0.9, 0.9], [0.5, 0.05], [0.05, 0.5]];
+    return pts.every(([x, y]) => g.getImageData(Math.floor(w * x), Math.floor(h * y), 1, 1).data[3] < 8);
+  } catch (e) { return false; }
+}
+
+/* 이미지 변환 도구는 첫 화면에 필요 없으니 나중에 불러옴 (화면이 뜬 뒤 한가할 때 미리 받아 둠) */
+let exporterP = null;
+function loadExporter() {
+  if (typeof htmlToImage !== 'undefined') return Promise.resolve(true);
+  if (!exporterP) {
+    exporterP = new Promise((res) => {
+      const sc = document.createElement('script');
+      sc.src = 'lib/html-to-image.js';
+      sc.onload = () => res(typeof htmlToImage !== 'undefined');
+      sc.onerror = () => { exporterP = null; res(false); };
+      document.head.append(sc);
+    });
+  }
+  return exporterP;
+}
+(window.requestIdleCallback || ((f) => setTimeout(f, 1500)))(() => loadExporter(), { timeout: 4000 });
 
 function cardToPng(card, fontCSS) {
   return htmlToImage.toPng(card, {
@@ -4125,33 +4299,44 @@ const fileName = (i, n = lastImages.length) => `${fileParts(i, n)}.png`;
 let busy = false;
 /** 카드들을 PNG로 변환 (indices 없으면 전부). 끝나면 미리보기를 원래대로 */
 async function makeImages(indices, onProgress) {
+  if (!(await loadExporter())) throw new Error('exporter');
   closePop();
-  selSticker = null;
-  $$('#stage .sticker.sel').forEach((x) => x.classList.remove('sel'));
+  selSticker = null; selInline = null;
+  if (typeof imgBar !== 'undefined') imgBar.hidden = true;
   editingKey = null;
-  $$('#stage .msg.editing').forEach((m) => m.classList.remove('editing'));
-  await document.fonts.ready;
-  await htmlBgReady;
-  const all = $$('#stage .card');
-  const cards = indices ? indices.map((i) => all[i]).filter(Boolean) : all;
-  const fontCSS = await buildFontEmbedCSS(cards);
-  for (const card of cards) await rasterizeHtmlLayers(card);
+  // 아직 반영되지 않은 입력이 있으면 지금 반영하고, 최신 상태로 한 번 그린 뒤 그동안은 다시 그리지 않음
+  if (srcTimer) { clearTimeout(srcTimer); srcTimer = null; if (state.text !== src.value) state.text = src.value; save(); }
+  renderQueued = false;
+  render();
+  exporting = true;
+  try {
+    await document.fonts.ready;
+    await htmlBgReady;
+    const all = $$('#stage .card');
+    const cards = indices ? indices.map((i) => all[i]).filter(Boolean) : all;
+    await ensureHtmlBg(cards);
+    const fontCSS = await buildFontEmbedCSS(cards);
+    for (const card of cards) await rasterizeHtmlLayers(card);
+    return await makeImagesOf(cards, fontCSS, onProgress);
+  } finally {
+    exporting = false;
+    renderAfterExport = false;
+    render(); // 줄 고정을 풀고 원래 미리보기로
+  }
+}
+async function makeImagesOf(cards, fontCSS, onProgress) {
   for (const card of cards) {
     card.querySelectorAll('.narr, .bubble, .card-title, .credit').forEach((el) => {
       if (el.querySelector('.wrap-float, .bimg-box, .tok-img')) return; // 이미지가 들어간 문단은 브라우저 배치 그대로
       try { freezeLines(el, currentScale); } catch (e) { /* 원래 상태로 둠 */ }
     });
   }
-  try {
-    const out = [];
-    for (let i = 0; i < cards.length; i++) {
-      if (onProgress) onProgress(i, cards.length);
-      out.push(await cardToPng(cards[i], fontCSS));
-    }
-    return out;
-  } finally {
-    render(); // 줄 고정을 풀고 원래 미리보기로
+  const out = [];
+  for (let i = 0; i < cards.length; i++) {
+    if (onProgress) onProgress(i, cards.length);
+    out.push(await cardToPng(cards[i], fontCSS));
   }
+  return out;
 }
 
 /* ---------- 저장 폴더 (Chrome · Edge 데스크톱) ---------- */
@@ -4176,6 +4361,7 @@ const idb = (() => {
     get: (k) => tx('readonly', (st) => st.get(k)).catch(() => undefined),
     set: (k, v) => tx('readwrite', (st) => st.put(v, k)),
     del: (k) => tx('readwrite', (st) => st.delete(k)),
+    keys: () => tx('readonly', (st) => st.getAllKeys()).then((v) => v || []).catch(() => []),
   };
 })();
 
@@ -4248,12 +4434,29 @@ function updateFolderUI() {
       h('button', { type: 'button', class: 'link-btn', onclick: pickFolder }, '원하는 폴더 지정'));
   }
   $('#btn-folder-save').hidden = !canPickFolder;
+  // 화면 탭 '저장 폴더'
+  const row = $('#folder-row');
+  if (row) {
+    row.innerHTML = '';
+    if (!canPickFolder) {
+      row.append(h('div', { class: 'folder-now' }, h('span', { class: 'folder-ico', html: icon('folder') }),
+        h('div', {}, h('b', {}, '다운로드 폴더'), h('small', {}, isMobile()
+          ? '휴대폰에서는 저장할 때 뜨는 창에서 ‘이미지 저장’이나 ‘파일에 저장’을 골라요.'
+          : '이 브라우저는 폴더 지정을 지원하지 않아요. PC의 크롬 · 엣지 · 웨일에서 원하는 폴더를 지정할 수 있어요.'))));
+    } else {
+      row.append(h('div', { class: 'folder-now' }, h('span', { class: 'folder-ico', html: icon('folder') }),
+        h('div', {}, h('b', {}, dirHandle ? dirHandle.name : '다운로드 폴더'), h('small', {}, dirHandle ? '‘이미지 저장’을 누르면 이 폴더에 바로 저장돼요. 같은 이름이 있으면 (2)를 붙여요.' : '폴더를 지정하면 ‘이미지 저장’이 그 폴더에 바로 쌓여요.'))),
+        h('div', { class: 'folder-actions' },
+          h('button', { type: 'button', class: 'btn btn-sm', onclick: pickFolder }, dirHandle ? '폴더 바꾸기' : '폴더 지정'),
+          dirHandle ? h('button', { type: 'button', class: 'link-btn muted', onclick: clearFolder }, '해제') : null));
+    }
+  }
 }
 
 let lastImages = [];
 async function exportImages() {
   if (busy) return;
-  if (typeof htmlToImage === 'undefined') { toast('이미지 변환 도구를 불러오지 못했어요'); return; }
+  if (!(await loadExporter())) { toast('이미지 변환 도구를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.'); return; }
   const btn = $('#btn-save');
   const label = $('.btn-label', btn);
   const orig = label.textContent;
@@ -4661,6 +4864,8 @@ setPane('text', false);
 if (isMobile()) setSheet(true);
 rebuildAll();
 resetHistory();
+// 따로 보관한 사진을 불러와 다시 그림 (예전 설정은 다음 자동 저장 때 사진만 옮겨 짐)
+restoreImages().then((n) => { if (n) { rebuildAll(); resetHistory(); } save(); });
 if (state.bgRef) loadBgRef(state.bgRef).then(() => { htmlBg.cache.clear(); render(); }).catch(() => toast('배경을 불러오지 못했어요'));
 
 /* ── 첫 방문 튜토리얼: 메뉴를 하나씩 강조하며 설명 ── */
