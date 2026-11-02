@@ -145,8 +145,8 @@ const DEFAULTS = {
   scene: { show: true, place: '', alive: '', total: '' },
   // 미니홈피 배경: 프레임 · 바탕 색, 방문자 수, 마이룸 사진 · 말풍선, TALK! TALK! 한마디
   hompy: { frame: '#8fd0e6', bg: '#eceff3', today: '', total: '', room: '', say: '', talk: [] },
-  // 코르크보드 배경: 가운데 메모지 색, 할 일 포스트잇 글
-  cork: { memo: '#faf7f0', todo: '✓ 장보기\n✓ 발췌하기\n☐ 헬스장 등록' },
+  // 다이어리 배경: 표지 색, 날짜(비우면 오늘), 날씨, 메모지 제목 · 내용, 키링 글자
+  diary: { color: '#ff8a80', date: '', weather: 'sun', memoTitle: 'to do ♡', todo: '✓ 장보기\n✓ 발췌하기\n☐ 헬스장 등록', beads: 'LOVE', keyring: true },
   images: {},   // 글자처럼 넣은 이미지: id → { src, w(%), align }
   stickers: [], // 자유 배치 이미지: { id, src, x, y, w(px), rot, layer: 'front'|'back', page, op }
   file: { prefix: true, date: true, pair: '', title: '', number: false },
@@ -582,6 +582,9 @@ function migrate(st, raw) {
   // 빈 줄 기본값을 '한 줄은 문단 나눔만'으로 (한 번만 옮김, 이후 사용자가 고른 값은 유지)
   if (raw && raw.parse && !raw.parse.blankV3) { st.parse.blank = 'para1'; st.parse.blankV3 = true; }
   if (!st.file) st.file = copyState(DEFAULTS.file);
+  // 코르크보드 배경은 없어짐
+  if (st.bgRef === 'bg/cork.html') st.bgRef = '';
+  delete st.cork;
   // 미니홈피 예전 예시 한마디 → 새 예시로
   if (st.hompy && (st.hompy.talk || []).map((t) => t.text).join('|').startsWith('일촌 신청 받아 주세요 ♡|다이어리 잘 보고 가요~|오늘도 들렀다 갑니다 ^^*')) {
     st.hompy.talk = [{ name: '닐', text: '뭐하냐' }, { name: '린', text: '로그 좀 올려' }, { name: '익명', text: '잘 구경했다...ㅋㅋ' }];
@@ -1089,6 +1092,11 @@ function genCSS() {
 }`;
   const bg = backgroundCSS(c);
   css += `\n.card { background-image: ${bg.image}; background-size: ${bg.size}; background-repeat: ${bg.repeat}; background-position: ${bg.pos}; }`;
+  // 서체 · 조판 탭에서 고른 값이 스킨 · 템플릿 CSS보다 우선하도록 (스킨 칸의 .narr · .bubble 규칙보다 구체적인 선택자)
+  css += `
+html body .card .narr:not(.placeholder) { font-family: var(--text-font); font-size: var(--text-size); line-height: var(--text-lh); letter-spacing: var(--text-ls); font-weight: var(--text-weight); text-align: var(--text-align); word-break: var(--text-break, keep-all); word-spacing: var(--text-ws, 0); }
+html body .card .bubble { font-family: var(--b-font); font-size: var(--b-size); line-height: var(--b-lh); letter-spacing: var(--b-ls); font-weight: var(--b-weight); }
+html body .card .name { font-size: var(--name-size); }`;
   return css;
 }
 
@@ -1261,13 +1269,19 @@ async function loadBgRef(file) {
 const bgHasTitle = () => { TITLE_TOKEN.lastIndex = 0; return TITLE_TOKEN.test(bgCode()); };
 const bgUsesScene = () => /\{\{\s*(장소|생존|전체|place|alive|total)\s*\}\}/i.test(bgCode());
 const bgUsesHompy = () => /\{\{\s*(마이룸|톡톡|프레임색)\s*\}\}/.test(bgCode());
-const bgUsesCork = () => /\{\{\s*(메모지색|할일)\s*\}\}/.test(bgCode());
+const bgUsesDiary = () => /\{\{\s*(다이어리색|메모제목)\s*\}\}/.test(bgCode());
+const WEATHERS = [['sun', '맑음', '☀\uFE0E'], ['cloud', '흐림', '☁\uFE0E'], ['rain', '비', '☂\uFE0E'], ['snow', '눈', '❄\uFE0E']];
+function todayLabel() {
+  const d = new Date();
+  const p2 = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}. ${p2(d.getMonth() + 1)}. ${p2(d.getDate())}. ${'일월화수목금토'[d.getDay()]}`;
+}
 const safeColor = (v, d) => (/^#[0-9a-f]{3,8}$/i.test(v || '') ? v : d);
 function fillBgTokens(html) {
   const e = (t) => esc((t || '').trim());
   const sc = state.scene || {};
   const hp = state.hompy || {};
-  const ck = state.cork || {};
+  const dy = state.diary || {};
   // 상황판 끄기: data-scene 이 붙은 요소를 숨김
   if (sc.show === false) html = (html || '') + '<style>[data-scene]{display:none !important}</style>';
   return (html || '')
@@ -1285,8 +1299,13 @@ function fillBgTokens(html) {
     .replace(/\{\{\s*토탈\s*\}\}/g, () => e(String(hp.total ?? '')))
     .replace(/\{\{\s*마이룸\s*\}\}/g, () => (hp.room ? `<img src="${hp.room.replace(/"/g, '&quot;')}" alt="">` : '')
       + ((hp.say || '').trim() ? `<div class="say">${e(hp.say)}</div>` : ''))
-    .replace(/\{\{\s*메모지색\s*\}\}/g, () => safeColor(ck.memo, '#faf7f0'))
-    .replace(/\{\{\s*할일\s*\}\}/g, () => String(ck.todo || '').split('\n').map((l) => l.trim()).filter(Boolean).slice(0, 5).map((l) => `<p>${e(l)}</p>`).join(''))
+    .replace(/\{\{\s*다이어리색\s*\}\}/g, () => safeColor(dy.color, '#ff8a80'))
+    .replace(/\{\{\s*날짜\s*\}\}/g, () => e(String(dy.date || '').trim() || todayLabel()))
+    .replace(/\{\{\s*날씨\s*\}\}/g, () => WEATHERS.map(([k, , g]) => `<i class="${k === dy.weather ? 'on' : ''}">${g}</i>`).join(''))
+    .replace(/\{\{\s*메모제목\s*\}\}/g, () => e(dy.memoTitle || ''))
+    .replace(/\{\{\s*할일\s*\}\}/g, () => String(dy.todo || '').split('\n').map((l) => l.trim()).filter(Boolean).slice(0, 5).map((l) => `<p>${e(l)}</p>`).join(''))
+    .replace(/\{\{\s*키링\s*\}\}/g, () => [...String(dy.beads || '').replace(/\s/g, '')].slice(0, 6).map((ch) => `<span>${e(ch)}</span>`).join(''))
+    .replace(/\{\{\s*키링표시\s*\}\}/g, () => (dy.keyring === false ? 'keyring-off' : ''))
     .replace(/\{\{\s*톡톡\s*\}\}/g, () => (hp.talk || []).filter((t) => (t.text || '').trim())
       .map((t) => `<li><span>${e(t.text)}</span>${(t.name || '').trim() ? `<em>${e(t.name)}</em>` : ''}</li>`).join(''))
     .replace(/\{\{\s*(생존|alive)\s*\}\}/gi, () => e(String(sc.alive ?? '')))
@@ -1360,7 +1379,7 @@ const HTML_BG_PRESETS = [
   // 미니홈피: 비어 있는 칸만 예시로 채움 (이미 쓴 마이룸 · 한마디는 그대로)
   { name: '미니홈피', file: 'bg/hompy.html', hompy: { today: '25', total: '1004', say: '안녕하세요', talk: [
     { name: '닐', text: '뭐하냐' }, { name: '린', text: '로그 좀 올려' }, { name: '익명', text: '잘 구경했다...ㅋㅋ' }] } },
-  { name: '코르크보드', file: 'bg/cork.html' },
+  { name: '다이어리', file: 'bg/diary.html' },
 ];
 
 function applySkin() {
@@ -1455,7 +1474,9 @@ function newPage(idx, W, H) {
   if (idx === 0 && state.title.trim() && !(bgCode() && bgHasTitle())) card.append(h('h2', { class: 'card-title', html: fmt(state.title) }));
   const safe = bgCode() ? bgSafeArea() : null;
   if (safe) {
-    const px = (v) => `${Math.round((v * W) / 100)}px`;
+    // 배경이 정한 글 자리 + '바깥 여백'을 기본값(40px)보다 늘리거나 줄인 만큼 더함
+    const extra = (state.canvas.pad ?? 40) - 40;
+    const px = (v) => `${Math.max(0, Math.round((v * W) / 100 + extra))}px`;
     card.style.padding = `${px(safe.t)} ${px(safe.r)} ${px(safe.b)} ${px(safe.l)}`;
     if (!H && safe.minH) card.style.minHeight = px(safe.minH);
   }
@@ -1822,8 +1843,8 @@ const HOMPY_COLORS = [
   ['하늘', '#8fd0e6', '#eceff3'], ['연두', '#a8d86a', '#e7e8e4'], ['딸기', '#f5a3b7', '#fbf0f2'],
   ['라벤더', '#b9a7e8', '#f0eef7'], ['레몬', '#f2d36b', '#f7f4ea'], ['민트', '#8fd8c0', '#ebf3f0'], ['회색', '#b5bcc4', '#f2f3f5'],
 ];
-// 코르크보드 가운데 메모지 추천 색
-const CORK_COLORS = [['아이보리', '#faf7f0'], ['화이트', '#ffffff'], ['크림', '#f5eedc'], ['웜그레이', '#eeebe6'], ['세이지', '#e8ece1'], ['블러시', '#f6ebe7'], ['더스티 블루', '#e7edf1']];
+// 다이어리 표지 추천 색
+const DIARY_COLORS = [['코랄', '#ff8a80'], ['체리', '#e8506a'], ['피치', '#ffb38a'], ['버터', '#f2c94c'], ['민트', '#6fcfb0'], ['스카이', '#7cb8f0'], ['라일락', '#b49cf0'], ['코코아', '#a47e6b'], ['차콜', '#5b5f6b']];
 const SCHEMA = {
   text: [
     { sec: '대사 인식', note: '말풍선을 누르면 캐릭터 · 위치 · 모양을 바꾸거나 다시 글로 되돌릴 수 있어요.', rows: [
@@ -1858,10 +1879,19 @@ const SCHEMA = {
       { t: 'text', p: 'hompy.today', l: 'TODAY', ph: '예) 25' },
       { t: 'text', p: 'hompy.total', l: 'TOTAL', ph: '예) 1004' },
     ] },
-    { sec: '코르크보드', show: () => bgUsesCork(), rows: [
-      { t: 'color', p: 'cork.memo', l: '메모지 색' },
-      { t: 'swatches', keys: ['cork.memo'], o: CORK_COLORS },
-      { t: 'area', p: 'cork.todo', l: '할 일 카드', sub: '한 줄에 하나씩 · 최대 5줄', ph: '✓ 장보기\n☐ 헬스장 등록' },
+    { sec: '다이어리', show: () => bgUsesDiary(), rows: [
+      { t: 'color', p: 'diary.color', l: '다이어리 색' },
+      { t: 'swatches', keys: ['diary.color'], o: DIARY_COLORS },
+      { t: 'text', p: 'diary.date', l: '날짜', ph: '비워두면 오늘 날짜' },
+      { t: 'seg', p: 'diary.weather', l: '날씨', o: [...WEATHERS.map(([k, l]) => [k, l]), ['none', '없음']], block: true },
+    ] },
+    { sec: '메모지', show: () => bgUsesDiary(), rows: [
+      { t: 'text', p: 'diary.memoTitle', l: '메모 제목', ph: '예) to do ♡' },
+      { t: 'area', p: 'diary.todo', l: '메모 내용', sub: '한 줄에 하나씩 · 최대 5줄', ph: '✓ 장보기\n☐ 헬스장 등록' },
+    ] },
+    { sec: '키링', show: () => bgUsesDiary(), rows: [
+      { t: 'switch', p: 'diary.keyring', l: '키링 보이기' },
+      { t: 'text', p: 'diary.beads', l: '키링 글자', ph: '예) LOVE · 이니셜 (최대 6자)', show: () => state.diary.keyring !== false },
     ] },
     { sec: '마이룸', note: '사진을 넣지 않으면 기본 방이 보여요.', show: () => bgUsesHompy(), rows: [
       { t: 'roomImg', p: 'hompy.room' },
@@ -2870,7 +2900,7 @@ function buildQuickInsert() {
 }
 
 /* 내 양식: 디자인 · 대사 인식 설정을 저장/불러오기 (글은 제외) */
-const STYLE_KEYS = ['typo', 'head', 'bubble', 'canvas', 'parse', 'skin', 'bgHtml', 'bgRef', 'scene', 'hompy', 'cork'];
+const STYLE_KEYS = ['typo', 'head', 'bubble', 'canvas', 'parse', 'skin', 'bgHtml', 'bgRef', 'scene', 'hompy', 'diary'];
 let myStyles = [];
 
 function styleSnapshot(name, withChars) {
@@ -3493,6 +3523,7 @@ function buildSkin() {
       try {
         await loadBgRef(bp.file);
         commit();
+        if (state.bgRef !== bp.file) dropBgChars();
         state.bgRef = bp.file;
         state.bgHtml = '';
         syncHtmlEditor();
@@ -3525,13 +3556,22 @@ function buildSkin() {
         }
         changed(); commit();
         buildChars(); buildFields(); buildQuickInsert();
-        toast(`‘${bp.name}’ 배경을 적용했어요${added.length ? ` · 캐릭터 ${added.length}명 등록` : ''}${bp.scene ? ' · 장소 · 생존 인원은 텍스트 탭 ‘상황판’에서' : ''}${bp.hompy ? ' · 색 · 마이룸 · 한마디는 텍스트 탭에서' : ''}${bp.file === 'bg/cork.html' ? ' · 메모지 색 · 할 일은 텍스트 탭에서' : ''}`, { label: '되돌리기', fn: undo }, 4200);
+        toast(`‘${bp.name}’ 배경을 적용했어요${added.length ? ` · 캐릭터 ${added.length}명 등록` : ''}${bp.scene ? ' · 장소 · 생존 인원은 텍스트 탭 ‘상황판’에서' : ''}${bp.hompy ? ' · 색 · 마이룸 · 한마디는 텍스트 탭에서' : ''}${bp.file === 'bg/diary.html' ? ' · 색 · 날짜 · 날씨 · 메모는 텍스트 탭에서' : ''}`, { label: '되돌리기', fn: undo }, 4200);
       } catch (e) { toast('배경을 불러오지 못했어요'); }
     },
   }, bp.name)));
   $('#skin-css').value = state.skin;
   syncHtmlEditor();
   setHtmlStatus(htmlBg.status);
+}
+/* 등록 배경을 해제하거나 다른 배경으로 바꾸면 그 배경이 넣어 준 등장인물을 지움 (직접 만든 캐릭터는 그대로) */
+function dropBgChars() {
+  const bp = state.bgRef && HTML_BG_PRESETS.find((x) => x.file === state.bgRef);
+  if (!bp || !bp.chars) return 0;
+  const names = new Set(bp.chars.map((c) => (typeof c === 'string' ? c : c.name)));
+  const before = state.chars.length;
+  state.chars = state.chars.filter((c) => !(names.has(c.name) && /^p/.test(c.id || '')));
+  return before - state.chars.length;
 }
 // 등록된 배경을 쓰는 중이면 코드 칸 대신 이름 카드를 보여 줌
 function syncHtmlEditor() {
@@ -3571,6 +3611,7 @@ $('#html-bg').addEventListener('input', (e) => {
 });
 $('#btn-html-example').addEventListener('click', () => {
   if ((state.bgRef || state.bgHtml.trim()) && !confirm('지금 HTML 배경을 예시로 바꿀까요?')) return;
+  dropBgChars();
   state.bgRef = '';
   state.bgHtml = `<style>
   body { background: linear-gradient(160deg, #fdf6ec, #f3e7d9); }
@@ -3585,11 +3626,14 @@ $('#btn-html-example').addEventListener('click', () => {
 $('#btn-html-ref-clear').addEventListener('click', () => $('#btn-html-clear').click());
 $('#btn-html-clear').addEventListener('click', () => {
   if (!state.bgRef && !state.bgHtml.trim()) return;
+  commit();
+  const gone = dropBgChars();
   state.bgHtml = '';
   state.bgRef = '';
   syncHtmlEditor();
-  changed();
-  toast('HTML 배경을 비웠어요', { label: '되돌리기', fn: undo });
+  changed(); commit();
+  if (gone) { buildChars(); buildFields(); buildQuickInsert(); }
+  toast(`HTML 배경을 비웠어요${gone ? ` · 배경 등장인물 ${gone}명도 지웠어요` : ''}`, { label: '되돌리기', fn: undo });
 });
 $('#skin-css').addEventListener('keydown', (e) => {
   if (e.key === 'Tab' && !e.shiftKey) {
@@ -4088,10 +4132,11 @@ document.addEventListener('click', (e) => {
 /* 초기화: 필요한 범위만 골라서 (모두 되돌리기 가능) */
 const RESETS = [
   { id: 'skin', icon: 'code', title: '스킨만 초기화', desc: 'CSS 스킨과 HTML 배경을 비워요', done: '스킨을 초기화했어요',
-    run() { state.skin = ''; state.bgHtml = ''; state.bgRef = ''; } },
+    run() { dropBgChars(); state.skin = ''; state.bgHtml = ''; state.bgRef = ''; } },
   { id: 'design', icon: 'type', title: '디자인 초기화', desc: '서체 · 말풍선 · 화면 · 스킨을 기본 디자인으로. 글과 캐릭터는 그대로예요', done: '디자인을 기본으로 되돌렸어요',
     run() {
       for (const k of DESIGN_KEYS) state[k] = copyState(DEFAULTS[k]);
+      dropBgChars();
       state.skin = ''; state.bgHtml = ''; state.bgRef = '';
       state.overrides = Object.fromEntries(Object.entries(state.overrides).map(([k, v]) => {
         const { shape, side, ...rest } = v;

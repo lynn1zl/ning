@@ -1,0 +1,244 @@
+<!-- ninining-safe: 34% 14.5% 21% 20.5%; min-height: 125% -->
+<!-- 다이어리: 색 · 날짜 · 날씨 · 메모지 · 키링 글자는 텍스트 탭에서 바꿔요 -->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&family=Gaegu:wght@400;700&display=swap');
+
+  :root {
+    --c: {{다이어리색}};
+    --deep: color-mix(in srgb, var(--c) 72%, #3b1f22);
+    --soft: color-mix(in srgb, var(--c) 34%, #ffffff);
+    --pale: color-mix(in srgb, var(--c) 14%, #ffffff);
+    --paper: #fffaf6;
+    --sans: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+    --hand: 'Nanum Pen Script', 'Gaegu', var(--sans);
+    --gaegu: 'Gaegu', var(--sans);
+  }
+
+  body {
+    background:
+      radial-gradient(circle, rgba(255,255,255,.6) 1.5px, transparent 2px) 0 0 / 22px 22px,
+      linear-gradient(160deg, var(--soft), color-mix(in srgb, var(--c) 46%, #fff) 55%, var(--soft));
+  }
+
+  /* 카드 폭에 맞춰 모든 치수가 함께 커지고 작아지도록 (600px 기준 1u) */
+  .dy { position: absolute; inset: 0; container-type: size; }
+  .dy * { --u: calc(100cqw / 600); }
+  .dy > div { position: absolute; }
+
+  /* 표지 */
+  .cover {
+    inset: calc(22 * var(--u));
+    border-radius: calc(22 * var(--u));
+    background: linear-gradient(150deg, color-mix(in srgb, var(--c) 88%, #fff) 0%, var(--c) 55%, color-mix(in srgb, var(--c) 90%, #000) 100%);
+    box-shadow: inset 0 0 0 calc(2 * var(--u)) rgba(255,255,255,.32), 0 calc(14 * var(--u)) calc(30 * var(--u)) color-mix(in srgb, var(--c) 40%, rgba(60,20,20,.35));
+  }
+  .cover::after {
+    content: ''; position: absolute; inset: calc(9 * var(--u));
+    border-radius: calc(15 * var(--u));
+    border: calc(1.8 * var(--u)) dashed rgba(255,255,255,.7);
+  }
+
+  /* 속지: 여백선 + 줄 */
+  .page {
+    top: calc(44 * var(--u)); right: calc(40 * var(--u)); bottom: calc(44 * var(--u)); left: calc(74 * var(--u));
+    border-radius: calc(4 * var(--u)) calc(12 * var(--u)) calc(12 * var(--u)) calc(4 * var(--u));
+    background:
+      linear-gradient(90deg, transparent calc(36 * var(--u)), color-mix(in srgb, var(--c) 45%, transparent) calc(36 * var(--u)) calc(37.5 * var(--u)), transparent calc(37.5 * var(--u))),
+      repeating-linear-gradient(0deg, transparent 0 calc(29 * var(--u)), color-mix(in srgb, var(--c) 20%, transparent) calc(29 * var(--u)) calc(30 * var(--u))),
+      var(--paper);
+    box-shadow:
+      calc(3 * var(--u)) 0 0 #f1e6de, calc(6 * var(--u)) 0 0 #fff5ee, calc(9 * var(--u)) 0 0 #ece0d6,
+      0 calc(8 * var(--u)) calc(18 * var(--u)) rgba(90,30,30,.18);
+  }
+
+  /* 링 */
+  .rings {
+    top: calc(84 * var(--u)); bottom: calc(84 * var(--u)); left: calc(52 * var(--u)); width: calc(44 * var(--u));
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 42'%3E%3Ccircle cx='38' cy='22' r='3.2' fill='%23000' fill-opacity='.22'/%3E%3Crect x='0' y='17' width='40' height='8' rx='4' fill='%23c4b4b6'/%3E%3Crect x='1' y='17.6' width='38' height='5' rx='2.5' fill='%23f2eaea'/%3E%3Crect x='3' y='18.4' width='30' height='1.6' rx='.8' fill='%23ffffff'/%3E%3C/svg%3E") 0 0 / 100% calc(42 * var(--u)) repeat-y;
+    filter: drop-shadow(0 calc(2 * var(--u)) calc(2 * var(--u)) rgba(90,30,30,.3));
+  }
+
+  /* 날짜 · 날씨 줄 */
+  .dateline {
+    top: calc(64 * var(--u)); left: calc(124 * var(--u)); right: calc(214 * var(--u));
+    display: flex; align-items: center; gap: calc(14 * var(--u));
+    white-space: nowrap;
+    color: var(--deep);
+  }
+  .dateline small { font: 700 calc(8 * var(--u))/1 var(--sans); letter-spacing: .22em; opacity: .7; margin-right: calc(5 * var(--u)); }
+  .dateline .d { font: 700 calc(15 * var(--u))/1 var(--gaegu); }
+  .dateline .w { display: inline-flex; align-items: center; gap: calc(2 * var(--u)); }
+  .dateline .w i {
+    display: inline-grid; place-items: center;
+    width: calc(19 * var(--u)); height: calc(19 * var(--u));
+    border-radius: 50%;
+    font: calc(12 * var(--u))/1 'Segoe UI Symbol', 'Apple Symbols', var(--sans);
+    font-style: normal;
+    color: color-mix(in srgb, var(--deep) 45%, #fff);
+  }
+  .dateline .w i.on { color: var(--deep); box-shadow: 0 0 0 calc(1.6 * var(--u)) var(--c); background: var(--pale); }
+
+  /* 마스킹테이프 */
+  .tape {
+    position: absolute;
+    height: calc(20 * var(--u));
+    opacity: .9;
+    clip-path: polygon(3% 0, 97% 0, 100% 20%, 97% 45%, 100% 70%, 97% 100%, 3% 100%, 0 75%, 3% 50%, 0 25%);
+  }
+  .tape.check { background: repeating-conic-gradient(var(--soft) 0 25%, #fff 0 50%) 0 0 / calc(10 * var(--u)) calc(10 * var(--u)); }
+  .tape.stripe { background: repeating-linear-gradient(45deg, var(--soft) 0 calc(6 * var(--u)), #fff calc(6 * var(--u)) calc(12 * var(--u))); }
+
+  /* 제목 메모 */
+  .title {
+    top: calc(98 * var(--u)); left: calc(104 * var(--u));
+    max-width: calc(290 * var(--u));
+    transform: rotate(-2deg);
+    filter: drop-shadow(0 calc(4 * var(--u)) calc(5 * var(--u)) rgba(90,30,30,.18));
+  }
+  .title .paper {
+    padding: calc(16 * var(--u)) calc(26 * var(--u)) calc(22 * var(--u));
+    background: repeating-linear-gradient(0deg, transparent 0 calc(23 * var(--u)), color-mix(in srgb, var(--c) 25%, transparent) calc(23 * var(--u)) calc(24 * var(--u))), #fff;
+    clip-path: polygon(0 0, 100% 0, 100% 90%, 95% 100%, 89% 91%, 83% 100%, 77% 91%, 71% 100%, 65% 91%, 59% 100%, 53% 91%, 47% 100%, 41% 91%, 35% 100%, 29% 91%, 23% 100%, 17% 91%, 11% 100%, 5% 91%, 0 100%);
+  }
+  .title b {
+    display: block;
+    font: 700 calc(30 * var(--u))/1.25 var(--hand);
+    color: var(--deep);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .title b span { background: linear-gradient(transparent 58%, rgba(255,232,120,.8) 58% 90%, transparent 90%); padding: 0 calc(3 * var(--u)); }
+  .title .tape { width: calc(84 * var(--u)); top: calc(-10 * var(--u)); left: 50%; transform: translateX(-50%) rotate(3deg); }
+
+  /* 메모지 (텍스트 탭에서 수정) */
+  .memo {
+    top: calc(40 * var(--u)); right: calc(28 * var(--u)); width: calc(168 * var(--u));
+    min-height: calc(132 * var(--u));
+    padding: calc(20 * var(--u)) calc(16 * var(--u)) calc(14 * var(--u)) calc(18 * var(--u));
+    box-sizing: border-box;
+    background: linear-gradient(170deg, rgba(255,255,255,.35), transparent 45%, rgba(0,0,0,.03)), #fff3c2;
+    box-shadow: 0 calc(6 * var(--u)) calc(14 * var(--u)) rgba(90,30,30,.18);
+    transform: rotate(5deg);
+    font-family: var(--hand);
+    color: #5a3a32;
+  }
+  .memo b { display: block; margin-bottom: calc(4 * var(--u)); font: 700 calc(21 * var(--u))/1 var(--hand); color: var(--deep); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .memo p { margin: 0; font-size: calc(18 * var(--u)); line-height: calc(21 * var(--u)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .memo p:nth-of-type(n+6) { display: none; }
+  .memo .tape { width: calc(70 * var(--u)); top: calc(-9 * var(--u)); left: calc(48 * var(--u)); transform: rotate(-7deg); }
+
+  /* 출처 메모 */
+  .credit {
+    right: calc(66 * var(--u)); bottom: calc(64 * var(--u));
+    padding: calc(8 * var(--u)) calc(12 * var(--u)) calc(7 * var(--u)) calc(16 * var(--u));
+    text-align: right;
+    background: repeating-linear-gradient(0deg, transparent 0 calc(15 * var(--u)), color-mix(in srgb, var(--c) 18%, transparent) calc(15 * var(--u)) calc(16 * var(--u))) 0 calc(5 * var(--u)), #fffdfa;
+    box-shadow: 0 calc(3 * var(--u)) calc(7 * var(--u)) rgba(90,30,30,.12);
+    transform: rotate(-1.5deg);
+    line-height: 1.4;
+    color: #6a4440;
+  }
+  .credit b { display: block; font: 700 calc(11 * var(--u))/1.4 var(--sans); }
+  .credit span { display: block; font: 500 calc(9 * var(--u))/1.4 var(--sans); letter-spacing: .12em; color: var(--deep); }
+  .credit b:empty, .credit span:empty { display: none; }
+  .credit b:not(:empty)::before { content: '<'; } .credit b:not(:empty)::after { content: '>'; }
+  .credit:not(:has(b:not(:empty), span:not(:empty))) { display: none; }
+
+  /* 하트 · 반짝이 (표지 가장자리에만) */
+  .h {
+    width: calc(22 * var(--u)); height: calc(20 * var(--u));
+    background: var(--hc, #fff);
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 20'%3E%3Cpath d='M11 20C2 13.6 0 9.1 0 5.9 0 2.5 2.5 0 5.7 0 8 0 9.8 1.4 11 3.3 12.2 1.4 14 0 16.3 0 19.5 0 22 2.5 22 5.9 22 9.1 20 13.6 11 20Z'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 20'%3E%3Cpath d='M11 20C2 13.6 0 9.1 0 5.9 0 2.5 2.5 0 5.7 0 8 0 9.8 1.4 11 3.3 12.2 1.4 14 0 16.3 0 19.5 0 22 2.5 22 5.9 22 9.1 20 13.6 11 20Z'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+    transform: rotate(var(--r, 0deg)) scale(var(--s, 1));
+  }
+  .h1 { top: calc(10 * var(--u)); left: calc(96 * var(--u)); --r: -14deg; --s: 1.2; }
+  .h2 { top: calc(14 * var(--u)); left: 52%; --hc: var(--soft); --r: 12deg; }
+  .h3 { bottom: calc(14 * var(--u)); left: 44%; --r: 8deg; --s: 1.1; }
+  .h4 { bottom: calc(12 * var(--u)); right: calc(150 * var(--u)); --hc: var(--soft); --r: -10deg; --s: .8; }
+  .h5 { top: 46%; right: calc(6 * var(--u)); --r: -12deg; --s: .9; }
+  .h6 { top: 30%; left: calc(4 * var(--u)); --hc: var(--soft); --r: 16deg; --s: .9; }
+  .spark {
+    width: calc(18 * var(--u)); height: calc(18 * var(--u));
+    background: #fff;
+    clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%);
+  }
+  .s1 { top: calc(6 * var(--u)); right: calc(240 * var(--u)); }
+  .s2 { bottom: calc(8 * var(--u)); left: calc(200 * var(--u)); background: #fff6b0; transform: scale(.8); }
+  .s3 { top: 62%; left: calc(2 * var(--u)); transform: scale(.7); }
+
+  /* 키링 */
+  .keyring { width: calc(70 * var(--u)); filter: drop-shadow(0 calc(4 * var(--u)) calc(4 * var(--u)) rgba(90,30,30,.22)); transform-origin: 50% 0; }
+  .keyring .ring {
+    position: absolute; top: 0; left: calc(17 * var(--u));
+    width: calc(34 * var(--u)); height: calc(34 * var(--u));
+    box-sizing: border-box;
+    border-radius: 50%;
+    border: calc(4 * var(--u)) solid #eee9f0;
+    box-shadow: inset 0 0 0 calc(1 * var(--u)) #bdb3c3, 0 0 0 calc(1 * var(--u)) #bdb3c3;
+  }
+  .keyring .chain {
+    position: absolute; top: calc(33 * var(--u)); left: calc(32 * var(--u));
+    width: calc(5 * var(--u)); height: calc(22 * var(--u));
+    background: repeating-linear-gradient(180deg, #ddd5e2 0 calc(5 * var(--u)), transparent calc(5 * var(--u)) calc(7.5 * var(--u)));
+    border-radius: calc(3 * var(--u));
+  }
+  .k1 { top: calc(236 * var(--u)); right: calc(6 * var(--u)); transform: rotate(-6deg); }
+  .k1 .letters { position: absolute; top: calc(56 * var(--u)); left: calc(21 * var(--u)); display: flex; flex-direction: column; gap: calc(3 * var(--u)); }
+  .k1 .letters span {
+    display: grid; place-items: center;
+    width: calc(26 * var(--u)); height: calc(26 * var(--u));
+    border-radius: calc(6 * var(--u));
+    background: #fff;
+    box-shadow: inset 0 calc(-3 * var(--u)) 0 rgba(0,0,0,.06), 0 0 0 calc(1.5 * var(--u)) var(--soft);
+    font: 900 calc(14 * var(--u))/1 var(--sans);
+    color: var(--c);
+  }
+  .k1 .letters span:nth-child(2n) { background: var(--pale); color: var(--deep); }
+  .k1 .letters::after {      /* 하트 자물쇠 */
+    content: ''; display: block; margin: calc(4 * var(--u)) 0 0 calc(-8 * var(--u));
+    width: calc(42 * var(--u)); height: calc(38 * var(--u));
+    background: linear-gradient(135deg, color-mix(in srgb, var(--c) 40%, #fff), var(--c));
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 20'%3E%3Cpath d='M11 20C2 13.6 0 9.1 0 5.9 0 2.5 2.5 0 5.7 0 8 0 9.8 1.4 11 3.3 12.2 1.4 14 0 16.3 0 19.5 0 22 2.5 22 5.9 22 9.1 20 13.6 11 20Z'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 20'%3E%3Cpath d='M11 20C2 13.6 0 9.1 0 5.9 0 2.5 2.5 0 5.7 0 8 0 9.8 1.4 11 3.3 12.2 1.4 14 0 16.3 0 19.5 0 22 2.5 22 5.9 22 9.1 20 13.6 11 20Z'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+  }
+  .k2 { bottom: calc(230 * var(--u)); left: calc(4 * var(--u)); transform: rotate(7deg); }
+  .k2 .star {
+    position: absolute; top: calc(52 * var(--u)); left: calc(10 * var(--u));
+    width: calc(48 * var(--u)); height: calc(48 * var(--u));
+    background: linear-gradient(135deg, #fff59a, #ffcf4d);
+    clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  }
+  .k2 .bead { position: absolute; top: calc(102 * var(--u)); left: calc(26 * var(--u)); width: calc(16 * var(--u)); height: calc(16 * var(--u)); border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff, var(--soft)); box-shadow: 0 calc(19 * var(--u)) 0 calc(-2 * var(--u)) var(--c); }
+  .keyring-off .keyring { display: none; }
+
+  /* 케이크 한 조각 */
+  .cake { left: calc(40 * var(--u)); bottom: calc(30 * var(--u)); width: calc(120 * var(--u)); height: calc(92 * var(--u)); filter: drop-shadow(0 calc(5 * var(--u)) calc(6 * var(--u)) rgba(90,30,30,.22)); }
+  .cake > i { position: absolute; display: block; }
+  .cake .plate { left: 0; bottom: 0; width: 100%; height: calc(30 * var(--u)); border-radius: 50%; background: radial-gradient(ellipse at 50% 40%, #fff 55%, #f3e5df 72%, #e5cfc7 100%); }
+  .cake .slice {
+    left: calc(18 * var(--u)); bottom: calc(13 * var(--u)); width: calc(84 * var(--u)); height: calc(50 * var(--u));
+    background:
+      linear-gradient(180deg, transparent calc(19 * var(--u)), var(--c) calc(19 * var(--u)) calc(23 * var(--u)), #fff calc(23 * var(--u)) calc(26 * var(--u)), transparent calc(26 * var(--u))),
+      linear-gradient(180deg, transparent calc(36 * var(--u)), var(--soft) calc(36 * var(--u)) calc(39 * var(--u)), transparent calc(39 * var(--u))),
+      linear-gradient(180deg, #f8e7d2, #efd5b8);
+    clip-path: polygon(0 24%, 100% 0, 100% 100%, 0 100%);
+    border-radius: calc(3 * var(--u));
+  }
+  .cake .cream { left: calc(18 * var(--u)); bottom: calc(57 * var(--u)); width: calc(84 * var(--u)); height: calc(9 * var(--u)); background: radial-gradient(circle, #fff calc(3.2 * var(--u)), transparent calc(3.6 * var(--u))) 0 0 / calc(8 * var(--u)) 100%; transform: skewY(-15deg); transform-origin: 0 100%; }
+  .cake .berry { left: calc(70 * var(--u)); bottom: calc(66 * var(--u)); width: calc(18 * var(--u)); height: calc(21 * var(--u)); border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%; background: radial-gradient(circle, #ffe08a calc(.8 * var(--u)), transparent calc(1.2 * var(--u))) 0 0 / calc(5 * var(--u)) calc(5 * var(--u)), linear-gradient(180deg, #e0213b, #ff4d5e); }
+</style>
+
+<div class="dy {{키링표시}}">
+  <div class="h h1"></div><div class="h h2"></div><div class="h h3"></div><div class="h h4"></div><div class="h h5"></div><div class="h h6"></div>
+  <div class="spark s1"></div><div class="spark s2"></div><div class="spark s3"></div>
+  <div class="cover"></div>
+  <div class="page"></div>
+  <div class="rings"></div>
+  <div class="dateline"><span><small>DATE</small><span class="d">{{날짜}}</span></span><span class="w"><small>WEATHER</small>{{날씨}}</span></div>
+  <div class="title"><div class="paper"><b><span>{{제목}}</span></b></div><div class="tape check"></div></div>
+  <div class="memo"><div class="tape stripe"></div><b>{{메모제목}}</b>{{할일}}</div>
+  <div class="cake"><i class="plate"></i><i class="slice"></i><i class="cream"></i><i class="berry"></i></div>
+  <div class="credit"><b>{{출처}}</b><span>{{제작자}}</span></div>
+  <div class="keyring k1" data-layer="top"><div class="ring"></div><div class="chain"></div><div class="letters">{{키링}}</div></div>
+  <div class="keyring k2" data-layer="top"><div class="ring"></div><div class="chain"></div><div class="star"></div><div class="bead"></div></div>
+</div>
