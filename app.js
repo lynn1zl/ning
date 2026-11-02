@@ -4146,7 +4146,9 @@ function freezeLines(E, scale) {
     for (let i = 0; i < t.length; i++) {
       if (t[i] === ' ' || t[i] === '\n' || t[i] === '\t') continue;
       r.setStart(node, i); r.setEnd(node, i + 1);
-      const rc = r.getClientRects()[0];
+      // 줄의 첫 글자는 브라우저에 따라 '윗줄 끝의 폭 0 자리'를 함께 돌려주므로, 폭이 있는 실제 글자 자리를 씀
+      const rects = [...r.getClientRects()];
+      const rc = rects.filter((x) => x.width > 0.5).pop() || rects[rects.length - 1];
       if (!rc) continue;
       if (prevTop !== null && rc.top - prevTop > lh * 0.5) breaks.push([node, i]);
       prevTop = rc.top;
