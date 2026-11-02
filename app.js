@@ -143,6 +143,8 @@ const DEFAULTS = {
   bgHtml: '',
   bgRef: '', // 등록된 배경 파일 (코드는 저장하지 않음)
   scene: { show: true, place: '', alive: '', total: '' },
+  // 미니홈피 배경: 프레임 · 바탕 색, 방문자 수, 마이룸 사진 · 말풍선, TALK! TALK! 한마디
+  hompy: { frame: '#8fd0e6', bg: '#eceff3', today: '', total: '', room: '', say: '', talk: [] },
   images: {},   // 글자처럼 넣은 이미지: id → { src, w(%), align }
   stickers: [], // 자유 배치 이미지: { id, src, x, y, w(px), rot, layer: 'front'|'back', page, op }
   file: { prefix: true, date: true, pair: '', title: '', number: false },
@@ -1252,9 +1254,12 @@ async function loadBgRef(file) {
 }
 const bgHasTitle = () => { TITLE_TOKEN.lastIndex = 0; return TITLE_TOKEN.test(bgCode()); };
 const bgUsesScene = () => /\{\{\s*(장소|생존|전체|place|alive|total)\s*\}\}/i.test(bgCode());
+const bgUsesHompy = () => /\{\{\s*(마이룸|톡톡|프레임색)\s*\}\}/.test(bgCode());
+const safeColor = (v, d) => (/^#[0-9a-f]{3,8}$/i.test(v || '') ? v : d);
 function fillBgTokens(html) {
   const e = (t) => esc((t || '').trim());
   const sc = state.scene || {};
+  const hp = state.hompy || {};
   // 상황판 끄기: data-scene 이 붙은 요소를 숨김
   if (sc.show === false) html = (html || '') + '<style>[data-scene]{display:none !important}</style>';
   return (html || '')
@@ -1266,6 +1271,14 @@ function fillBgTokens(html) {
       return `${t > 0 && a >= 0 ? Math.max(0, Math.min(100, (a / t) * 100)).toFixed(2) : 0}%`;
     })
     .replace(/\{\{\s*(장소|place)\s*\}\}/gi, () => e(sc.place))
+    .replace(/\{\{\s*프레임색\s*\}\}/g, () => safeColor(hp.frame, '#8fd0e6'))
+    .replace(/\{\{\s*배경색\s*\}\}/g, () => safeColor(hp.bg, '#eceff3'))
+    .replace(/\{\{\s*투데이\s*\}\}/g, () => e(String(hp.today ?? '')))
+    .replace(/\{\{\s*토탈\s*\}\}/g, () => e(String(hp.total ?? '')))
+    .replace(/\{\{\s*마이룸\s*\}\}/g, () => (hp.room ? `<img src="${hp.room.replace(/"/g, '&quot;')}" alt="">` : '')
+      + ((hp.say || '').trim() ? `<div class="say">${e(hp.say)}</div>` : ''))
+    .replace(/\{\{\s*톡톡\s*\}\}/g, () => (hp.talk || []).filter((t) => (t.text || '').trim())
+      .map((t) => `<li><span>${e(t.text)}</span>${(t.name || '').trim() ? `<em>${e(t.name)}</em>` : ''}</li>`).join(''))
     .replace(/\{\{\s*(생존|alive)\s*\}\}/gi, () => e(String(sc.alive ?? '')))
     .replace(/\{\{\s*(전체|total)\s*\}\}/gi, () => e(String(sc.total ?? '')));
 }
@@ -1331,6 +1344,9 @@ const HTML_BG_PRESETS = [
     chars: ['마녀', { name: '노엘', avatar: 'bg/witch/noel.webp' }, { name: '륜', avatar: 'bg/witch/ryun.webp' }, { name: '악셀', avatar: 'bg/witch/axel.webp' }, { name: '루카', avatar: 'bg/witch/luka.webp' }] },
   { name: '언덕 위의 마왕', file: 'bg/demon.html', clearCredit: true, parse: { formats: ['star1'], mode: 'plain' }, avatars: true,
     chars: ['마왕', { name: '체페슈', avatar: 'bg/demon/tepes.webp' }, { name: '아자젤', avatar: 'bg/demon/azazel.webp' }, { name: '노먼', avatar: 'bg/demon/norman.webp' }, { name: '빌터', avatar: 'bg/demon/wilter.webp' }, { name: '한', avatar: 'bg/demon/han.webp' }, { name: '라이케', avatar: 'bg/demon/raike.webp' }] },
+  // 미니홈피: 비어 있는 칸만 예시로 채움 (이미 쓴 마이룸 · 한마디는 그대로)
+  { name: '미니홈피', file: 'bg/hompy.html', hompy: { today: '25', total: '1004', say: '안녕하세요', talk: [
+    { name: '니니닝', text: '일촌 신청 받아 주세요 ♡' }, { name: '토끼', text: '다이어리 잘 보고 가요~' }, { name: '익명', text: '오늘도 들렀다 갑니다 ^^*' }] } },
 ];
 
 function applySkin() {
@@ -1762,6 +1778,11 @@ function refreshConditions() {
 
 const fixedRatio = () => state.canvas.ratio !== 'auto';
 
+// 미니홈피 프레임 · 바탕 추천 색
+const HOMPY_COLORS = [
+  ['하늘', '#8fd0e6', '#eceff3'], ['연두', '#a8d86a', '#e7e8e4'], ['딸기', '#f5a3b7', '#fbf0f2'],
+  ['라벤더', '#b9a7e8', '#f0eef7'], ['레몬', '#f2d36b', '#f7f4ea'], ['민트', '#8fd8c0', '#ebf3f0'], ['회색', '#b5bcc4', '#f2f3f5'],
+];
 const SCHEMA = {
   text: [
     { sec: '대사 인식', note: '말풍선을 누르면 캐릭터 · 위치 · 모양을 바꾸거나 다시 글로 되돌릴 수 있어요.', rows: [
@@ -1788,6 +1809,20 @@ const SCHEMA = {
       { t: 'text', p: 'scene.place', l: '현재 장소', ph: '예) 골목길', show: () => state.scene.show !== false },
       { t: 'text', p: 'scene.alive', l: '생존 인원', ph: '예) 31', show: () => state.scene.show !== false },
       { t: 'text', p: 'scene.total', l: '전체 인원', ph: '예) 31', show: () => state.scene.show !== false },
+    ] },
+    { sec: '미니홈피', show: () => bgUsesHompy(), rows: [
+      { t: 'color', p: 'hompy.frame', l: '프레임 색' },
+      { t: 'color', p: 'hompy.bg', l: '배경 색' },
+      { t: 'swatches', p: 'hompy', o: HOMPY_COLORS },
+      { t: 'text', p: 'hompy.today', l: 'TODAY', ph: '예) 25' },
+      { t: 'text', p: 'hompy.total', l: 'TOTAL', ph: '예) 1004' },
+    ] },
+    { sec: '마이룸', note: '사진을 넣지 않으면 기본 방이 보여요.', show: () => bgUsesHompy(), rows: [
+      { t: 'roomImg', p: 'hompy.room' },
+      { t: 'text', p: 'hompy.say', l: '말풍선', ph: '예) 안녕하세요 · 비워두면 숨겨요' },
+    ] },
+    { sec: 'TALK! TALK!', note: '한마디를 비워 둔 줄은 보이지 않아요. 3~5줄이 가장 잘 어울려요.', show: () => bgUsesHompy(), rows: [
+      { t: 'talk', p: 'hompy.talk' },
     ] },
   ],
   bubble: [
@@ -2035,6 +2070,67 @@ function fieldEl(d) {
       el = h('div', { class: 'row' }, labelEl(d.l, d.sub),
         h('div', { class: 'img-field' }, clear, thumb, h('label', { class: 'btn btn-sm' }, '선택', input)));
       refresh();
+      break;
+    }
+
+    case 'swatches': {
+      const row = h('div', { class: 'hp-swatches' });
+      d.o.forEach(([l, frame, bg]) => {
+        const b = h('button', { type: 'button', class: 'hp-sw', title: l, 'aria-label': `${l} 색 조합` }, h('i'), h('span', {}, l));
+        b.firstChild.style.background = frame;
+        b.firstChild.style.boxShadow = `inset 0 0 0 4px ${bg}`;
+        b.addEventListener('click', () => { state.hompy.frame = frame; state.hompy.bg = bg; changed(); commit(); buildFields(); });
+        row.append(b);
+      });
+      el = h('div', { class: 'row stack' }, labelEl('추천 색 조합'), row);
+      break;
+    }
+
+    case 'roomImg': {
+      const thumb = h('span', { class: 'img-thumb' });
+      const clear = h('button', { type: 'button', class: 'icon-btn sm danger', 'aria-label': '사진 지우기', html: icon('trash'), onclick: () => { setPath(d.p, ''); refresh(); } });
+      const refresh = () => { thumb.style.backgroundImage = getPath(d.p) ? `url("${getPath(d.p)}")` : ''; clear.hidden = !getPath(d.p); };
+      const input = h('input', { type: 'file', accept: 'image/*', hidden: true });
+      input.addEventListener('change', async () => {
+        const f = input.files[0];
+        input.value = '';
+        if (f) { try { setPath(d.p, await shrinkImage(f, 900, false)); commit(); } catch (e) { toast('이미지를 읽지 못했어요'); } refresh(); }
+      });
+      const urlIn = h('input', { type: 'url', class: 'input', placeholder: 'https://… 이미지 주소', 'aria-label': '마이룸 이미지 링크' });
+      const go = async () => {
+        const url = urlIn.value.trim();
+        if (!/^https?:/i.test(url)) { toast('https:// 로 시작하는 이미지 링크를 넣어 주세요'); return; }
+        try {
+          const r = await fetch(url);
+          if (!r.ok) throw new Error(r.status);
+          const blob = await r.blob();
+          if (!/^image\//.test(blob.type)) throw new Error('type');
+          setPath(d.p, await shrinkImage(blob, 900, false));
+          toast('링크의 사진을 넣었어요');
+        } catch (e) {
+          toast('이 링크는 외부에서 가져오는 걸 막아 두었어요 · 사진을 저장한 뒤 파일로 넣어 주세요', null, 4200);
+          return;
+        }
+        commit(); urlIn.value = ''; refresh();
+      };
+      urlIn.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) go(); });
+      el = h('div', { class: 'row stack' },
+        h('div', { class: 'row-top' }, labelEl('마이룸 사진'), h('div', { class: 'img-field' }, clear, thumb, h('label', { class: 'btn btn-sm' }, '파일', input))),
+        h('div', { class: 'photo-url' }, urlIn, h('button', { type: 'button', class: 'btn btn-sm', onclick: go }, '링크')));
+      refresh();
+      break;
+    }
+
+    case 'talk': {
+      const list = getPath(d.p);
+      while (list.length < 5) list.push({ name: '', text: '' });
+      const box = h('div', { class: 'talk-rows' });
+      list.slice(0, 5).forEach((t, i) => {
+        box.append(h('div', { class: 'talk-row' },
+          h('input', { type: 'text', class: 'input talk-text', value: t.text, placeholder: `한마디 ${i + 1}`, 'aria-label': `한마디 ${i + 1}`, oninput: (e) => { t.text = e.target.value; changed(); } }),
+          h('input', { type: 'text', class: 'input talk-name', value: t.name, placeholder: '이름', 'aria-label': `한마디 ${i + 1} 이름`, oninput: (e) => { t.name = e.target.value; changed(); } })));
+      });
+      el = h('div', { class: 'row stack' }, box);
       break;
     }
 
@@ -2720,7 +2816,7 @@ function buildQuickInsert() {
 }
 
 /* 내 양식: 디자인 · 대사 인식 설정을 저장/불러오기 (글은 제외) */
-const STYLE_KEYS = ['typo', 'head', 'bubble', 'canvas', 'parse', 'skin', 'bgHtml', 'bgRef', 'scene'];
+const STYLE_KEYS = ['typo', 'head', 'bubble', 'canvas', 'parse', 'skin', 'bgHtml', 'bgRef', 'scene', 'hompy'];
 let myStyles = [];
 
 function styleSnapshot(name, withChars) {
@@ -3366,9 +3462,14 @@ function buildSkin() {
         if ('credit' in bp) { state.credit = bp.credit; state.creator = bp.creator || ''; }
         if (bp.scene) for (const k of Object.keys(bp.scene)) if (!String(state.scene[k] ?? '').trim()) state.scene[k] = bp.scene[k];
         if (bp.parse) Object.assign(state.parse, copyState(bp.parse), { auto: true });
+        if (bp.hompy) {
+          const hp = state.hompy;
+          for (const k of ['today', 'total', 'say']) if (!String(hp[k] ?? '').trim()) hp[k] = bp.hompy[k];
+          if (!(hp.talk || []).some((t) => (t.text || '').trim())) hp.talk = copyState(bp.hompy.talk);
+        }
         changed(); commit();
         buildChars(); buildFields(); buildQuickInsert();
-        toast(`‘${bp.name}’ 배경을 적용했어요${added.length ? ` · 캐릭터 ${added.length}명 등록` : ''}${bp.scene ? ' · 장소 · 생존 인원은 텍스트 탭 ‘상황판’에서' : ''}`, { label: '되돌리기', fn: undo }, 4200);
+        toast(`‘${bp.name}’ 배경을 적용했어요${added.length ? ` · 캐릭터 ${added.length}명 등록` : ''}${bp.scene ? ' · 장소 · 생존 인원은 텍스트 탭 ‘상황판’에서' : ''}${bp.hompy ? ' · 색 · 마이룸 · 한마디는 텍스트 탭에서' : ''}`, { label: '되돌리기', fn: undo }, 4200);
       } catch (e) { toast('배경을 불러오지 못했어요'); }
     },
   }, bp.name)));

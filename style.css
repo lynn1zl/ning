@@ -1530,3 +1530,14 @@ body.resizing iframe, body.resizing #stage { pointer-events: none; }
 .html-ref-text b { display: block; font-size: 15px; }
 .html-ref-text small { display: block; font-size: 12.5px; color: var(--text-3); }
 #html-presets .chip.on { background: var(--accent); color: #fff; }
+
+/* 미니홈피 입력 */
+.hp-swatches { display: flex; flex-wrap: wrap; gap: 6px; }
+.hp-sw { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px 5px 6px; border: 1px solid var(--line, rgba(0,0,0,.1)); border-radius: 999px; background: transparent; color: inherit; font: inherit; font-size: 12px; cursor: pointer; }
+.hp-sw i { width: 20px; height: 20px; border-radius: 50%; border: 1px solid rgba(0,0,0,.12); }
+.hp-sw:hover { background: rgba(127,127,127,.08); }
+.row.stack .photo-url .input { min-width: 0; flex: 1; }
+.talk-rows { display: flex; flex-direction: column; gap: 6px; }
+.talk-row { display: flex; gap: 6px; }
+.talk-row .talk-text { flex: 1; min-width: 0; }
+.talk-row .talk-name { width: 30%; min-width: 0; }
