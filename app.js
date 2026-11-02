@@ -431,7 +431,7 @@ let state = loadState();
 function migrate(st, raw) {
   // 이전 버전: 배경 이미지만 있던 설정은 '이미지' 배경으로
   if (raw && raw.canvas && !raw.canvas.bgType && raw.canvas.bgImage) st.canvas.bgType = 'image';
-  // 이전 버전: 따옴표 / 괄호 스위치 → 대사 형식
+  // 이전 버전: 따옴표 / 괄호 스위치 → 지문 형식
   if (raw && raw.parse && !raw.parse.formats) {
     if (raw.parse.quotes === false) st.parse.auto = false;
     if (raw.parse.parens) st.parse.formats = [...st.parse.formats, 'paren'];
@@ -587,7 +587,7 @@ function loadPreviewFont(f, el) {
 /* =========================================================
    텍스트 파싱
    ========================================================= */
-/* 대사 형식: 소설마다 다른 대사 표기를 골라서 인식 */
+/* 지문 형식: 소설마다 다른 대사 표기를 골라서 인식 */
 const DIALOGUE_FORMATS = [
   { id: 'dq', label: '"텍스트"', pairs: [['"', '"'], ['“', '”'], ['＂', '＂']] },
   { id: 'sq', label: "'텍스트'", pairs: [["'", "'"], ['‘', '’']] },
@@ -789,7 +789,7 @@ function parseText() {
       pendingName = line;
       continue;
     }
-    // 장식 기호로 감싼 이름 줄 (그 줄 자체가 대사 형식이 아니고, 다음 줄이 깔끔한 대사일 때)
+    // 장식 기호로 감싼 이름 줄 (그 줄 자체가 지문 형식이 아니고, 다음 줄이 깔끔한 대사일 때)
     if (P.auto && !nl && cleanDialogue(nextLine) && !matchFormat(line, rules) && !leadQuote(line, rules)) {
       const dn = decoratedName(line);
       if (dn) { pendingName = dn; continue; }
@@ -1160,8 +1160,9 @@ function applyHtmlBg(pages) {
 let htmlBgReady = Promise.resolve();
 // HTML 배경 프리셋: 고를 때만 불러와서 사이트는 가볍게 유지
 const HTML_BG_PRESETS = [
-  { name: '언덕 위의 마녀', file: 'bg/witch.html', chars: ['마녀', '노엘', '륜', '악셀', '루카'] },
-  { name: '언덕 위의 마왕', file: 'bg/demon.html', chars: ['마왕', '체페슈', '아자젤', '노먼', '빌터', '한', '라이케'] },
+  // 언덕 시리즈: 출처 · 제작자는 비우고, 지문 형식은 '*텍스트*'를 나레이션으로
+  { name: '언덕 위의 마녀', file: 'bg/witch.html', chars: ['마녀', '노엘', '륜', '악셀', '루카'], clearCredit: true, parse: { formats: ['star1'], mode: 'plain' } },
+  { name: '언덕 위의 마왕', file: 'bg/demon.html', chars: ['마왕', '체페슈', '아자젤', '노먼', '빌터', '한', '라이케'], clearCredit: true, parse: { formats: ['star1'], mode: 'plain' } },
 ];
 
 function applySkin() {
@@ -1846,10 +1847,10 @@ function fieldEl(d) {
             const arr = state.parse.custom.slice(); arr.splice(idx, 1); setPath('parse.custom', arr); buildFields();
           } })));
       });
-      const plus = h('button', { type: 'button', class: 'fchip add', 'aria-label': '대사 형식 직접 지정' }, h('span', { class: 'add-ico', html: icon('plus') }), '직접 지정');
+      const plus = h('button', { type: 'button', class: 'fchip add', 'aria-label': '지문 형식 직접 지정' }, h('span', { class: 'add-ico', html: icon('plus') }), '직접 지정');
       plus.addEventListener('click', () => openCustomFormatPop(plus));
       row.append(plus);
-      el = h('div', { class: 'row stack' }, labelEl('대사 형식', '중복 선택 가능'), row);
+      el = h('div', { class: 'row stack' }, labelEl('지문 형식', '중복 선택 가능'), row);
       break;
     }
 
@@ -1941,7 +1942,7 @@ function isOpen(pane, sec, idx) {
   return o && sec in o ? o[sec] : idx === 0;
 }
 
-/* 대사 형식 직접 지정 (칩 목록 끝의 '+ 직접 지정') */
+/* 지문 형식 직접 지정 (칩 목록 끝의 '+ 직접 지정') */
 const customFmtLabel = (o, c) => (c ? `${o} 대사 ${c}` : `${o} 대사…`);
 function openCustomFormatPop(anchor) {
   const open = h('input', { type: 'text', class: 'input sym', placeholder: '⧼', maxlength: 6, 'aria-label': '여는 기호' });
@@ -1973,7 +1974,7 @@ function openCustomFormatPop(anchor) {
   paint();
   const cell = (input, cap, opt) => h('label', { class: 'sym-cell' }, input, h('span', { class: 'sym-cap' + (opt ? ' opt' : '') }, cap));
   openPop(h('div', { class: 'fmt-pop' },
-    h('div', { class: 'pop-title' }, '대사 형식 직접 지정'),
+    h('div', { class: 'pop-title' }, '지문 형식 직접 지정'),
     h('div', { class: 'sym-row' }, cell(open, '여는 기호'), h('span', { class: 'sym-mid' }, '대사'), cell(close, '닫는 기호 · 생략 가능', true), addBtn),
     preview), anchor);
   setTimeout(() => open.focus(), 30);
@@ -2516,7 +2517,7 @@ function buildMyStyles() {
   const list = $('#style-list');
   list.innerHTML = '';
   if (!myStyles.length) {
-    list.append(h('div', { class: 'row empty' }, h('div', { class: 'row-label' }, '저장한 프리셋이 없어요', h('small', {}, '지금 화면의 서체 · 말풍선 · 배경 · 대사 형식을 이름 붙여 보관해 보세요'))));
+    list.append(h('div', { class: 'row empty' }, h('div', { class: 'row-label' }, '저장한 프리셋이 없어요', h('small', {}, '지금 화면의 서체 · 말풍선 · 배경 · 지문 형식을 이름 붙여 보관해 보세요'))));
     return;
   }
   myStyles.forEach((st, i) => {
@@ -2846,8 +2847,10 @@ function buildSkin() {
           state.chars.push({ id: `p${base}${i}`, name, avatar: '', side: 'left', homeSide: 'left', shape: '', custom: true, bg: '#ffffff', color: '#222222', border: '#ffffff' });
           added.push(name);
         });
+        if (bp.clearCredit) { state.credit = ''; state.creator = ''; }
+        if (bp.parse) Object.assign(state.parse, copyState(bp.parse), { auto: true });
         changed(); commit();
-        if (added.length) { buildChars(); buildFields(); buildQuickInsert(); }
+        buildChars(); buildFields(); buildQuickInsert();
         toast(`‘${bp.name}’ 배경을 적용했어요${added.length ? ` · 캐릭터 ${added.length}명 등록` : ''}`, { label: '되돌리기', fn: undo }, 3600);
       } catch (e) { toast('배경을 불러오지 못했어요'); }
     },
