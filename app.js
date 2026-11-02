@@ -134,6 +134,7 @@ const DEFAULTS = {
   overrides: {},
   skin: '',
   bgHtml: '',
+  scene: { place: '', alive: '', total: '' },
   file: { prefix: true, date: true, pair: '', title: '', number: false },
 };
 
@@ -1203,12 +1204,21 @@ async function buildHtmlBgURL(html, w, h, layer) {
 /* HTML 배경 안의 {{제목}} · {{출처}} · {{제작자}} (또는 '제목을 입력하세요')를 발췌기 입력과 연동 */
 const TITLE_TOKEN = /\{\{\s*(제목|title)\s*\}\}|제목을 입력하세요/gi;
 const bgHasTitle = () => { TITLE_TOKEN.lastIndex = 0; return TITLE_TOKEN.test(state.bgHtml || ''); };
+const bgUsesScene = () => /\{\{\s*(장소|생존|전체|place|alive|total)\s*\}\}/i.test(state.bgHtml || '');
 function fillBgTokens(html) {
   const e = (t) => esc((t || '').trim());
+  const sc = state.scene || {};
   return (html || '')
     .replace(TITLE_TOKEN, () => e(state.title))
     .replace(/\{\{\s*(출처|credit)\s*\}\}/gi, () => e(state.credit))
-    .replace(/\{\{\s*(제작자|creator)\s*\}\}/gi, () => e(state.creator));
+    .replace(/\{\{\s*(제작자|creator)\s*\}\}/gi, () => e(state.creator))
+    .replace(/\{\{\s*(생존비율|alivePct)\s*\}\}/gi, () => {
+      const a = parseFloat(sc.alive), t = parseFloat(sc.total);
+      return `${t > 0 && a >= 0 ? Math.max(0, Math.min(100, (a / t) * 100)).toFixed(2) : 0}%`;
+    })
+    .replace(/\{\{\s*(장소|place)\s*\}\}/gi, () => e(sc.place))
+    .replace(/\{\{\s*(생존|alive)\s*\}\}/gi, () => e(String(sc.alive ?? '')))
+    .replace(/\{\{\s*(전체|total)\s*\}\}/gi, () => e(String(sc.total ?? '')));
 }
 // 글이 들어갈 자리: <!-- ninining-safe: 위% 오른쪽% 아래% 왼쪽%; min-height: %--> (모두 카드 가로 기준)
 function bgSafeArea() {
@@ -1266,6 +1276,7 @@ function applyHtmlBg(pages) {
 let htmlBgReady = Promise.resolve();
 // HTML 배경 프리셋: 고를 때만 불러와서 사이트는 가볍게 유지
 const HTML_BG_PRESETS = [
+  { name: '생존 게임 시뮬레이터', file: 'bg/survival.html', credit: '⚠️생존 게임 시뮬레이터', creator: '@wooya', scene: { place: '골목길', alive: '31', total: '31' } },
   // 언덕 시리즈: 출처 · 제작자는 비우고, 지문 형식은 '*텍스트*'를 나레이션으로
   { name: '언덕 위의 마녀', file: 'bg/witch.html', clearCredit: true, parse: { formats: ['star1'], mode: 'plain' }, avatars: true,
     chars: ['마녀', { name: '노엘', avatar: 'bg/witch/noel.webp' }, { name: '륜', avatar: 'bg/witch/ryun.webp' }, { name: '악셀', avatar: 'bg/witch/axel.webp' }, { name: '루카', avatar: 'bg/witch/luka.webp' }] },
@@ -1360,7 +1371,9 @@ function newPage(idx, W, H) {
   const flow = h('div', { class: 'flow' });
   content.append(flow);
   card.append(content);
-  const work = (state.credit || '').trim(), author = (state.creator || '').trim();
+  // HTML 배경이 출처 · 제작자를 직접 보여 주면 카드 아래쪽 출처 줄은 생략
+  const bgCredit = state.bgHtml && /\{\{\s*(출처|credit|제작자|creator)\s*\}\}/i.test(state.bgHtml);
+  const work = bgCredit ? '' : (state.credit || '').trim(), author = bgCredit ? '' : (state.creator || '').trim();
   if (work || author || state.canvas.pageNum) {
     const foot = h('div', { class: 'card-footer' });
     const credit = h('div', { class: `credit credit-${state.head.creditLayout}` });
@@ -1664,6 +1677,11 @@ const SCHEMA = {
       { t: 'text', p: 'title', l: '제목', ph: '비워두면 표시하지 않아요' },
       { t: 'text', p: 'credit', l: '출처 · 작품명', ph: '예) 채팅방 이름 · 날짜' },
       { t: 'text', p: 'creator', l: '출처 · 제작자', ph: '예) @내계정' },
+    ] },
+    { sec: '상황판', note: '지금 HTML 배경의 상황판에 보여요. 생존 게이지는 생존 인원 ÷ 전체 인원으로 채워져요.', show: () => bgUsesScene(), rows: [
+      { t: 'text', p: 'scene.place', l: '현재 장소', ph: '예) 골목길' },
+      { t: 'text', p: 'scene.alive', l: '생존 인원', ph: '예) 31' },
+      { t: 'text', p: 'scene.total', l: '전체 인원', ph: '예) 31' },
     ] },
   ],
   bubble: [
@@ -2096,7 +2114,9 @@ function buildFields() {
     secs.forEach((s, idx) => {
       const body = [h('div', { class: 'section' }, s.rows.map(fieldEl)), s.note ? h('p', { class: 'footnote' }, s.note) : null];
       if (!COLLAPSIBLE[key]) {
-        box.append(h('div', { class: 'section-title' }, s.sec), ...body.filter(Boolean));
+        const parts = [h('div', { class: 'section-title' }, s.sec), ...body.filter(Boolean)];
+        if (s.show) parts.forEach((el) => conditions.push({ el, when: s.show, hide: true }));
+        box.append(...parts);
         return;
       }
       const open = isOpen(key, s.sec, idx);
@@ -2575,7 +2595,7 @@ function buildQuickInsert() {
 }
 
 /* 내 양식: 디자인 · 대사 인식 설정을 저장/불러오기 (글은 제외) */
-const STYLE_KEYS = ['typo', 'head', 'bubble', 'canvas', 'parse', 'skin', 'bgHtml'];
+const STYLE_KEYS = ['typo', 'head', 'bubble', 'canvas', 'parse', 'skin', 'bgHtml', 'scene'];
 let myStyles = [];
 
 function styleSnapshot(name, withChars) {
@@ -2588,7 +2608,7 @@ function applyStyle(st) {
   const data = st.data || st; // 전체 설정 파일도 받기
   for (const k of STYLE_KEYS) {
     if (!(k in data)) continue;
-    state[k] = k === 'skin' || k === 'bgHtml' ? data[k] || '' : deepMerge(copyState(DEFAULTS[k]), data[k]);
+    state[k] = k === 'skin' || k === 'bgHtml' ? data[k] || '' : deepMerge(copyState(DEFAULTS[k] || {}), data[k]);
   }
   if (Array.isArray(data.chars)) state.chars = copyState(data.chars);
   commit(); rebuildAll(); save();
@@ -2965,10 +2985,12 @@ function buildSkin() {
         });
         if (bp.avatars) state.bubble.avatar = true;
         if (bp.clearCredit) { state.credit = ''; state.creator = ''; }
+        if ('credit' in bp) { state.credit = bp.credit; state.creator = bp.creator || ''; }
+        if (bp.scene) for (const k of Object.keys(bp.scene)) if (!String(state.scene[k] ?? '').trim()) state.scene[k] = bp.scene[k];
         if (bp.parse) Object.assign(state.parse, copyState(bp.parse), { auto: true });
         changed(); commit();
         buildChars(); buildFields(); buildQuickInsert();
-        toast(`‘${bp.name}’ 배경을 적용했어요${added.length ? ` · 캐릭터 ${added.length}명 등록` : ''}`, { label: '되돌리기', fn: undo }, 3600);
+        toast(`‘${bp.name}’ 배경을 적용했어요${added.length ? ` · 캐릭터 ${added.length}명 등록` : ''}${bp.scene ? ' · 장소 · 생존 인원은 텍스트 탭 ‘상황판’에서' : ''}`, { label: '되돌리기', fn: undo }, 4200);
       } catch (e) { toast('배경을 불러오지 못했어요'); }
     },
   }, bp.name)));
