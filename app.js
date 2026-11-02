@@ -286,7 +286,7 @@ const PANES = [
   { id: 'text', label: '텍스트', icon: 'text', desc: '' },
   { id: 'bubble', label: '말풍선', icon: 'bubble', desc: '말풍선 모양과 색, 프로필 표시 방식을 정해요.' },
   { id: 'chars', label: '캐릭터', icon: 'person', desc: '본문에 쓴 이름이 여기 등록한 캐릭터 이름과 똑같아야(띄어쓰기까지) 말풍선에 사진과 색이 자동으로 연결돼요.' },
-  { id: 'typo', label: '서체', icon: 'type', desc: '본문, 말풍선, 제목의 글꼴과 간격을 다듬어요.' },
+  { id: 'typo', label: '서체', icon: 'type', desc: '나레이션, 말풍선, 제목의 글꼴과 간격을 다듬어요.' },
   { id: 'canvas', label: '화면', icon: 'frame', desc: '비율과 크기, 배경을 정해요.' },
   { id: 'skin', label: '스킨', icon: 'code', desc: 'CSS로 디자인을 자유롭게 덮어써요.' },
   { id: 'template', label: '프리셋', icon: 'grid', desc: '자주 쓰는 설정을 프리셋으로 저장해 두고 불러오거나, 템플릿으로 디자인을 한 번에 바꿔요.' },
@@ -806,7 +806,7 @@ function parseText() {
     if (P.auto) {
       const w = matchFormat(line, rules);
       if (P.mode === 'plain') {
-        // 기호 없는 줄이 대사, 기호로 감싼 줄은 지문
+        // 기호 없는 줄이 대사, 기호로 감싼 줄은 나레이션
         if (w) narr(w.inner); else bubble(line, line);
         continue;
       }
@@ -1495,7 +1495,7 @@ const SCHEMA = {
       { t: 'autoDialog' },
       { t: 'formats' },
       { t: 'mode' },
-      { t: 'switch', p: 'parse.inline', l: '문장 속 대사도 분리', sub: '지문 중간에 있는 대사도 말풍선으로 꺼내요', when: () => state.parse.mode === 'marked' },
+      { t: 'switch', p: 'parse.inline', l: '문장 속 대사도 분리', sub: '나레이션 중간에 있는 대사도 말풍선으로 꺼내요', when: () => state.parse.mode === 'marked' },
       { t: 'switch', p: 'parse.strip', l: '말풍선에서 기호 숨기기' },
       { t: 'switch', p: 'parse.mergeTl', l: '아랫줄 괄호는 같은 말풍선에', sub: '대사 바로 아래 ( ) 줄을 번역처럼 작게 붙여요' },
       { t: 'seg', p: 'parse.tlShow', l: '원문 · 번역이 함께 있는 대사', o: [['both', '둘 다'], ['tl', '번역만'], ['orig', '원문만']], block: true },
@@ -1539,7 +1539,7 @@ const SCHEMA = {
     ] },
   ],
   typo: [
-    { sec: '본문', note: '긴 글은 한 줄 25~35자, 행간 1.6~1.8, 문단은 간격과 들여쓰기 중 하나로만 구분할 때 가장 읽기 편해요. 들여쓰기는 장면 전환이나 말풍선 다음 첫 문단에는 자동으로 빠져요.', rows: [
+    { sec: '나레이션', note: '긴 글은 한 줄 25~35자, 행간 1.6~1.8, 문단은 간격과 들여쓰기 중 하나로만 구분할 때 가장 읽기 편해요. 들여쓰기는 장면 전환이나 말풍선 다음 첫 문단에는 자동으로 빠져요.', rows: [
       { t: 'font', p: 'typo.font', c: 'typo.fontCustom' },
       { t: 'slider', p: 'typo.size', l: '크기', min: 10, max: 40, step: 0.5, u: 'px' , pt: true },
       { t: 'slider', p: 'typo.lh', l: '행간', min: 1, max: 3, step: 0.05, u: '' },
@@ -1810,9 +1810,9 @@ function fieldEl(d) {
     case 'mode': {
       const isPlain = state.parse.mode === 'plain';
       const hint = h('small', { class: 'mode-hint' });
-      const paint = (m) => { hint.textContent = m === 'plain' ? '고른 기호로 감싼 줄은 지문이 되고, 기호 없는 줄이 말풍선이 돼요' : '고른 기호로 감싼 줄이 말풍선이 되고, 나머지는 지문이에요'; };
+      const paint = (m) => { hint.textContent = m === 'plain' ? '고른 기호로 감싼 줄은 나레이션이 되고, 기호 없는 줄이 말풍선이 돼요' : '고른 기호로 감싼 줄이 말풍선이 되고, 나머지는 나레이션이에요'; };
       paint(isPlain ? 'plain' : 'marked');
-      const seg = segEl([['marked', '대사로'], ['plain', '지문으로']], state.parse.mode, (v) => { setPath('parse.mode', v); paint(v); }, true);
+      const seg = segEl([['marked', '대사로'], ['plain', '나레이션으로']], state.parse.mode, (v) => { setPath('parse.mode', v); paint(v); }, true);
       el = h('div', { class: 'row stack mode-row' }, h('div', { class: 'row-label' }, '위에서 고른 형식을', hint), seg);
       break;
     }
