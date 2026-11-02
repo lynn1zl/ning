@@ -1229,10 +1229,9 @@ textarea.code {
    서식 도구 막대
    ========================================================= */
 .fmt-bar {
-  display: flex; align-items: center; gap: 2px;
+  display: flex; align-items: center; flex-wrap: wrap; gap: 4px 2px;
   padding: 8px 10px;
   border-bottom: 1px solid var(--hair);
-  overflow-x: auto; scrollbar-width: none;
 }
 .fmt-bar::-webkit-scrollbar { display: none; }
 .ft {
@@ -1477,13 +1476,35 @@ body.resizing iframe, body.resizing #stage { pointer-events: none; }
 
 /* 본문 이미지 */
 .card .inline-img { margin: 0; display: flex; }
-.card .inline-img img { display: block; width: var(--img-w, 100%); height: auto; border-radius: 4px; }
+.card .inline-img .img-box { position: relative; display: block; width: var(--img-w, 100%); }
+.card .inline-img img { display: block; width: 100%; height: auto; border-radius: 4px; }
 .card .inline-img.align-left { justify-content: flex-start; }
 .card .inline-img.align-center { justify-content: center; }
 .card .inline-img.align-right { justify-content: flex-end; }
-.page-wrap .inline-img { cursor: pointer; }
+/* 어울림: 문단 안에서 띄워 글이 옆으로 흐름 */
+.card .narr > .inline-img.wrap-float { display: block; float: left; width: var(--img-w, 40%); margin: .3em 1em .4em 0; text-indent: 0; }
+.card .narr > .inline-img.wrap-float.align-right { float: right; margin: .3em 0 .4em 1em; }
+.card .narr > .inline-img.wrap-float .img-box { width: 100%; }
+.card .flow > .narr { display: flow-root; }
+.page-wrap .inline-img .img-box { cursor: pointer; }
 .page-wrap .inline-img:hover img { outline: 2px dashed rgba(49, 130, 246, .55); outline-offset: 3px; }
-
+/* 크기 조절 핸들 (미리보기에서만) */
+.rs-handle { display: none; }
+.page-wrap .img-box:hover > .rs-handle, .page-wrap .bimg-box:hover > .rs-handle {
+  display: block; position: absolute; right: -8px; bottom: -8px; width: 16px; height: 16px; z-index: 3;
+  border-radius: 50%; background: #fff; border: 2px solid #3182f6; cursor: nwse-resize;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .25);
+}
+/* 말풍선 안 사진 */
+.bubble .bimg-box { position: relative; display: block; max-width: 100%; margin: 2px 0 .45em; white-space: normal; }
+.bubble .bimg-box img { display: block; width: 100%; height: auto; border-radius: calc(var(--b-radius) * .6); }
+.bubble.img-only { padding: 6px; }
+.bubble.img-only .bimg-box { margin: 0; }
+.card .tok-img { display: block; max-width: 100%; height: auto; border-radius: 4px; margin: .3em 0; }
+.wrap-tiles { grid-template-columns: repeat(3, 1fr) !important; }
+.wrap-tiles .tile svg { width: 44px; height: 30px; }
+.bphoto { display: flex; flex-direction: column; gap: 6px; }
+.bphoto .photo-url .input { min-width: 0; }
 .card > .sticker { position: absolute !important; z-index: 4; transform-origin: center; touch-action: none; user-select: none; }
 .card > .sticker.layer-back { z-index: 0; }
 .card > .sticker img { display: block; width: 100%; height: auto; pointer-events: none; }

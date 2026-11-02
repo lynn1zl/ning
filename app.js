@@ -54,6 +54,12 @@ const SHAPE_ICONS = {
   comic: '<rect x="8" y="5" width="35" height="21" rx="10" fill="none" stroke="currentColor" stroke-width="3"/><path d="M9.5 11 2.5 15l7 3.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>',
   system: '<rect x="8" y="10" width="32" height="12" rx="6" opacity=".45"/><rect x="15" y="14.8" width="18" height="2.4" rx="1.2"/>',
 };
+const WRAP_ICONS = {
+  block: '<rect x="4" y="3" width="40" height="3" rx="1.5" opacity=".45"/><rect x="14" y="9" width="20" height="14" rx="2"/><rect x="4" y="26" width="40" height="3" rx="1.5" opacity=".45"/>',
+  float: '<rect x="4" y="4" width="17" height="14" rx="2"/><rect x="25" y="4" width="19" height="3" rx="1.5" opacity=".45"/><rect x="25" y="9.5" width="19" height="3" rx="1.5" opacity=".45"/><rect x="25" y="15" width="19" height="3" rx="1.5" opacity=".45"/><rect x="4" y="21" width="40" height="3" rx="1.5" opacity=".45"/><rect x="4" y="26.5" width="30" height="3" rx="1.5" opacity=".45"/>',
+  free: '<rect x="4" y="4" width="40" height="3" rx="1.5" opacity=".3"/><rect x="4" y="10" width="40" height="3" rx="1.5" opacity=".3"/><rect x="4" y="16" width="40" height="3" rx="1.5" opacity=".3"/><rect x="4" y="22" width="30" height="3" rx="1.5" opacity=".3"/><rect x="24" y="8" width="18" height="16" rx="2" transform="rotate(8 33 16)"/><path d="M40 22l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+};
+const wrapSvg = (k) => `<svg viewBox="0 0 48 32" fill="currentColor" aria-hidden="true">${WRAP_ICONS[k]}</svg>`;
 const shapeSvg = (k) => `<svg viewBox="0 0 48 32" fill="currentColor" aria-hidden="true">${SHAPE_ICONS[k]}</svg>`;
 
 /* =========================================================
@@ -465,6 +471,7 @@ function fmt(s) {
     .replace(/__(.+?)__/g, '<u>$1</u>')
     .replace(/~~(.+?)~~/g, '<s>$1</s>')
     .replace(/==(.+?)==/g, '<mark>$1</mark>')
+    .replace(/!\[[^\]]*\]\(img:([\w-]+)\)/g, (m, id) => (state.images[id] ? `<img class="tok-img" src="${state.images[id].src}" alt="">` : ''))
     .replace(/(^|[^*])\*([^*\s][^*]*?)\*(?!\*)/g, '$1<i>$2</i>');
 }
 
@@ -1320,16 +1327,13 @@ function renderBlock(b) {
   if (b.type === 'narr') {
     let drop = '';
     if (dropcapPending && !b.cont) { drop = ' dropcap'; dropcapPending = false; }
-    return h('p', { class: 'narr' + drop + (b.ind && !b.cont ? ' ind' : '') + (b.cont ? ' cont' : '') + (b.key ? ' was-bubble' : ''), 'data-key': b.key || false, html: withDropcap(drop, state.typo.noOrphan === false ? fmt(b.text) : fmtNoOrphan(b.text, state.typo.align === 'justify' || state.typo.wordBreak === 'char')) });
+    const p = h('p', { class: 'narr' + drop + (b.ind && !b.cont ? ' ind' : '') + (b.cont ? ' cont' : '') + (b.key ? ' was-bubble' : ''), 'data-key': b.key || false, html: withDropcap(drop, state.typo.noOrphan === false ? fmt(b.text) : fmtNoOrphan(b.text, state.typo.align === 'justify' || state.typo.wordBreak === 'char')) });
+    if (b.floatImg && state.images[b.floatImg.id]) { p._float = inlineFigure(b.floatImg.id, b.floatImg.alt); p.prepend(p._float); }
+    return p;
   }
   if (b.type === 'gap') { const g = h('div', { class: 'gap' }); g.style.setProperty('--gap-n', b.n || 1); return g; }
   if (b.type === 'hr') return h('hr', { class: 'divider' });
-  if (b.type === 'img') {
-    const info = state.images[b.id];
-    const fig = h('figure', { class: `inline-img align-${info.align || 'center'}`, 'data-img': b.id }, h('img', { src: info.src, alt: b.alt || '' }));
-    fig.style.setProperty('--img-w', `${info.w || 100}%`);
-    return fig;
-  }
+  if (b.type === 'img') return inlineFigure(b.id, b.alt);
 
   const B = state.bubble;
   const { ch, speaker, side, shape } = b;
@@ -1369,7 +1373,15 @@ function renderBlock(b) {
     // 번역 줄: 줄바꿈 뒤에 작은 글씨로 (말풍선 안 기호는 '기호 숨기기'를 따름)
     for (const t of b.tl) inner += '\n<span class="tl">' + fmt(strip ? t.inner : t.full) + '</span>';
   }
-  body.append(h('div', { class: 'bubble', html: inner }));
+  const bub = h('div', { class: 'bubble', html: inner });
+  const ov = state.overrides[b.key] || {};
+  if (ov.img) {
+    const box = h('span', { class: 'bimg-box', 'data-key': b.key }, h('img', { src: ov.img, alt: '', draggable: 'false' }), h('span', { class: 'stk-ui rs-handle', title: '끌어서 크기 조절' }));
+    box.style.width = `${ov.imgW || 180}px`;
+    bub.prepend(box);
+    if (!(strip ? b.inner : b.full).trim()) bub.classList.add('img-only');
+  }
+  body.append(bub);
   msg.append(body);
   return msg;
 }
@@ -1437,7 +1449,7 @@ function splitParagraph(page, el, b, alone) {
   const head = (k) => tokens.slice(0, k).join('').trimEnd();
   const tail = (k) => tokens.slice(k).join('').trimStart();
   const dc = el.classList.contains('dropcap');
-  const put = (t) => { el.innerHTML = withDropcap(dc, fmt(t)); };
+  const put = (t) => { el.innerHTML = withDropcap(dc, fmt(t)); if (el._float) el.prepend(el._float); };
   const show = (k) => put(balanceMarks(head(k), tail(k))[0]);
   const fits = (k) => { show(k); return !overflows(page); };
   let lo = 0, hi = tokens.length - 1;
@@ -1497,6 +1509,14 @@ function placeSticker(el, st) {
   Object.assign(el.style, { left: `${st.x}px`, top: `${st.y}px`, width: `${st.w}px`, transform: `rotate(${st.rot || 0}deg)`, opacity: st.op ?? 1 });
 }
 
+function inlineFigure(id, alt) {
+  const info = state.images[id];
+  const fig = h('figure', { class: `inline-img wrap-${info.wrap || 'block'} align-${info.align || 'center'}`, 'data-img': id },
+    h('span', { class: 'img-box' }, h('img', { src: info.src, alt: alt || '', draggable: 'false' }), h('span', { class: 'stk-ui rs-handle', title: '끌어서 크기 조절' })));
+  fig.style.setProperty('--img-w', `${info.w || 100}%`);
+  return fig;
+}
+
 let dropcapPending = false;
 /* 드롭캡: 첫 글자(앞의 따옴표 등 문장부호 포함)를 실제 요소로 감쌈 — 이미지 저장에도 그대로 나오게 */
 function withDropcap(on, html) {
@@ -1540,6 +1560,11 @@ function render() {
   while (queue.length) {
     const b = queue.shift();
     if (b.type === 'gap' && !page.flow.childElementCount) continue;
+    // 어울림 이미지는 바로 다음 나레이션 문단 안에 띄워서 글이 옆으로 흐르게
+    if (b.type === 'img' && (state.images[b.id] || {}).wrap === 'float' && queue[0] && queue[0].type === 'narr' && !queue[0].floatImg) {
+      queue[0] = { ...queue[0], floatImg: b };
+      continue;
+    }
     const el = renderBlock(b);
     page.flow.append(el);
     if (!split || !overflows(page)) continue;
@@ -2374,6 +2399,8 @@ function openBubbleEditor(key, anchor) {
       h('div', { class: 'pop-label' }, '화자'), chips,
       h('div', { class: 'pop-label' }, '위치'), segEl([['', '자동'], ...SIDES], o.side || '', (v) => update('side', v), true),
       h('div', { class: 'pop-label' }, '모양'), tiles,
+      h('div', { class: 'pop-label' }, '말풍선 안 사진'),
+      bubblePhotoRow(key, o, () => wrap.replaceWith(build())),
       h('div', { class: 'pop-foot' },
         h('div', {},
           h('button', { type: 'button', class: 'link-btn', onclick: () => { delete state.overrides[key]; changed(); wrap.replaceWith(build()); } }, '초기화'),
@@ -2389,7 +2416,7 @@ function openBubbleEditor(key, anchor) {
 }
 
 $('#stage').addEventListener('click', (e) => {
-  if (e.target.closest('.sticker')) return;
+  if (e.target.closest('.sticker') || e.target.closest('.rs-handle')) return;
   const fig = e.target.closest('.inline-img');
   if (fig) { openInlineImagePop(fig, fig.dataset.img); return; }
   const wb = e.target.closest('.narr.was-bubble');
@@ -3010,6 +3037,47 @@ $('#bulk-names').addEventListener('input', updateBulkPreview);
 $('#bulk-names').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); bulkAddChars(); } });
 $('#btn-bulk-add').addEventListener('click', bulkAddChars);
 
+
+/* 말풍선 안 사진 넣기 · 크기 · 삭제 */
+function bubblePhotoRow(key, o, rebuild) {
+  const setImg = (srcv) => {
+    const next = { ...(state.overrides[key] || {}), img: srcv };
+    if (!next.imgW) next.imgW = 180;
+    state.overrides[key] = next; changed(); rebuild();
+  };
+  const file = h('input', { type: 'file', accept: 'image/*', hidden: true });
+  file.addEventListener('change', async () => { const f = file.files[0]; if (f) { try { setImg(await shrinkImage(f, 1200, false)); } catch (e) { toast('이미지를 읽지 못했어요'); } } });
+  const urlIn = h('input', { type: 'url', class: 'input', placeholder: 'https://… 이미지 주소' });
+  const go = async () => { try { setImg(await imageFromUrl(urlIn.value)); } catch (e) { toast('이미지를 불러오지 못했어요'); } };
+  urlIn.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) go(); });
+  const row = h('div', { class: 'bphoto' },
+    h('div', { class: 'photo-url' }, h('label', { class: 'btn btn-sm' }, '파일', file), urlIn, h('button', { type: 'button', class: 'btn btn-sm', onclick: go }, '링크')));
+  if (o.img) {
+    const out = h('output', {}, `${o.imgW || 180}px`);
+    const sl = h('input', { type: 'range', class: 'slider', min: 40, max: 600, step: 1, value: o.imgW || 180 });
+    sl.style.setProperty('--p', `${((o.imgW || 180) - 40) / 560 * 100}%`);
+    sl.addEventListener('input', () => {
+      out.textContent = `${sl.value}px`; sl.style.setProperty('--p', `${(sl.value - 40) / 560 * 100}%`);
+      state.overrides[key] = { ...state.overrides[key], imgW: +sl.value };
+      const box = $(`#stage .bimg-box[data-key="${CSS.escape(key)}"]`); if (box) box.style.width = `${sl.value}px`;
+      save(); commitSoon();
+    });
+    row.append(h('div', { class: 'pop-label row-top' }, '사진 크기', out), sl,
+      h('button', { type: 'button', class: 'link-btn danger', onclick: () => { const { img, imgW, ...rest } = state.overrides[key]; if (Object.keys(rest).length) state.overrides[key] = rest; else delete state.overrides[key]; changed(); rebuild(); } }, '사진 빼기'));
+  }
+  return row;
+}
+
+/* 아이콘 타일 선택 (배치 방식) */
+function iconTiles(opts, val, onPick) {
+  const box = h('div', { class: 'tiles wrap-tiles' });
+  opts.forEach(([k, l]) => {
+    const t = h('button', { type: 'button', class: 'tile' + (k === val ? ' on' : ''), title: l, html: wrapSvg(k) + `<span>${l}</span>` });
+    t.addEventListener('click', () => { $$('.tile', box).forEach((x) => x.classList.toggle('on', x === t)); onPick(k); });
+    box.append(t);
+  });
+  return box;
+}
 /* ── 본문 이미지 넣기 ── */
 const newId = () => Math.random().toString(36).slice(2, 9);
 async function imageFromUrl(url) {
@@ -3039,13 +3107,14 @@ function addImage(src, mode) {
     toast('카드 위에 놓았어요 · 끌어서 옮기고 모서리를 끌어 크기를 바꿔요', { label: '되돌리기', fn: undo }, 3600);
   } else {
     const id = newId();
-    state.images = { ...state.images, [id]: { src, w: 100, align: 'center' } };
+    const float = mode === 'float';
+    state.images = { ...state.images, [id]: { src, w: float ? 40 : 100, align: float ? 'left' : 'center', wrap: float ? 'float' : 'block' } };
     insertSnippet(`![](img:${id})\n`, '', true);
     toast('글 사이에 이미지를 넣었어요 · 미리보기에서 이미지를 누르면 크기를 바꿀 수 있어요', { label: '되돌리기', fn: undo }, 3600);
   }
 }
 function openImageInsertPop(anchor) {
-  let mode = 'inline';
+  let mode = 'block';
   const file = h('input', { type: 'file', accept: 'image/*', hidden: true });
   const urlIn = h('input', { type: 'url', class: 'input', placeholder: 'https://… 이미지 주소', 'aria-label': '이미지 링크' });
   const take = async (getSrc) => {
@@ -3055,13 +3124,9 @@ function openImageInsertPop(anchor) {
   file.addEventListener('change', () => { const f = file.files[0]; if (f) take(() => shrinkImage(f, 1600, false)); });
   const apply = () => { if (urlIn.value.trim()) take(() => imageFromUrl(urlIn.value)); else urlIn.focus(); };
   urlIn.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) apply(); });
-  const hint = h('small', { class: 'mode-hint' });
-  const paint = () => { hint.textContent = mode === 'free' ? '카드 위 원하는 곳에 끌어다 놓고, 크기 · 회전 · 글 위/뒤를 정해요' : '글 사이 커서 자리에 들어가 글과 함께 흐르고 페이지를 넘어가요'; };
-  paint();
   openPop(h('div', { class: 'photo-pop' },
     h('div', { class: 'pop-title' }, '이미지 넣기'),
-    segEl([['inline', '글자처럼'], ['free', '자유 배치']], mode, (v) => { mode = v; paint(); }, true),
-    h('p', { class: 'pop-note', style: 'margin-top:8px' }, hint),
+    iconTiles([['block', '자리차지'], ['float', '어울림'], ['free', '자유 배치']], 'block', (v) => { mode = v; }),
     h('label', { class: 'photo-opt', style: 'margin-top:10px' }, h('span', { class: 'po-ico', html: icon('image') }),
       h('span', {}, h('b', {}, '파일에서 고르기'), h('small', {}, 'JPG · PNG · GIF · WebP')), file),
     h('div', { class: 'pop-label' }, '이미지 링크'),
@@ -3086,8 +3151,9 @@ function openInlineImagePop(fig, id) {
   slider.addEventListener('input', () => { out.textContent = `${slider.value}%`; slider.style.setProperty('--p', `${(slider.value - 10) / 90 * 100}%`); upd('w', +slider.value); });
   openPop(h('div', {},
     h('div', { class: 'pop-title' }, '글자처럼 넣은 이미지'),
+    iconTiles([['block', '자리차지'], ['float', '어울림']], info.wrap || 'block', (v) => { upd('wrap', v); if (v === 'float' && (state.images[id].w || 100) > 70) upd('w', 40); }),
     h('div', { class: 'pop-label row-top' }, '폭', out), slider,
-    h('div', { class: 'pop-label' }, '정렬'), segEl(ALIGN3, info.align || 'center', (v) => upd('align', v), true),
+    h('div', { class: 'pop-label' }, '위치'), segEl(ALIGN3, info.align || 'center', (v) => upd('align', v), true),
     h('div', { class: 'pop-foot' },
       h('button', { type: 'button', class: 'link-btn', onclick: () => {
         removeImageToken(id);
@@ -3128,6 +3194,44 @@ function openStickerPop(el, id) {
       } }, '삭제'),
       h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: closePop }, '완료'))), el);
 }
+
+(function imageResizeDrag() {
+  const stage = $('#stage');
+  let d = null;
+  stage.addEventListener('pointerdown', (e) => {
+    const hnd = e.target.closest('.rs-handle');
+    if (!hnd || hnd.closest('.sticker')) return;
+    e.preventDefault(); e.stopPropagation();
+    closePop();
+    const box = hnd.parentElement;
+    const fig = box.closest('.inline-img');
+    if (fig) {
+      const ref = (fig.classList.contains('wrap-float') ? fig.parentElement : fig).clientWidth;
+      d = { kind: 'inline', id: fig.dataset.img, fig, ref, w0: box.offsetWidth, x0: e.clientX, cur: null };
+    } else {
+      d = { kind: 'bubble', key: box.dataset.key, box, w0: box.offsetWidth, x0: e.clientX, cur: null };
+    }
+    hnd.setPointerCapture(e.pointerId);
+  }, true);
+  stage.addEventListener('pointermove', (e) => {
+    if (!d) return;
+    const w = Math.max(30, d.w0 + (e.clientX - d.x0) / currentScale);
+    if (d.kind === 'inline') {
+      const pct = Math.max(10, Math.min(100, Math.round((w / d.ref) * 100)));
+      d.cur = pct; d.fig.style.setProperty('--img-w', `${pct}%`);
+    } else { d.cur = Math.round(w); d.box.style.width = `${d.cur}px`; }
+  });
+  const end = () => {
+    if (!d) return;
+    const x = d; d = null;
+    if (x.cur == null) return;
+    if (x.kind === 'inline') state.images = { ...state.images, [x.id]: { ...state.images[x.id], w: x.cur } };
+    else state.overrides[x.key] = { ...(state.overrides[x.key] || {}), imgW: x.cur };
+    changed();
+  };
+  stage.addEventListener('pointerup', end);
+  stage.addEventListener('pointercancel', end);
+})();
 
 (function stickerDrag() {
   const stage = $('#stage');
@@ -3520,6 +3624,7 @@ async function makeImages(indices, onProgress) {
   for (const card of cards) await rasterizeHtmlLayers(card);
   for (const card of cards) {
     card.querySelectorAll('.narr, .bubble, .card-title, .credit').forEach((el) => {
+      if (el.querySelector('.wrap-float, .bimg-box, .tok-img')) return; // 이미지가 들어간 문단은 브라우저 배치 그대로
       try { freezeLines(el, currentScale); } catch (e) { /* 원래 상태로 둠 */ }
     });
   }
