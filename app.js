@@ -136,7 +136,7 @@ const DEFAULTS = {
     speech: 'round', tail: true, side: 'left',
     font: 'Pretendard', fontCustom: '', size: 14, lh: 1.55, ls: 0, weight: 400,
     bg: '#ffffff', color: '#222222', border: '#2b2a27', bw: 0, radius: 14, px: 12, py: 8, maxw: 78, shadow: true, gap: 12,
-    avatar: true, avatarSize: 34, avatarShape: 'circle', showName: true, nameSize: 10.5, nameColor: '#6b665e',
+    avatar: true, avatarSize: 34, avatarShape: 'circle', showName: true, namePos: 'top', nameW: 0, nameSize: 10.5, nameColor: '#6b665e',
   },
   canvas: { ratio: 'auto', width: 600, pad: 40, bgType: 'solid', bg: '#f7f3ea', bg2: '#e6dcc8', gradType: 'linear', gradAngle: 160, pattern: 'dots', patColor: '#8a7f6a', patOpacity: 0.22, patSize: 18, bgImage: '', overlay: 0, overlayColor: '#000000', valign: 'flex-start', fit: false, paginate: true, pageNum: false, scale: 2 },
   chars: [
@@ -1079,6 +1079,7 @@ function genCSS() {
   --avatar-radius: ${ar};
   --name-size: ${fit(b.nameSize)};
   --name-color: ${b.nameColor};
+  --name-w: ${b.nameW > 0 ? `${fit(b.nameW)}` : 'auto'};
   --title-font: ${fontStack(hd.font, hd.fontCustom)};
   --title-size: ${fit(hd.size)};
   --title-weight: ${hd.weight};
@@ -1417,7 +1418,7 @@ function renderBlock(b) {
     else if (shape === 'thought') tail = 'tail-dots';
   }
   const msg = h('div', {
-    class: `msg msg-${side} kind-${b.kind} shape-${shape} ${tail}${b.key === editingKey ? ' editing' : ''}`,
+    class: `msg msg-${side} kind-${b.kind} shape-${shape} ${tail}${B.showName && B.namePos === 'side' ? ' name-side' : ''}${b.key === editingKey ? ' editing' : ''}`,
     'data-key': b.key,
     'data-speaker': speaker || false,
   });
@@ -1436,7 +1437,11 @@ function renderBlock(b) {
     msg.append(av);
   } else msg.classList.add('no-avatar');
   const body = h('div', { class: 'msg-body' });
-  if (B.showName && speaker) body.append(h('div', { class: 'name' }, speaker));
+  if (B.showName && speaker) {
+    const nm = h('div', { class: 'name' }, speaker);
+    if (ch && ch.nameColor) nm.style.color = ch.nameColor; // 캐릭터별 이름 색
+    body.append(nm);
+  }
   const strip = state.parse.strip;
   let inner = fmt(strip ? b.inner : b.full);
   const show = state.parse.tlShow || 'both';
@@ -2136,6 +2141,8 @@ const SCHEMA = {
       { t: 'slider', p: 'bubble.avatarSize', l: '사진 크기', min: 20, max: 100, step: 1, u: 'px', when: () => state.bubble.avatar },
       { t: 'seg', p: 'bubble.avatarShape', l: '사진 모양', o: [['circle', '원'], ['rounded', '둥근 사각'], ['square', '사각']], when: () => state.bubble.avatar },
       { t: 'switch', p: 'bubble.showName', l: '이름' },
+      { t: 'seg', p: 'bubble.namePos', l: '이름 위치', o: [['top', '말풍선 위'], ['side', '말풍선 왼쪽']], when: () => state.bubble.showName },
+      { t: 'slider', p: 'bubble.nameW', l: '이름 칸 너비', sub: '0이면 이름 길이에 맞춰요', min: 0, max: 160, step: 2, u: 'px', show: () => state.bubble.namePos === 'side', when: () => state.bubble.showName },
       { t: 'slider', p: 'bubble.nameSize', l: '이름 크기', min: 8, max: 24, step: 0.5, u: 'px', when: () => state.bubble.showName , pt: true },
       { t: 'color', p: 'bubble.nameColor', l: '이름 색', when: () => state.bubble.showName },
     ] },
@@ -2308,7 +2315,7 @@ function fieldEl(d) {
         setPath(d.p, v);
       });
       const ptText = (v) => `인쇄 기준 약 ${+(v * 0.75).toFixed(1)}pt`;
-      const lab = labelEl(d.l, d.pt ? ptText(val) : null);
+      const lab = labelEl(d.l, d.pt ? ptText(val) : (d.sub || null));
       if (d.pt) slider.addEventListener('input', () => { lab.querySelector('small').textContent = ptText(slider.value); });
       if (d.pt) num.addEventListener('change', () => { lab.querySelector('small').textContent = ptText(getPath(d.p)); });
       el = h('div', { class: 'row stack' }, h('div', { class: 'row-top' }, lab, num), slider);
@@ -3410,7 +3417,11 @@ function buildChars() {
         h('div', { class: 'row' }, labelEl('위치'), segEl(SIDES, ch.side, (v) => { ch.side = v; ch.homeSide = v; changed(); })),
         h('div', { class: 'row' }, labelEl('말풍선 모양'), shapeSel),
         h('label', { class: 'row' }, labelEl('개별 색상'), customSw),
-        colorRow));
+        colorRow,
+        h('div', { class: 'row' }, labelEl('이름 색', ch.nameColor ? '' : '말풍선 설정의 이름 색을 따라요'),
+          h('div', { class: 'img-field' },
+            ch.nameColor ? h('button', { type: 'button', class: 'link-btn muted', onclick: () => { ch.nameColor = ''; changed(); buildChars(); } }, '기본으로') : null,
+            colorButton(() => ch.nameColor || state.bubble.nameColor, (v) => { const first = !ch.nameColor; ch.nameColor = v; changed(); if (first) buildChars(); })))));
     dropTarget(card, isImageFile, setAvatar);
     list.append(card);
   });
