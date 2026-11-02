@@ -146,7 +146,7 @@ const DEFAULTS = {
   // 미니홈피 배경: 프레임 · 바탕 색, 방문자 수, 마이룸 사진 · 말풍선, TALK! TALK! 한마디
   hompy: { frame: '#8fd0e6', bg: '#eceff3', today: '', total: '', room: '', say: '', talk: [] },
   // 코르크보드 배경: 가운데 메모지 색, 할 일 포스트잇 글
-  cork: { memo: '#fffdf3', todo: '✓ 장보기\n✓ 발췌하기\n☐ 헬스장 등록' },
+  cork: { memo: '#faf7f0', todo: '✓ 장보기\n✓ 발췌하기\n☐ 헬스장 등록' },
   images: {},   // 글자처럼 넣은 이미지: id → { src, w(%), align }
   stickers: [], // 자유 배치 이미지: { id, src, x, y, w(px), rot, layer: 'front'|'back', page, op }
   file: { prefix: true, date: true, pair: '', title: '', number: false },
@@ -1285,7 +1285,7 @@ function fillBgTokens(html) {
     .replace(/\{\{\s*토탈\s*\}\}/g, () => e(String(hp.total ?? '')))
     .replace(/\{\{\s*마이룸\s*\}\}/g, () => (hp.room ? `<img src="${hp.room.replace(/"/g, '&quot;')}" alt="">` : '')
       + ((hp.say || '').trim() ? `<div class="say">${e(hp.say)}</div>` : ''))
-    .replace(/\{\{\s*메모지색\s*\}\}/g, () => safeColor(ck.memo, '#fffdf3'))
+    .replace(/\{\{\s*메모지색\s*\}\}/g, () => safeColor(ck.memo, '#faf7f0'))
     .replace(/\{\{\s*할일\s*\}\}/g, () => String(ck.todo || '').split('\n').map((l) => l.trim()).filter(Boolean).slice(0, 5).map((l) => `<p>${e(l)}</p>`).join(''))
     .replace(/\{\{\s*톡톡\s*\}\}/g, () => (hp.talk || []).filter((t) => (t.text || '').trim())
       .map((t) => `<li><span>${e(t.text)}</span>${(t.name || '').trim() ? `<em>${e(t.name)}</em>` : ''}</li>`).join(''))
@@ -1823,7 +1823,7 @@ const HOMPY_COLORS = [
   ['라벤더', '#b9a7e8', '#f0eef7'], ['레몬', '#f2d36b', '#f7f4ea'], ['민트', '#8fd8c0', '#ebf3f0'], ['회색', '#b5bcc4', '#f2f3f5'],
 ];
 // 코르크보드 가운데 메모지 추천 색
-const CORK_COLORS = [['아이보리', '#fffdf3'], ['하양', '#ffffff'], ['하늘', '#eef6ff'], ['분홍', '#fff0f4'], ['민트', '#ecfaf3'], ['레몬', '#fffbd9'], ['라벤더', '#f4f0ff']];
+const CORK_COLORS = [['아이보리', '#faf7f0'], ['화이트', '#ffffff'], ['크림', '#f5eedc'], ['웜그레이', '#eeebe6'], ['세이지', '#e8ece1'], ['블러시', '#f6ebe7'], ['더스티 블루', '#e7edf1']];
 const SCHEMA = {
   text: [
     { sec: '대사 인식', note: '말풍선을 누르면 캐릭터 · 위치 · 모양을 바꾸거나 다시 글로 되돌릴 수 있어요.', rows: [
@@ -1861,7 +1861,7 @@ const SCHEMA = {
     { sec: '코르크보드', show: () => bgUsesCork(), rows: [
       { t: 'color', p: 'cork.memo', l: '메모지 색' },
       { t: 'swatches', keys: ['cork.memo'], o: CORK_COLORS },
-      { t: 'area', p: 'cork.todo', l: '할 일 포스트잇', sub: '한 줄에 하나씩 · 최대 5줄', ph: '✓ 장보기\n☐ 헬스장 등록' },
+      { t: 'area', p: 'cork.todo', l: '할 일 카드', sub: '한 줄에 하나씩 · 최대 5줄', ph: '✓ 장보기\n☐ 헬스장 등록' },
     ] },
     { sec: '마이룸', note: '사진을 넣지 않으면 기본 방이 보여요.', show: () => bgUsesHompy(), rows: [
       { t: 'roomImg', p: 'hompy.room' },

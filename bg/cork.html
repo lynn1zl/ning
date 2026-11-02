@@ -1,20 +1,21 @@
-<!-- ninining-safe: 29% 18.7% 15.5% 18.7%; min-height: 125% -->
-<!-- 코르크보드: 가운데 메모지 색 · 할 일 포스트잇 글은 텍스트 탭에서 바꿔요 -->
+<!-- ninining-safe: 28.5% 18.7% 15.5% 18.7%; min-height: 125% -->
+<!-- 코르크보드: 가운데 메모지 색 · 할 일 카드 글은 텍스트 탭에서 바꿔요 -->
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&family=Gaegu:wght@400;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Nanum+Pen+Script&display=swap');
 
   :root {
     --memo: {{메모지색}};
     --sans: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
-    --hand: 'Nanum Pen Script', 'Gaegu', var(--sans);
-    --gaegu: 'Gaegu', var(--sans);
+    --serif: 'Gowun Batang', 'Nanum Myeongjo', serif;
+    --hand: 'Nanum Pen Script', var(--sans);
+    --ink: #2c3a55;
   }
 
-  /* 나무 액자 */
+  /* 오크 액자 */
   body {
     background:
-      repeating-linear-gradient(90deg, rgba(120,70,30,.10) 0 2px, transparent 2px 9px, rgba(255,235,200,.10) 9px 11px, transparent 11px 23px),
-      linear-gradient(180deg, #e2b57c, #c99257 50%, #d8a76c);
+      repeating-linear-gradient(90deg, rgba(70,40,15,.07) 0 1px, transparent 1px 6px, rgba(255,240,215,.06) 6px 7px, transparent 7px 17px),
+      linear-gradient(180deg, #b48a5e, #9c7449 55%, #a98157);
   }
 
   /* 카드 폭에 맞춰 모든 치수가 함께 커지고 작아지도록 (600px 기준 1u) */
@@ -22,247 +23,220 @@
   .cb * { --u: calc(100cqw / 600); }
   .cb > div { position: absolute; }
 
-  /* 코르크 */
+  /* 코르크: 낮은 대비의 고운 입자 */
   .cork {
-    inset: calc(16 * var(--u));
-    border-radius: calc(3 * var(--u));
+    inset: calc(14 * var(--u));
     background:
-      radial-gradient(circle, rgba(92,52,22,.42) calc(.9 * var(--u)), transparent calc(1.5 * var(--u))) 0 0 / calc(7 * var(--u)) calc(9 * var(--u)),
-      radial-gradient(circle, rgba(255,226,180,.32) calc(1 * var(--u)), transparent calc(1.8 * var(--u))) calc(3 * var(--u)) calc(4 * var(--u)) / calc(11 * var(--u)) calc(13 * var(--u)),
-      radial-gradient(ellipse, rgba(110,62,26,.38) calc(1.6 * var(--u)), transparent calc(2.6 * var(--u))) calc(5 * var(--u)) calc(2 * var(--u)) / calc(17 * var(--u)) calc(15 * var(--u)),
-      radial-gradient(ellipse, rgba(225,170,110,.45) calc(2.2 * var(--u)), transparent calc(3.6 * var(--u))) 0 0 / calc(23 * var(--u)) calc(19 * var(--u)),
-      radial-gradient(ellipse, rgba(90,50,20,.22) calc(3 * var(--u)), transparent calc(5 * var(--u))) calc(9 * var(--u)) calc(7 * var(--u)) / calc(37 * var(--u)) calc(31 * var(--u)),
-      #c48d58;
-    box-shadow: inset 0 0 0 calc(1.5 * var(--u)) rgba(80,45,15,.35), inset 0 calc(3 * var(--u)) calc(10 * var(--u)) rgba(60,30,10,.45);
+      radial-gradient(circle, rgba(70,40,18,.20) calc(.6 * var(--u)), transparent calc(1.1 * var(--u))) 0 0 / calc(5.3 * var(--u)) calc(6.7 * var(--u)),
+      radial-gradient(circle, rgba(60,34,14,.18) calc(.8 * var(--u)), transparent calc(1.3 * var(--u))) calc(2.1 * var(--u)) calc(3.4 * var(--u)) / calc(8.9 * var(--u)) calc(7.3 * var(--u)),
+      radial-gradient(circle, rgba(245,215,170,.20) calc(.8 * var(--u)), transparent calc(1.4 * var(--u))) calc(1.3 * var(--u)) calc(.7 * var(--u)) / calc(6.1 * var(--u)) calc(9.7 * var(--u)),
+      radial-gradient(ellipse, rgba(90,52,22,.16) calc(1.4 * var(--u)), transparent calc(2.4 * var(--u))) calc(4 * var(--u)) calc(1 * var(--u)) / calc(13.7 * var(--u)) calc(11.3 * var(--u)),
+      radial-gradient(ellipse, rgba(230,180,125,.20) calc(2 * var(--u)), transparent calc(3.4 * var(--u))) 0 0 / calc(19.3 * var(--u)) calc(23.9 * var(--u)),
+      radial-gradient(ellipse, rgba(80,45,18,.12) calc(3 * var(--u)), transparent calc(5 * var(--u))) calc(7 * var(--u)) calc(11 * var(--u)) / calc(31.7 * var(--u)) calc(27.1 * var(--u)),
+      radial-gradient(ellipse at 50% 40%, #c49a6c, #b48858 70%, #a87c4e);
+    box-shadow: inset 0 0 0 calc(1 * var(--u)) rgba(50,28,10,.35), inset 0 calc(2 * var(--u)) calc(9 * var(--u)) rgba(40,20,5,.45);
   }
 
-  /* 가운데 메모지 (비뚤지 않게) */
+  /* 공통 그림자 (종이가 코르크에서 살짝 떠 있는 느낌) */
+  .lift { box-shadow: 0 calc(1 * var(--u)) calc(1.5 * var(--u)) rgba(40,22,8,.22), 0 calc(8 * var(--u)) calc(16 * var(--u)) calc(-4 * var(--u)) rgba(40,22,8,.38); }
+
+  /* 가운데 메모지 (반듯하게) */
   .memo {
-    top: calc(62 * var(--u)); left: calc(84 * var(--u)); right: calc(84 * var(--u)); bottom: calc(58 * var(--u));
-    border-radius: calc(2 * var(--u)) calc(2 * var(--u)) calc(3 * var(--u)) calc(3 * var(--u));
+    top: calc(64 * var(--u)); left: calc(84 * var(--u)); right: calc(84 * var(--u)); bottom: calc(58 * var(--u));
     background:
-      radial-gradient(circle, #8a5a33 calc(3.6 * var(--u)), transparent calc(4.2 * var(--u))) calc(4 * var(--u)) calc(3 * var(--u)) / calc(20 * var(--u)) calc(16 * var(--u)) repeat-x,
-      repeating-linear-gradient(0deg, rgba(80,130,200,.16) 0 1px, transparent 1px calc(16 * var(--u))),
-      repeating-linear-gradient(90deg, rgba(80,130,200,.16) 0 1px, transparent 1px calc(16 * var(--u))),
-      linear-gradient(180deg, rgba(255,255,255,.25), rgba(0,0,0,.03)),
+      radial-gradient(circle, rgba(60,50,40,.10) calc(.8 * var(--u)), transparent calc(1.1 * var(--u))) calc(4 * var(--u)) calc(4 * var(--u)) / calc(18 * var(--u)) calc(18 * var(--u)),
+      linear-gradient(180deg, rgba(255,255,255,.35), rgba(0,0,0,.025)),
       var(--memo);
-    box-shadow: 0 calc(2 * var(--u)) calc(3 * var(--u)) rgba(60,30,10,.25), 0 calc(10 * var(--u)) calc(22 * var(--u)) rgba(60,30,10,.25);
   }
-  .memo::after {               /* 오른쪽 아래 살짝 들린 모서리 */
-    content: '';
-    position: absolute; right: 0; bottom: 0;
-    width: calc(26 * var(--u)); height: calc(26 * var(--u));
-    background: linear-gradient(315deg, transparent 50%, rgba(0,0,0,.06) 50%, rgba(255,255,255,.6) 100%);
+
+  /* 반투명 마스킹테이프 */
+  .tape {
+    height: calc(20 * var(--u));
+    background: linear-gradient(180deg, rgba(255,255,255,.25), rgba(255,255,255,0) 60%), var(--c, rgba(214,206,186,.78));
+    clip-path: polygon(2% 0, 98% 0, 100% 18%, 98.5% 36%, 100% 55%, 98.5% 75%, 100% 100%, 2% 100%, 0 82%, 1.5% 62%, 0 44%, 1.5% 24%);
+    transform: rotate(var(--r, 0deg));
   }
+  .tape.t0 { top: calc(52 * var(--u)); left: calc(250 * var(--u)); width: calc(100 * var(--u)); --r: -1.5deg; --c: rgba(196,206,190,.82); }
 
   /* 머리글: 제목 + 바로 밑에 출처 */
   .head {
-    top: calc(98 * var(--u)); left: calc(112 * var(--u)); right: calc(160 * var(--u));
-    padding-bottom: calc(10 * var(--u));
-    border-bottom: calc(1.4 * var(--u)) dashed rgba(90,70,50,.28);
+    top: calc(98 * var(--u)); left: calc(112 * var(--u)); right: calc(162 * var(--u));
+    padding-bottom: calc(12 * var(--u));
+    border-bottom: calc(1 * var(--u)) solid rgba(60,50,40,.18);
   }
   .head h1 {
-    display: inline;
     margin: 0;
-    font: 700 calc(26 * var(--u))/1.25 var(--gaegu);
+    font: 700 calc(23 * var(--u))/1.3 var(--serif);
     letter-spacing: -.02em;
-    color: #3a332c;
-    background: linear-gradient(transparent 60%, rgba(255,226,92,.75) 60% 90%, transparent 90%);
-    padding: 0 calc(3 * var(--u));
+    color: #2a2622;
+    overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
   }
-  .head .t { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-  .head .src { margin-top: calc(4 * var(--u)); font: calc(13 * var(--u))/1.3 var(--gaegu); color: #8b7d70; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .head .src {
+    margin-top: calc(6 * var(--u));
+    font: 500 calc(10 * var(--u))/1.3 var(--sans);
+    letter-spacing: .12em;
+    color: #8f867b;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
   .head .src b, .head .src i { font: inherit; }
   .head .src b:empty, .head .src i:empty { display: none; }
-  .head .src b:not(:empty) ~ i:not(:empty)::before { content: ' · '; }
+  .head .src b:not(:empty) ~ i:not(:empty)::before { content: '  —  '; white-space: pre; }
 
-  /* 압정 */
+  /* 압정 (무광) */
   .pin {
-    width: calc(16 * var(--u)); height: calc(16 * var(--u));
+    width: calc(13 * var(--u)); height: calc(13 * var(--u));
     border-radius: 50%;
-    background: radial-gradient(circle at 34% 30%, rgba(255,255,255,.85) 0 calc(2 * var(--u)), transparent calc(3.4 * var(--u))), var(--c, #e2403f);
-    box-shadow: inset calc(-2 * var(--u)) calc(-3 * var(--u)) calc(4 * var(--u)) rgba(0,0,0,.28), calc(3 * var(--u)) calc(5 * var(--u)) calc(4 * var(--u)) rgba(50,25,5,.4);
+    background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.55) 0 calc(1.4 * var(--u)), transparent calc(3.4 * var(--u))), var(--c, #a8473f);
+    box-shadow: inset calc(-1.5 * var(--u)) calc(-2 * var(--u)) calc(3 * var(--u)) rgba(0,0,0,.25), calc(2.5 * var(--u)) calc(4 * var(--u)) calc(3 * var(--u)) rgba(40,20,5,.38);
   }
-  .pin.p0 { top: calc(52 * var(--u)); left: calc(292 * var(--u)); width: calc(18 * var(--u)); height: calc(18 * var(--u)); }
-  .pin.p1 { top: calc(30 * var(--u)); left: calc(36 * var(--u)); --c: #3b5bd6; }
-  .pin.p2 { top: calc(34 * var(--u)); left: calc(64 * var(--u)); --c: #d8c234; }
-  .pin.p3 { top: calc(296 * var(--u)); left: calc(48 * var(--u)); --c: #22b04b; }
+  .pin.p1 { top: calc(34 * var(--u)); left: calc(40 * var(--u)); --c: #34495e; }
+  .pin.p2 { top: calc(30 * var(--u)); left: calc(170 * var(--u)); --c: #c2a15a; width: calc(11 * var(--u)); height: calc(11 * var(--u)); }
+  .pin.p3 { top: calc(338 * var(--u)); left: calc(46 * var(--u)); --c: #a8473f; }
+  .pin.p4 { top: calc(28 * var(--u)); right: calc(80 * var(--u)); --c: #c2a15a; }
+  .pin.p5 { bottom: calc(30 * var(--u)); left: calc(300 * var(--u)); --c: #34495e; width: calc(11 * var(--u)); height: calc(11 * var(--u)); }
 
-  /* 포스트잇 */
-  .note {
-    width: calc(84 * var(--u)); height: calc(84 * var(--u));
-    background: linear-gradient(170deg, rgba(255,255,255,.25), transparent 40%, rgba(0,0,0,.05)), var(--c);
-    box-shadow: calc(1 * var(--u)) calc(4 * var(--u)) calc(6 * var(--u)) rgba(60,30,10,.32);
-    transform: rotate(var(--r));
-  }
-  .note.n1 { top: calc(196 * var(--u)); left: calc(14 * var(--u)); --c: #e2e872; --r: -7deg; }
-  .note.n2 { top: calc(292 * var(--u)); left: calc(20 * var(--u)); --c: #ffb3d6; --r: 6deg; width: calc(78 * var(--u)); height: calc(78 * var(--u)); }
-  .note.n3 { bottom: calc(118 * var(--u)); left: calc(16 * var(--u)); --c: #a6ecc6; --r: -4deg; }
-  .note.n4 { bottom: calc(66 * var(--u)); right: calc(22 * var(--u)); --c: #cdbcf5; --r: 8deg; width: calc(76 * var(--u)); height: calc(76 * var(--u)); }
-  .note.n2::after {            /* 낙서 하트 */
-    content: '♡'; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) rotate(-8deg);
-    font: calc(30 * var(--u))/1 var(--hand); color: #e0558f;
-  }
-  .note.n3::after {
-    content: '꼭!'; position: absolute; left: calc(14 * var(--u)); top: calc(16 * var(--u));
-    font: calc(24 * var(--u))/1 var(--hand); color: #2f8a5c;
-  }
-
-  /* 마스킹테이프 */
-  .tape {
-    height: calc(18 * var(--u));
-    opacity: .85;
-    clip-path: polygon(3% 0, 97% 0, 100% 25%, 97% 50%, 100% 75%, 97% 100%, 3% 100%, 0 75%, 3% 50%, 0 25%);
-    transform: rotate(var(--r));
-  }
-  .tape.a { top: calc(12 * var(--u)); right: calc(56 * var(--u)); width: calc(64 * var(--u)); --r: -6deg; background: rgba(120,190,230,.85); }
-  .tape.b { bottom: calc(132 * var(--u)); right: calc(36 * var(--u)); width: calc(50 * var(--u)); --r: 22deg; background: repeating-linear-gradient(45deg, #ffd2e2 0 calc(5 * var(--u)), #fff 0 calc(10 * var(--u))); }
-
-  /* 할 일 포스트잇 (텍스트 탭에서 수정) */
+  /* 할 일 인덱스카드 (텍스트 탭에서 수정) */
   .todo {
-    top: calc(22 * var(--u)); right: calc(22 * var(--u)); width: calc(136 * var(--u));
-    min-height: calc(110 * var(--u));
-    padding: calc(16 * var(--u)) calc(14 * var(--u)) calc(12 * var(--u));
-    background: linear-gradient(170deg, rgba(255,255,255,.3), transparent 45%, rgba(0,0,0,.05)), #fff28a;
-    box-shadow: calc(1 * var(--u)) calc(5 * var(--u)) calc(7 * var(--u)) rgba(60,30,10,.32);
-    transform: rotate(4deg);
-    font-family: var(--hand);
-    color: #4a3d2c;
+    top: calc(24 * var(--u)); right: calc(22 * var(--u)); width: calc(140 * var(--u));
+    min-height: calc(112 * var(--u));
+    padding: calc(14 * var(--u)) calc(14 * var(--u)) calc(12 * var(--u)) calc(16 * var(--u));
+    box-sizing: border-box;
+    background:
+      linear-gradient(rgba(190,80,70,.55), rgba(190,80,70,.55)) 0 calc(33 * var(--u)) / 100% calc(1 * var(--u)) no-repeat,
+      repeating-linear-gradient(180deg, transparent 0 calc(19 * var(--u)), rgba(90,130,180,.28) calc(19 * var(--u)) calc(20 * var(--u))) 0 calc(34 * var(--u)) / 100% 100% no-repeat,
+      #fbf7ec;
+    transform: rotate(3deg);
+    color: var(--ink);
   }
-  .todo b { display: block; margin-bottom: calc(3 * var(--u)); font: calc(20 * var(--u))/1 var(--hand); color: #e0605a; }
-  .todo p { margin: 0; font-size: calc(18 * var(--u)); line-height: calc(20 * var(--u)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .todo b { display: block; height: calc(20 * var(--u)); font: 600 calc(9 * var(--u))/calc(20 * var(--u)) var(--sans); letter-spacing: .28em; color: #a8473f; }
+  .todo p { margin: 0; font: calc(18 * var(--u))/calc(20 * var(--u)) var(--hand); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .todo p:nth-of-type(n+6) { display: none; }
 
-  /* 우표 */
+  /* 폴라로이드 */
+  .polaroid {
+    top: calc(188 * var(--u)); left: calc(8 * var(--u));
+    width: calc(92 * var(--u)); height: calc(108 * var(--u));
+    padding: calc(7 * var(--u)) calc(7 * var(--u)) calc(23 * var(--u));
+    box-sizing: border-box;
+    background: #fbfaf7;
+    transform: rotate(-6deg);
+  }
+  .polaroid i {
+    display: block; width: 100%; height: 100%;
+    background:
+      radial-gradient(ellipse at 70% 25%, rgba(255,240,215,.9), transparent 45%),
+      linear-gradient(180deg, #c9d6dc 0%, #dfd7c8 55%, #b7a88f 56%, #a39276 100%);
+  }
+  .polaroid .t2 { position: absolute; top: calc(-9 * var(--u)); left: calc(26 * var(--u)); width: calc(42 * var(--u)); --r: 4deg; --c: rgba(226,214,190,.85); }
+
+  /* 포스트잇 (차분한 색) */
+  .note {
+    width: calc(80 * var(--u)); height: calc(80 * var(--u));
+    background: linear-gradient(165deg, rgba(255,255,255,.22), transparent 45%, rgba(0,0,0,.04)), var(--c);
+    transform: rotate(var(--r));
+  }
+  .note.n1 { top: calc(330 * var(--u)); left: calc(14 * var(--u)); --c: #cfd6bf; --r: 4deg; }
+  .note.n2 { top: calc(384 * var(--u)); right: calc(16 * var(--u)); --c: #ead2c8; --r: -5deg; width: calc(72 * var(--u)); height: calc(72 * var(--u)); }
+
+  /* 빈티지 우표 + 소인 */
   .stamp {
-    top: calc(236 * var(--u)); right: calc(12 * var(--u));
-    width: calc(80 * var(--u)); height: calc(100 * var(--u));
+    top: calc(232 * var(--u)); right: calc(14 * var(--u));
+    width: calc(74 * var(--u)); height: calc(92 * var(--u));
     padding: calc(6 * var(--u));
     box-sizing: border-box;
-    background: #fbf7ee;
-    -webkit-mask: radial-gradient(circle, transparent calc(3 * var(--u)), #000 calc(3.4 * var(--u))) calc(-5 * var(--u)) calc(-5 * var(--u)) / calc(10 * var(--u)) calc(10 * var(--u)), linear-gradient(#000 0 0) content-box;
-    mask: radial-gradient(circle, transparent calc(3 * var(--u)), #000 calc(3.4 * var(--u))) calc(-5 * var(--u)) calc(-5 * var(--u)) / calc(10 * var(--u)) calc(10 * var(--u)), linear-gradient(#000 0 0) content-box;
-    transform: rotate(7deg);
-    filter: drop-shadow(0 calc(3 * var(--u)) calc(3 * var(--u)) rgba(60,30,10,.35));
+    background: #f6f1e6;
+    -webkit-mask: radial-gradient(circle, transparent calc(2.6 * var(--u)), #000 calc(3 * var(--u))) calc(-4.5 * var(--u)) calc(-4.5 * var(--u)) / calc(9 * var(--u)) calc(9 * var(--u)), linear-gradient(#000 0 0) content-box;
+    mask: radial-gradient(circle, transparent calc(2.6 * var(--u)), #000 calc(3 * var(--u))) calc(-4.5 * var(--u)) calc(-4.5 * var(--u)) / calc(9 * var(--u)) calc(9 * var(--u)), linear-gradient(#000 0 0) content-box;
+    transform: rotate(5deg);
+    filter: drop-shadow(0 calc(2 * var(--u)) calc(2.5 * var(--u)) rgba(40,22,8,.35));
   }
   .stamp .in {
     position: relative; height: 100%;
     overflow: hidden;
-    background:
-      radial-gradient(circle at 50% 50%, #fff3a6 0 calc(4 * var(--u)), transparent calc(4.5 * var(--u))) calc(22 * var(--u)) calc(40 * var(--u)) / calc(26 * var(--u)) calc(26 * var(--u)) no-repeat,
-      radial-gradient(circle, #f59ac0 calc(6.5 * var(--u)), transparent calc(7 * var(--u))) calc(14 * var(--u)) calc(30 * var(--u)) / calc(20 * var(--u)) calc(20 * var(--u)) no-repeat,
-      radial-gradient(circle, #f59ac0 calc(6.5 * var(--u)), transparent calc(7 * var(--u))) calc(28 * var(--u)) calc(30 * var(--u)) / calc(20 * var(--u)) calc(20 * var(--u)) no-repeat,
-      radial-gradient(circle, #f59ac0 calc(6.5 * var(--u)), transparent calc(7 * var(--u))) calc(14 * var(--u)) calc(44 * var(--u)) / calc(20 * var(--u)) calc(20 * var(--u)) no-repeat,
-      radial-gradient(circle, #f59ac0 calc(6.5 * var(--u)), transparent calc(7 * var(--u))) calc(28 * var(--u)) calc(44 * var(--u)) / calc(20 * var(--u)) calc(20 * var(--u)) no-repeat,
-      linear-gradient(#5aa36a, #5aa36a) calc(33 * var(--u)) calc(58 * var(--u)) / calc(2 * var(--u)) calc(24 * var(--u)) no-repeat,
-      linear-gradient(180deg, #9fc8ee, #cfe4f6);
-    border: calc(1 * var(--u)) solid #7aa6cf;
+    background: linear-gradient(170deg, #c7d3d4, #aebfc1);
+    box-shadow: inset 0 0 0 calc(1 * var(--u)) rgba(60,80,85,.35);
   }
-  .stamp .in::before { content: 'LETTER'; position: absolute; left: calc(5 * var(--u)); top: calc(5 * var(--u)); font: 700 calc(8 * var(--u))/1 Georgia, serif; letter-spacing: .1em; color: #fff; }
-  .stamp .in::after { content: '450'; position: absolute; right: calc(5 * var(--u)); bottom: calc(5 * var(--u)); font: italic 700 calc(13 * var(--u))/1 Georgia, serif; color: #d2557f; }
-
-  /* 스티커 */
-  .star {
+  .stamp .fl {                 /* 꽃: 꽃잎 · 가운데를 같은 상자 안에서 그려 중심이 어긋나지 않음 */
+    position: absolute; left: 50%; top: 44%;
     width: calc(34 * var(--u)); height: calc(34 * var(--u));
-    background: linear-gradient(135deg, #ffe680, #f2bd2a);
-    clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
-    transform: rotate(var(--r));
-    filter: drop-shadow(0 calc(2 * var(--u)) calc(2 * var(--u)) rgba(60,30,10,.3));
-  }
-  .star.s1 { top: calc(110 * var(--u)); left: calc(30 * var(--u)); --r: -12deg; }
-  .star.s2 { top: calc(402 * var(--u)); left: calc(36 * var(--u)); --r: 14deg; width: calc(26 * var(--u)); height: calc(26 * var(--u)); }
-  .star.s3 { bottom: calc(22 * var(--u)); left: calc(250 * var(--u)); --r: 8deg; width: calc(22 * var(--u)); height: calc(22 * var(--u)); }
-
-  .heart-s {                   /* 흰 테두리 하트 스티커 */
-    top: calc(176 * var(--u)); right: calc(28 * var(--u));
-    width: calc(44 * var(--u)); height: calc(40 * var(--u));
-    transform: rotate(10deg);
-    filter: drop-shadow(0 calc(2 * var(--u)) calc(2 * var(--u)) rgba(60,30,10,.35));
-  }
-  .heart-s i, .heart-s b {
-    position: absolute; inset: 0;
-    clip-path: polygon(50% 100%, 12% 66%, 2% 46%, 0 28%, 6% 10%, 20% 1%, 36% 2%, 50% 16%, 64% 2%, 80% 1%, 94% 10%, 100% 28%, 98% 46%, 88% 66%);
-    background: #fff;
-  }
-  .heart-s b { inset: calc(3 * var(--u)); background: radial-gradient(circle at 30% 30%, #ff8a99, #e2445a 70%); }
-
-  .smile {
-    width: calc(40 * var(--u)); height: calc(40 * var(--u));
-    border-radius: 50%;
+    transform: translate(-50%, -50%);
     background:
-      radial-gradient(ellipse, #4a3420 calc(2 * var(--u)), transparent calc(2.5 * var(--u))) calc(10 * var(--u)) calc(10 * var(--u)) / calc(6 * var(--u)) calc(9 * var(--u)) no-repeat,
-      radial-gradient(ellipse, #4a3420 calc(2 * var(--u)), transparent calc(2.5 * var(--u))) calc(24 * var(--u)) calc(10 * var(--u)) / calc(6 * var(--u)) calc(9 * var(--u)) no-repeat,
-      radial-gradient(circle, rgba(255,120,120,.45) calc(3 * var(--u)), transparent calc(3.6 * var(--u))) calc(4 * var(--u)) calc(19 * var(--u)) / calc(8 * var(--u)) calc(8 * var(--u)) no-repeat,
-      radial-gradient(circle, rgba(255,120,120,.45) calc(3 * var(--u)), transparent calc(3.6 * var(--u))) calc(28 * var(--u)) calc(19 * var(--u)) / calc(8 * var(--u)) calc(8 * var(--u)) no-repeat,
-      radial-gradient(circle at 35% 30%, #fff4a0, #ffd23c 70%);
-    box-shadow: 0 0 0 calc(3 * var(--u)) #fff, 0 calc(3 * var(--u)) calc(4 * var(--u)) calc(2 * var(--u)) rgba(60,30,10,.3);
-    transform: rotate(-10deg);
+      radial-gradient(circle at 50% 50%, #d9b25c 0 13%, transparent 14%),
+      radial-gradient(circle at 50% 24%, #b86a62 0 17%, transparent 18%),
+      radial-gradient(circle at 76% 50%, #b86a62 0 17%, transparent 18%),
+      radial-gradient(circle at 50% 76%, #b86a62 0 17%, transparent 18%),
+      radial-gradient(circle at 24% 50%, #b86a62 0 17%, transparent 18%),
+      radial-gradient(circle at 32% 32%, #cf8a80 0 15%, transparent 16%),
+      radial-gradient(circle at 68% 32%, #cf8a80 0 15%, transparent 16%),
+      radial-gradient(circle at 68% 68%, #cf8a80 0 15%, transparent 16%),
+      radial-gradient(circle at 32% 68%, #cf8a80 0 15%, transparent 16%);
   }
-  .smile::after {              /* 웃는 입 */
-    content: ''; position: absolute; left: calc(13 * var(--u)); top: calc(20 * var(--u));
-    width: calc(14 * var(--u)); height: calc(7 * var(--u));
-    border: calc(2.2 * var(--u)) solid #4a3420; border-top: 0;
-    border-radius: 0 0 calc(10 * var(--u)) calc(10 * var(--u));
+  .stamp .stem { position: absolute; left: calc(50% - .6 * var(--u)); top: 62%; width: calc(1.2 * var(--u)); height: 30%; background: #5f7a62; }
+  .stamp .in::before { content: 'KOREA'; position: absolute; left: calc(5 * var(--u)); top: calc(5 * var(--u)); font: 700 calc(7 * var(--u))/1 var(--serif); letter-spacing: .18em; color: #3f5558; }
+  .stamp .in::after { content: '450'; position: absolute; right: calc(5 * var(--u)); bottom: calc(4 * var(--u)); font: 700 calc(11 * var(--u))/1 var(--serif); color: #3f5558; }
+  .postmark {
+    top: calc(290 * var(--u)); right: calc(64 * var(--u));
+    width: calc(46 * var(--u)); height: calc(46 * var(--u));
     box-sizing: border-box;
-  }
-  .smile.m1 { bottom: calc(222 * var(--u)); left: calc(30 * var(--u)); }
-
-  .button {
-    --d: calc(30 * var(--u));
-    width: var(--d); height: var(--d);
     border-radius: 50%;
+    border: calc(1.4 * var(--u)) solid rgba(40,45,60,.5);
+    box-shadow: inset 0 0 0 calc(4 * var(--u)) transparent, inset 0 0 0 calc(5 * var(--u)) rgba(40,45,60,.35);
+    transform: rotate(-14deg);
+    font: 700 calc(6.5 * var(--u))/calc(43 * var(--u)) var(--sans);
+    letter-spacing: .14em;
+    text-align: center;
+    color: rgba(40,45,60,.55);
+  }
+  .postmark::after {          /* 소인 줄 */
+    content: ''; position: absolute; left: 96%; top: 24%;
+    width: calc(40 * var(--u)); height: calc(18 * var(--u));
+    background: repeating-linear-gradient(180deg, transparent 0 calc(3.4 * var(--u)), rgba(40,45,60,.42) calc(3.4 * var(--u)) calc(4.6 * var(--u)));
+  }
+
+  /* 티켓 */
+  .ticket {
+    bottom: calc(150 * var(--u)); left: calc(6 * var(--u));
+    width: calc(92 * var(--u)); height: calc(42 * var(--u));
     background:
-      radial-gradient(circle at 39% 39%, rgba(40,60,80,.5) calc(var(--d) * .06), transparent calc(var(--d) * .075)),
-      radial-gradient(circle at 61% 39%, rgba(40,60,80,.5) calc(var(--d) * .06), transparent calc(var(--d) * .075)),
-      radial-gradient(circle at 39% 61%, rgba(40,60,80,.5) calc(var(--d) * .06), transparent calc(var(--d) * .075)),
-      radial-gradient(circle at 61% 61%, rgba(40,60,80,.5) calc(var(--d) * .06), transparent calc(var(--d) * .075)),
-      radial-gradient(circle, transparent calc(var(--d) * .32), rgba(0,0,0,.12) calc(var(--d) * .34) calc(var(--d) * .37), transparent calc(var(--d) * .39)),
-      radial-gradient(circle at 35% 30%, #d4f0ff, var(--c, #79c3ea) 70%);
-    box-shadow: 0 calc(3 * var(--u)) calc(4 * var(--u)) rgba(60,30,10,.35);
+      linear-gradient(90deg, transparent calc(66 * var(--u)), rgba(255,255,255,.55) calc(66 * var(--u)) calc(67 * var(--u)), transparent calc(67 * var(--u))),
+      #d8b6a6;
+    -webkit-mask: radial-gradient(circle at 0 50%, transparent calc(5 * var(--u)), #000 calc(5.4 * var(--u))) left / 51% 100% no-repeat, radial-gradient(circle at 100% 50%, transparent calc(5 * var(--u)), #000 calc(5.4 * var(--u))) right / 51% 100% no-repeat;
+    mask: radial-gradient(circle at 0 50%, transparent calc(5 * var(--u)), #000 calc(5.4 * var(--u))) left / 51% 100% no-repeat, radial-gradient(circle at 100% 50%, transparent calc(5 * var(--u)), #000 calc(5.4 * var(--u))) right / 51% 100% no-repeat;
+    transform: rotate(-8deg);
+    filter: drop-shadow(0 calc(2 * var(--u)) calc(2 * var(--u)) rgba(40,22,8,.35));
+    color: #5e3a30;
   }
-  .button.b1 { bottom: calc(196 * var(--u)); right: calc(36 * var(--u)); }
-  .button.b2 { bottom: calc(20 * var(--u)); left: calc(110 * var(--u)); --c: #f49ab8; --d: calc(24 * var(--u)); }
+  .ticket b { position: absolute; left: calc(11 * var(--u)); top: calc(9 * var(--u)); font: 700 calc(8 * var(--u))/1.25 var(--serif); letter-spacing: .16em; }
+  .ticket small { position: absolute; left: calc(11 * var(--u)); bottom: calc(8 * var(--u)); font: 500 calc(6 * var(--u))/1 var(--sans); letter-spacing: .2em; opacity: .8; }
+  .ticket em { position: absolute; right: calc(7 * var(--u)); top: 50%; transform: translateY(-50%) rotate(90deg); font: 700 calc(7 * var(--u))/1 var(--sans); font-style: normal; letter-spacing: .1em; }
 
-  .label {
-    top: calc(344 * var(--u)); right: calc(18 * var(--u));
-    padding: calc(4 * var(--u)) calc(8 * var(--u));
-    font: 700 calc(12 * var(--u))/1 var(--sans);
-    color: #6a4a2a;
-    background: #fff27a;
-    box-shadow: 0 calc(2 * var(--u)) calc(3 * var(--u)) rgba(60,30,10,.3);
-    transform: rotate(-9deg);
-    white-space: nowrap;
+  /* 크라프트 태그 + 실 */
+  .tag {
+    bottom: calc(62 * var(--u)); right: calc(22 * var(--u));
+    width: calc(56 * var(--u)); height: calc(86 * var(--u));
+    background: linear-gradient(170deg, #cfae84, #bf9a6c);
+    clip-path: polygon(22% 0, 78% 0, 100% 16%, 100% 100%, 0 100%, 0 16%);
+    transform: rotate(9deg);
   }
-
-  .bit { width: calc(12 * var(--u)); height: calc(10 * var(--u)); background: var(--c); clip-path: polygon(20% 0, 100% 15%, 85% 100%, 0 80%); transform: rotate(var(--r)); opacity: .9; }
-  .bit.c1 { top: calc(150 * var(--u)); left: calc(56 * var(--u)); --c: #ff9fc0; --r: 20deg; }
-  .bit.c2 { top: calc(30 * var(--u)); left: calc(200 * var(--u)); --c: #9fe0e8; --r: -15deg; }
-  .bit.c3 { top: calc(36 * var(--u)); left: calc(380 * var(--u)); --c: #fff07a; --r: 40deg; }
-  .bit.c4 { bottom: calc(26 * var(--u)); right: calc(150 * var(--u)); --c: #ff9fc0; --r: -30deg; }
-  .bit.c5 { bottom: calc(160 * var(--u)); right: calc(56 * var(--u)); --c: #b9f0c8; --r: 10deg; }
-  .bit.c6 { bottom: calc(30 * var(--u)); left: calc(50 * var(--u)); --c: #9fe0e8; --r: 60deg; }
+  .tag::before { content: ''; position: absolute; left: 50%; top: calc(11 * var(--u)); width: calc(8 * var(--u)); height: calc(8 * var(--u)); margin-left: calc(-4 * var(--u)); border-radius: 50%; background: #8f6a42; box-shadow: 0 0 0 calc(2 * var(--u)) #e9dcc6; }
+  .tag::after { content: 'note'; position: absolute; left: 0; right: 0; top: calc(44 * var(--u)); text-align: center; font: italic 400 calc(12 * var(--u))/1 Georgia, var(--serif); color: #5a3f22; letter-spacing: .06em; }
+  .pin.p6 { bottom: calc(126 * var(--u)); right: calc(41 * var(--u)); --c: #c2a15a; width: calc(11 * var(--u)); height: calc(11 * var(--u)); }
 </style>
 
 <div class="cb">
   <div class="cork"></div>
-  <div class="bit c1"></div><div class="bit c2"></div><div class="bit c3"></div>
-  <div class="bit c4"></div><div class="bit c5"></div><div class="bit c6"></div>
-  <div class="pin p1"></div><div class="pin p2"></div>
-  <div class="memo"></div>
-  <div class="head"><div class="t"><h1>{{제목}}</h1></div><div class="src"><b>{{출처}}</b><i>{{제작자}}</i></div></div>
-  <div class="pin p0"></div>
-  <div class="note n1"></div>
-  <div class="note n2"></div>
+  <div class="pin p1"></div><div class="pin p2"></div><div class="pin p4"></div><div class="pin p5"></div>
+  <div class="memo lift"></div>
+  <div class="tape t0"></div>
+  <div class="head"><h1>{{제목}}</h1><div class="src"><b>{{출처}}</b><i>{{제작자}}</i></div></div>
+  <div class="polaroid lift"><i></i><div class="tape t2"></div></div>
+  <div class="note n1 lift"></div>
   <div class="pin p3"></div>
-  <div class="note n3"></div>
-  <div class="note n4"></div>
-  <div class="tape b"></div>
-  <div class="star s1"></div><div class="star s2"></div><div class="star s3"></div>
-  <div class="smile m1"></div>
-  <div class="stamp"><div class="in"></div></div>
-  <div class="heart-s"><i></i><b></b></div>
-  <div class="label">(｡•ᴗ•｡)♡</div>
-  <div class="button b1"></div><div class="button b2"></div>
-  <div class="todo"><b>to do ♡</b>{{할일}}</div>
-  <div class="tape a"></div>
+  <div class="note n2 lift"></div>
+  <div class="stamp"><div class="in"><div class="fl"></div><div class="stem"></div></div></div>
+  <div class="postmark">SEOUL</div>
+  <div class="ticket"><b>ADMIT<br>ONE</b><small>No. 0417</small><em>A-12</em></div>
+  <div class="tag lift"></div>
+  <div class="pin p6"></div>
+  <div class="todo lift"><b>TO DO</b>{{할일}}</div>
 </div>
