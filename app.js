@@ -204,6 +204,26 @@ const SKINS = {
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .9 0 0 0 0 .8 0 0 0 .1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }`,
   },
+  agent: {
+    name: '블랙 에이전트',
+    css: `/* 흑백 정장 · 기밀 문서 무드: 위아래 가는 흰 선, 빛이 번쩍이는 하이라이트, 'CLASSIFIED' 꼬리표 */
+.card-title { letter-spacing: .32em; text-transform: uppercase; font-weight: 800; }
+.name { letter-spacing: .22em; text-transform: uppercase; font-size: calc(var(--name-size) * .92); }
+.card::before {
+  content: "CLASSIFIED · EYES ONLY"; position: absolute; top: 18px; right: 22px; z-index: 2;
+  font: 700 9px/1 ui-monospace, Menlo, monospace; letter-spacing: .28em; color: rgba(255,255,255,.55);
+  padding: 5px 8px; border: 1px solid rgba(255,255,255,.35);
+}
+.card::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background:
+    linear-gradient(rgba(255,255,255,.85), rgba(255,255,255,.85)) top 10px left 22px / calc(100% - 44px) 1px no-repeat,
+    linear-gradient(rgba(255,255,255,.85), rgba(255,255,255,.85)) bottom 10px left 22px / calc(100% - 44px) 1px no-repeat,
+    radial-gradient(circle at 88% 8%, rgba(255,255,255,.22), transparent 28%),
+    linear-gradient(115deg, transparent 45%, rgba(255,255,255,.035) 50%, transparent 55%);
+}
+.bubble { letter-spacing: .01em; }`,
+  },
   chungking: {
     name: '중경삼림 무드',
     css: `/* 네온 번짐 · 필름 그레인 · 비네팅 */
@@ -276,9 +296,14 @@ const TEMPLATES = [
     skin: SKINS.mafia.css, chars: [['#1f1b18', '#efe6d4', '#c9a35e'], ['#5a1a1f', '#f5e6dc', '#8a2a30']],
   },
   {
-    id: 'flower', name: '꽃밭 피크닉', sub: '꽃 패턴 · 몽글한 파스텔 말풍선', pv: { bg: '#fff6f8', fg: '#7a5560', b1: '#ffffff', b2: '#ffd6e2', flower: true },
-    set: { typo: { color: '#6e4d57' }, head: { color: '#d4577a', creditColor: '#b78a96', creatorColor: '#d4577a', accent: '#ff8fab' }, bubble: { speech: 'pill', bg: '#ffffff', color: '#5e3f48', border: '#ffc2d1', bw: 1.5, shadow: true, nameColor: '#d4577a' }, canvas: { bg: '#fff6f8', bgType: 'pattern', pattern: 'flower', patColor: '#ff9db8', patOpacity: 0.32, patSize: 40 } },
-    chars: [['#ffffff', '#5e3f48', '#ffc2d1'], ['#ffe1ea', '#5e3f48', '#ffb3c7']],
+    id: 'flower', name: '보태니컬', sub: '선으로 그린 꽃 · 크림 · 더스티 로즈', pv: { bg: '#faf6f0', fg: '#6b5552', b1: '#ffffff', b2: '#efdcd6', flower: true },
+    set: { typo: { color: '#5f4d4a' }, head: { color: '#8a4e55', creditColor: '#a99590', creatorColor: '#8a4e55', accent: '#b9898a' }, bubble: { speech: 'round', bg: '#ffffff', color: '#4f3f3d', border: '#ffffff', bw: 0, radius: 14, shadow: true, nameColor: '#9a6a6c' }, canvas: { bg: '#faf6f0', bgType: 'pattern', pattern: 'flower', patColor: '#b98a87', patOpacity: 0.3, patSize: 54 } },
+    chars: [['#ffffff', '#4f3f3d', '#ffffff'], ['#f1e2dd', '#4f3f3d', '#f1e2dd']],
+  },
+  {
+    id: 'agent', name: '블랙 에이전트', sub: '흑백 정장 · 기밀 문서 · 플래시', pv: { bg: 'linear-gradient(115deg,#050505,#1a1a1a 55%,#050505)', fg: '#e8e8e8', b1: '#ffffff', b2: '#000000', outline: '#ffffff' },
+    set: { typo: { color: '#d7d7d7' }, head: { color: '#ffffff', creditColor: '#8a8a8a', creatorColor: '#ffffff', accent: '#ffffff' }, bubble: { speech: 'square', bg: '#ffffff', color: '#0a0a0a', border: '#ffffff', bw: 1, radius: 0, shadow: false, nameColor: '#bdbdbd' }, canvas: { bgType: 'gradient', gradType: 'linear', gradAngle: 160, bg: '#141414', bg2: '#020202' } },
+    skin: SKINS.agent.css, chars: [['#ffffff', '#0a0a0a', '#ffffff'], ['#000000', '#ffffff', '#ffffff']],
   },
   {
     id: 'film', name: '영화 자막', sub: '검은 화면 · 자막형 대사', pv: { bg: '#000000', fg: '#9a9a9a', film: true },
@@ -982,23 +1007,33 @@ const svgUrl = (svg) => `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 
 const PATTERNS = [['dots', '점'], ['grid', '격자'], ['lines', '줄 노트'], ['diagonal', '사선'], ['check', '체크'], ['plus', '플러스'], ['paper', '종이 질감'], ['manuscript', '원고지'], ['flower', '꽃']];
 
-// 꽃 패턴 타일: 다섯 잎 꽃(패턴 색) + 노란 꽃술 + 작은 잎 · 점, 엇갈리게 배치
+// 꽃 패턴 타일: 가는 선으로 그린 보태니컬 일러스트 (데이지 · 작은 가지 · 꽃봉오리)를 크기 · 각도를 달리해 흩뿌림
 function flowerTile(color, op, s) {
-  const t = s * 2;
-  const flower = (cx, cy, r) => {
-    let petals = '';
-    for (let k = 0; k < 5; k++) {
-      const a = (k * 72 - 90) * Math.PI / 180;
-      petals += `<circle cx="${(cx + Math.cos(a) * r * 0.62).toFixed(2)}" cy="${(cy + Math.sin(a) * r * 0.62).toFixed(2)}" r="${(r * 0.48).toFixed(2)}"/>`;
-    }
-    return `<g fill="${color}" fill-opacity="${op}">${petals}</g><circle cx="${cx}" cy="${cy}" r="${(r * 0.32).toFixed(2)}" fill="#ffd25e" fill-opacity="${Math.min(1, op + 0.25)}"/>`;
+  const t = Math.round(s * 4);
+  const sw = Math.max(0.8, s / 30).toFixed(2);
+  const fillOp = (op * 0.28).toFixed(3);
+  const st = `stroke="${color}" stroke-opacity="${op}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"`;
+  const daisy = (x, y, r, rot) => {
+    let g = '';
+    for (let k = 0; k < 8; k++) g += `<ellipse cx="0" cy="${(-r * 0.62).toFixed(2)}" rx="${(r * 0.2).toFixed(2)}" ry="${(r * 0.42).toFixed(2)}" transform="rotate(${k * 45})"/>`;
+    return `<g transform="translate(${x} ${y}) rotate(${rot})" fill="${color}" fill-opacity="${fillOp}" ${st}>${g}<circle r="${(r * 0.2).toFixed(2)}" fill="${color}" fill-opacity="${(op * 0.7).toFixed(3)}" stroke="none"/></g>`;
   };
-  const leaf = (x, y, rot) => `<ellipse cx="${x}" cy="${y}" rx="${(s * 0.11).toFixed(2)}" ry="${(s * 0.05).toFixed(2)}" transform="rotate(${rot} ${x} ${y})" fill="#8cc79a" fill-opacity="${op}"/>`;
-  const dot = (x, y) => `<circle cx="${x}" cy="${y}" r="${(s * 0.04).toFixed(2)}" fill="${color}" fill-opacity="${op * 0.7}"/>`;
-  const r = s * 0.28;
-  const body = flower(s * 0.5, s * 0.5, r) + flower(s * 1.5, s * 1.5, r)
-    + leaf(s * 0.5 + r * 1.15, s * 0.5 + r * 0.9, 35) + leaf(s * 1.5 - r * 1.15, s * 1.5 - r * 0.9, 215)
-    + dot(s * 1.5, s * 0.5) + dot(s * 0.5, s * 1.5) + dot(s * 1.1, s * 0.15) + dot(s * 0.15, s * 1.05);
+  const sprig = (x, y, len, rot) => {
+    const L = len;
+    let leaves = '';
+    for (let k = 1; k <= 3; k++) {
+      const yy = (-L * k / 4).toFixed(2), lw = (L * 0.11).toFixed(2), lh = (L * 0.2).toFixed(2);
+      leaves += `<ellipse cx="${-L * 0.1}" cy="${yy}" rx="${lw}" ry="${lh}" transform="rotate(-40 ${-L * 0.1} ${yy})"/><ellipse cx="${L * 0.1}" cy="${yy}" rx="${lw}" ry="${lh}" transform="rotate(40 ${L * 0.1} ${yy})"/>`;
+    }
+    return `<g transform="translate(${x} ${y}) rotate(${rot})" fill="${color}" fill-opacity="${fillOp}" ${st}><path d="M0 0 Q${L * 0.06} ${-L * 0.5} 0 ${-L}" fill="none"/>${leaves}</g>`;
+  };
+  const bud = (x, y, r, rot) => `<g transform="translate(${x} ${y}) rotate(${rot})" ${st} fill="none"><path d="M0 0 C${r} ${-r * 0.4} ${r * 0.6} ${-r * 1.6} 0 ${-r * 2} C${-r * 0.6} ${-r * 1.6} ${-r} ${-r * 0.4} 0 0Z" fill="${color}" fill-opacity="${fillOp}"/><path d="M0 0 L0 ${r * 1.4}"/></g>`;
+  const dot = (x, y) => `<circle cx="${x}" cy="${y}" r="${(s * 0.035).toFixed(2)}" fill="${color}" fill-opacity="${(op * 0.6).toFixed(3)}"/>`;
+  const u = s;
+  const body = daisy(u * 0.8, u * 0.9, u * 0.42, 10) + daisy(u * 2.9, u * 2.6, u * 0.3, 32) + daisy(u * 1.6, u * 3.4, u * 0.22, 5)
+    + sprig(u * 2.4, u * 1.35, u * 0.95, 28) + sprig(u * 0.55, u * 3.3, u * 0.75, -35) + sprig(u * 3.65, u * 0.65, u * 0.6, 160)
+    + bud(u * 1.75, u * 1.95, u * 0.17, -20) + bud(u * 3.4, u * 3.55, u * 0.14, 25)
+    + dot(u * 1.3, u * 0.3) + dot(u * 3.2, u * 1.7) + dot(u * 0.3, u * 2.1) + dot(u * 2.2, u * 2.9) + dot(u * 3.75, u * 2.95);
   return { image: svgUrl(`<svg xmlns="http://www.w3.org/2000/svg" width="${t}" height="${t}">${body}</svg>`), size: `${t}px ${t}px` };
 }
 
@@ -2627,7 +2662,7 @@ function buildTemplates() {
     const pv = h('div', { class: 'tpl-pv' });
     const p = t.pv;
     pv.style.background = p.bg;
-    if (p.flower) { const fp = flowerTile('#ff9db8', 0.5, 16); pv.style.backgroundImage = fp.image; pv.style.backgroundSize = fp.size; }
+    if (p.flower) { const fp = flowerTile('#b98a87', 0.55, 22); pv.style.backgroundImage = fp.image; pv.style.backgroundSize = fp.size; }
     if (p.lines) pv.style.backgroundImage = 'repeating-linear-gradient(transparent 0 13px, rgba(120,150,190,.25) 13px 14px)';
     if (p.frame) pv.style.boxShadow = 'inset 0 0 0 6px ' + p.bg + ', inset 0 0 0 7px rgba(80,55,30,.35)';
     const line = (w, center) => { const l = h('i', { class: 'l' }); l.style.cssText = `display:block;width:${w}%;background:${p.fg};${center ? 'align-self:center' : ''}`; return l; };
