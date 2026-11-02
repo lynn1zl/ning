@@ -1163,7 +1163,8 @@ const HTML_BG_PRESETS = [
   // 언덕 시리즈: 출처 · 제작자는 비우고, 지문 형식은 '*텍스트*'를 나레이션으로
   { name: '언덕 위의 마녀', file: 'bg/witch.html', clearCredit: true, parse: { formats: ['star1'], mode: 'plain' }, avatars: true,
     chars: ['마녀', { name: '노엘', avatar: 'bg/witch/noel.webp' }, { name: '륜', avatar: 'bg/witch/ryun.webp' }, { name: '악셀', avatar: 'bg/witch/axel.webp' }, { name: '루카', avatar: 'bg/witch/luka.webp' }] },
-  { name: '언덕 위의 마왕', file: 'bg/demon.html', chars: ['마왕', '체페슈', '아자젤', '노먼', '빌터', '한', '라이케'], clearCredit: true, parse: { formats: ['star1'], mode: 'plain' } },
+  { name: '언덕 위의 마왕', file: 'bg/demon.html', clearCredit: true, parse: { formats: ['star1'], mode: 'plain' }, avatars: true,
+    chars: ['마왕', { name: '체페슈', avatar: 'bg/demon/tepes.webp' }, { name: '아자젤', avatar: 'bg/demon/azazel.webp' }, { name: '노먼', avatar: 'bg/demon/norman.webp' }, { name: '빌터', avatar: 'bg/demon/wilter.webp' }, { name: '한', avatar: 'bg/demon/han.webp' }, '라이케'] },
 ];
 
 function applySkin() {
