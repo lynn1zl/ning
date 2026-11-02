@@ -1548,3 +1548,4 @@ body.resizing iframe, body.resizing #stage { pointer-events: none; }
 .talk-row { display: flex; gap: 6px; }
 .talk-row .talk-text { flex: 1; min-width: 0; }
 .talk-row .talk-name { width: 30%; min-width: 0; }
+.area-input { width: 100%; min-height: 108px; resize: vertical; line-height: 1.5; font: inherit; font-size: 14px; }

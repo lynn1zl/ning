@@ -145,6 +145,8 @@ const DEFAULTS = {
   scene: { show: true, place: '', alive: '', total: '' },
   // 미니홈피 배경: 프레임 · 바탕 색, 방문자 수, 마이룸 사진 · 말풍선, TALK! TALK! 한마디
   hompy: { frame: '#8fd0e6', bg: '#eceff3', today: '', total: '', room: '', say: '', talk: [] },
+  // 코르크보드 배경: 가운데 메모지 색, 할 일 포스트잇 글
+  cork: { memo: '#fffdf3', todo: '✓ 장보기\n✓ 발췌하기\n☐ 헬스장 등록' },
   images: {},   // 글자처럼 넣은 이미지: id → { src, w(%), align }
   stickers: [], // 자유 배치 이미지: { id, src, x, y, w(px), rot, layer: 'front'|'back', page, op }
   file: { prefix: true, date: true, pair: '', title: '', number: false },
@@ -1259,11 +1261,13 @@ async function loadBgRef(file) {
 const bgHasTitle = () => { TITLE_TOKEN.lastIndex = 0; return TITLE_TOKEN.test(bgCode()); };
 const bgUsesScene = () => /\{\{\s*(장소|생존|전체|place|alive|total)\s*\}\}/i.test(bgCode());
 const bgUsesHompy = () => /\{\{\s*(마이룸|톡톡|프레임색)\s*\}\}/.test(bgCode());
+const bgUsesCork = () => /\{\{\s*(메모지색|할일)\s*\}\}/.test(bgCode());
 const safeColor = (v, d) => (/^#[0-9a-f]{3,8}$/i.test(v || '') ? v : d);
 function fillBgTokens(html) {
   const e = (t) => esc((t || '').trim());
   const sc = state.scene || {};
   const hp = state.hompy || {};
+  const ck = state.cork || {};
   // 상황판 끄기: data-scene 이 붙은 요소를 숨김
   if (sc.show === false) html = (html || '') + '<style>[data-scene]{display:none !important}</style>';
   return (html || '')
@@ -1281,6 +1285,8 @@ function fillBgTokens(html) {
     .replace(/\{\{\s*토탈\s*\}\}/g, () => e(String(hp.total ?? '')))
     .replace(/\{\{\s*마이룸\s*\}\}/g, () => (hp.room ? `<img src="${hp.room.replace(/"/g, '&quot;')}" alt="">` : '')
       + ((hp.say || '').trim() ? `<div class="say">${e(hp.say)}</div>` : ''))
+    .replace(/\{\{\s*메모지색\s*\}\}/g, () => safeColor(ck.memo, '#fffdf3'))
+    .replace(/\{\{\s*할일\s*\}\}/g, () => String(ck.todo || '').split('\n').map((l) => l.trim()).filter(Boolean).slice(0, 5).map((l) => `<p>${e(l)}</p>`).join(''))
     .replace(/\{\{\s*톡톡\s*\}\}/g, () => (hp.talk || []).filter((t) => (t.text || '').trim())
       .map((t) => `<li><span>${e(t.text)}</span>${(t.name || '').trim() ? `<em>${e(t.name)}</em>` : ''}</li>`).join(''))
     .replace(/\{\{\s*(생존|alive)\s*\}\}/gi, () => e(String(sc.alive ?? '')))
@@ -1354,6 +1360,7 @@ const HTML_BG_PRESETS = [
   // 미니홈피: 비어 있는 칸만 예시로 채움 (이미 쓴 마이룸 · 한마디는 그대로)
   { name: '미니홈피', file: 'bg/hompy.html', hompy: { today: '25', total: '1004', say: '안녕하세요', talk: [
     { name: '닐', text: '뭐하냐' }, { name: '린', text: '로그 좀 올려' }, { name: '익명', text: '잘 구경했다...ㅋㅋ' }] } },
+  { name: '코르크보드', file: 'bg/cork.html' },
 ];
 
 function applySkin() {
@@ -1815,6 +1822,8 @@ const HOMPY_COLORS = [
   ['하늘', '#8fd0e6', '#eceff3'], ['연두', '#a8d86a', '#e7e8e4'], ['딸기', '#f5a3b7', '#fbf0f2'],
   ['라벤더', '#b9a7e8', '#f0eef7'], ['레몬', '#f2d36b', '#f7f4ea'], ['민트', '#8fd8c0', '#ebf3f0'], ['회색', '#b5bcc4', '#f2f3f5'],
 ];
+// 코르크보드 가운데 메모지 추천 색
+const CORK_COLORS = [['아이보리', '#fffdf3'], ['하양', '#ffffff'], ['하늘', '#eef6ff'], ['분홍', '#fff0f4'], ['민트', '#ecfaf3'], ['레몬', '#fffbd9'], ['라벤더', '#f4f0ff']];
 const SCHEMA = {
   text: [
     { sec: '대사 인식', note: '말풍선을 누르면 캐릭터 · 위치 · 모양을 바꾸거나 다시 글로 되돌릴 수 있어요.', rows: [
@@ -1845,9 +1854,14 @@ const SCHEMA = {
     { sec: '미니홈피', show: () => bgUsesHompy(), rows: [
       { t: 'color', p: 'hompy.frame', l: '프레임 색' },
       { t: 'color', p: 'hompy.bg', l: '배경 색' },
-      { t: 'swatches', p: 'hompy', o: HOMPY_COLORS },
+      { t: 'swatches', keys: ['hompy.frame', 'hompy.bg'], o: HOMPY_COLORS },
       { t: 'text', p: 'hompy.today', l: 'TODAY', ph: '예) 25' },
       { t: 'text', p: 'hompy.total', l: 'TOTAL', ph: '예) 1004' },
+    ] },
+    { sec: '코르크보드', show: () => bgUsesCork(), rows: [
+      { t: 'color', p: 'cork.memo', l: '메모지 색' },
+      { t: 'swatches', keys: ['cork.memo'], o: CORK_COLORS },
+      { t: 'area', p: 'cork.todo', l: '할 일 포스트잇', sub: '한 줄에 하나씩 · 최대 5줄', ph: '✓ 장보기\n☐ 헬스장 등록' },
     ] },
     { sec: '마이룸', note: '사진을 넣지 않으면 기본 방이 보여요.', show: () => bgUsesHompy(), rows: [
       { t: 'roomImg', p: 'hompy.room' },
@@ -2107,16 +2121,24 @@ function fieldEl(d) {
 
     case 'swatches': {
       const row = h('div', { class: 'hp-swatches' });
-      d.o.forEach(([l, frame, bg]) => {
-        const b = h('button', { type: 'button', class: 'hp-sw', title: l, 'aria-label': `${l} 색 조합` }, h('i'), h('span', {}, l));
-        b.firstChild.style.background = frame;
-        b.firstChild.style.boxShadow = `inset 0 0 0 4px ${bg}`;
-        b.addEventListener('click', () => { state.hompy.frame = frame; state.hompy.bg = bg; changed(); commit(); buildFields(); });
+      d.o.forEach(([l, ...vals]) => {
+        const b = h('button', { type: 'button', class: 'hp-sw', title: l, 'aria-label': `${l} 색` }, h('i'), h('span', {}, l));
+        b.firstChild.style.background = vals[0];
+        if (vals[1]) b.firstChild.style.boxShadow = `inset 0 0 0 4px ${vals[1]}`;
+        b.addEventListener('click', () => {
+          d.keys.forEach((k, i) => { const ks = k.split('.'); const last = ks.pop(); ks.reduce((o, x) => o[x], state)[last] = vals[i]; });
+          changed(); commit(); buildFields();
+        });
         row.append(b);
       });
-      el = h('div', { class: 'row stack' }, labelEl('추천 색 조합'), row);
+      el = h('div', { class: 'row stack' }, labelEl(d.keys.length > 1 ? '추천 색 조합' : '추천 색'), row);
       break;
     }
+
+    case 'area':
+      el = h('div', { class: 'row stack' }, labelEl(d.l, d.sub),
+        h('textarea', { class: 'input area-input', rows: 5, placeholder: d.ph || '', oninput: (e) => setPath(d.p, e.target.value) }, val || ''));
+      break;
 
     case 'roomImg': {
       const thumb = h('span', { class: 'img-thumb' });
@@ -2848,7 +2870,7 @@ function buildQuickInsert() {
 }
 
 /* 내 양식: 디자인 · 대사 인식 설정을 저장/불러오기 (글은 제외) */
-const STYLE_KEYS = ['typo', 'head', 'bubble', 'canvas', 'parse', 'skin', 'bgHtml', 'bgRef', 'scene', 'hompy'];
+const STYLE_KEYS = ['typo', 'head', 'bubble', 'canvas', 'parse', 'skin', 'bgHtml', 'bgRef', 'scene', 'hompy', 'cork'];
 let myStyles = [];
 
 function styleSnapshot(name, withChars) {
@@ -3503,7 +3525,7 @@ function buildSkin() {
         }
         changed(); commit();
         buildChars(); buildFields(); buildQuickInsert();
-        toast(`‘${bp.name}’ 배경을 적용했어요${added.length ? ` · 캐릭터 ${added.length}명 등록` : ''}${bp.scene ? ' · 장소 · 생존 인원은 텍스트 탭 ‘상황판’에서' : ''}${bp.hompy ? ' · 색 · 마이룸 · 한마디는 텍스트 탭에서' : ''}`, { label: '되돌리기', fn: undo }, 4200);
+        toast(`‘${bp.name}’ 배경을 적용했어요${added.length ? ` · 캐릭터 ${added.length}명 등록` : ''}${bp.scene ? ' · 장소 · 생존 인원은 텍스트 탭 ‘상황판’에서' : ''}${bp.hompy ? ' · 색 · 마이룸 · 한마디는 텍스트 탭에서' : ''}${bp.file === 'bg/cork.html' ? ' · 메모지 색 · 할 일은 텍스트 탭에서' : ''}`, { label: '되돌리기', fn: undo }, 4200);
       } catch (e) { toast('배경을 불러오지 못했어요'); }
     },
   }, bp.name)));
