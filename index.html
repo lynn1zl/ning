@@ -201,28 +201,63 @@
       <button type="button" class="icon-btn" data-close aria-label="닫기"></button>
     </div>
     <div class="help-body">
-      <div class="help-item"><code>"대사"</code> <code>「대사」</code> <code>*대사*</code> <code>⧼대사⟯</code><span>텍스트 탭 ‘대사 형식’에서 고른 기호로 감싼 줄이 말풍선</span></div>
-      <div class="help-item"><span class="kbd">기호 없는 줄이 대사</span><span>로 바꾸면 기호로 감싼 줄이 나레이션이 돼요</span></div>
-      <div class="help-item"><code>이름 | "대사"</code> <code>이름ㅣ"대사"</code><span>이름 뒤에 | 나 ㅣ 를 써도 돼요</span></div>
-      <div class="help-item"><code>이름 ——</code><code>「대사」</code><span>이름만 있는 줄 바로 아래 대사는 그 사람의 말풍선이 돼요</span></div>
-      <div class="help-item"><code>⧙ **이름** ⧙</code><code>"대사"</code><span>장식 기호로 감싼 이름 줄 아래 대사도 그 사람의 말풍선이 돼요</span></div>
-      <div class="help-item"><code>이름</code><code>「대사」</code><span>기호 없이 이름만 있는 줄은 등록된 캐릭터이거나, 두 번 이상 나오거나, 다음 줄이 외국어 대사일 때 이름으로 인식해요</span></div>
-      <div class="help-item"><code>「原文」 번역</code> <code>(번역)</code><span>따옴표 뒤에 이어지는 번역이나 바로 아랫줄의 괄호는 같은 말풍선 안에 작게 붙어요</span></div>
-      <div class="help-item"><code>이름: "대사"</code> <code>[이름] 대사</code><span>화자 지정 · 캐릭터 탭에 등록하면 사진과 색이 적용</span></div>
-      <div class="help-item"><code>빈 줄 1개</code><span>문단 나눔 (설정에서 바꿀 수 있어요)</span></div>
-      <div class="help-item"><code>빈 줄 2개</code> <code>---</code><span>장면 전환 여백 · 구분선</span></div>
-      <div class="help-item"><code>**굵게**</code> <code>*기울임*</code> <code>__밑줄__</code> <code>~~취소선~~</code> <code>==형광펜==</code><span>입력창 위 서식 버튼으로도 넣을 수 있어요</span></div>
-      <div class="help-item"><span class="kbd">말풍선 클릭</span><span>그 말풍선만 화자 · 위치 · 모양 변경</span></div>
-      <h4>단축키</h4>
-      <div class="help-item"><span class="kbd">Ctrl/⌘ Z</span><span>실행 취소 (입력창 밖에서)</span></div>
-      <div class="help-item"><span class="kbd">Ctrl/⌘ Shift Z</span><span>다시 실행</span></div>
-      <div class="help-item"><span class="kbd">Ctrl/⌘ B · I · U</span><span>굵게 · 기울임 · 밑줄 (입력창에서)</span></div>
-      <div class="help-item"><span class="kbd">Ctrl/⌘ Shift X · H</span><span>취소선 · 형광펜</span></div>
-      <div class="help-item"><span class="kbd">Ctrl/⌘ S</span><span>이미지 저장</span></div>
-      <div class="help-item"><span class="kbd">Ctrl/⌘ + / −</span><span>미리보기 확대 · 축소</span></div>
+      <p class="tut-lead">한 줄씩 읽어서 <b>말풍선</b>이 될지 <b>나레이션</b>이 될지 정해요. 아래 규칙에 맞는 줄이 말풍선이 되고, 나머지는 나레이션이에요.</p>
+
+      <section class="tut-sec">
+        <h4><span class="tut-num">1</span>기호로 감싼 줄 → 말풍선</h4>
+        <p>텍스트 탭 ‘대사 형식’에서 고른 기호로 줄 전체를 감싸면 말풍선이 돼요. 목록 끝의 <b>+ 직접 지정</b>으로 원하는 기호를 더할 수 있어요.</p>
+        <div class="tut-row"><code>"대사"</code><code>「대사」</code><code>『대사』</code><code>⧼대사⟯</code><span class="tut-res bubble">말풍선</span></div>
+        <div class="tut-row"><code>"대사." 그가 말했다.</code><span class="tut-res narr">나레이션</span><small>기호 뒤에 나레이션이 이어지면 그대로 둬요</small></div>
+      </section>
+
+      <section class="tut-sec">
+        <h4><span class="tut-num">2</span>이름을 붙이면 → 그 사람의 말풍선</h4>
+        <p>이름 뒤에 구분 기호를 쓰거나, 윗줄에 이름만 따로 쓰면 돼요. 캐릭터 탭에 같은 이름이 있으면 사진과 색이 붙고, 새 이름은 자동으로 등록돼요.</p>
+        <div class="tut-row"><code>이름: "대사"</code><code>[이름] 대사</code><span class="tut-res bubble">말풍선</span></div>
+        <div class="tut-row"><code>이름 | 대사</code><code>이름ㅣ대사</code><span class="tut-res bubble">말풍선</span><small>따옴표가 없어도 돼요</small></div>
+        <div class="tut-row stack"><code>이름 ——<br>「대사」</code><code>⧙ **이름** ⧙<br>"대사"</code><span class="tut-res bubble">말풍선</span><small>이름만 있는 줄 바로 아래 대사</small></div>
+        <div class="tut-row stack"><code>이름<br>「대사」</code><span class="tut-res bubble">말풍선</span><small>기호 없는 이름 줄은 등록된 캐릭터이거나, 두 번 이상 나오거나, 다음 줄이 외국어 대사일 때만</small></div>
+        <div class="tut-row"><code>시간: 오후 세 시</code><span class="tut-res narr">나레이션</span><small>따옴표 없는 ‘이름:’ 줄은 등록된 캐릭터일 때만 말풍선</small></div>
+      </section>
+
+      <section class="tut-sec">
+        <h4><span class="tut-num">3</span>번역은 → 같은 말풍선 안에</h4>
+        <p>원문 뒤에 이어지는 번역이나, 대사 바로 아랫줄의 괄호는 한 말풍선 안에 작게 들어가요. ‘둘 다 / 번역만 / 원문만’ 중 골라서 보여 줄 수 있어요.</p>
+        <div class="tut-row"><code>「待って」 기다려</code><span class="tut-res bubble">말풍선 + 번역</span></div>
+        <div class="tut-row stack"><code>이름 | Hello<br>(안녕)</code><span class="tut-res bubble">말풍선 + 번역</span></div>
+      </section>
+
+      <section class="tut-sec">
+        <h4><span class="tut-num">4</span>반대로 쓰고 싶다면 → ‘나레이션으로’</h4>
+        <p>텍스트 탭의 <b>위에서 고른 형식을 [나레이션으로]</b>를 고르면, 고른 기호로 감싼 줄이 나레이션이 되고 <b>기호 없는 줄이 말풍선</b>이 돼요. 나레이션을 *기울임*처럼 기호로 표시하는 글에 쓰면 돼요.</p>
+        <div class="tut-row"><code>*그는 창밖을 보았다.*</code><span class="tut-res narr">나레이션</span></div>
+        <div class="tut-row"><code>오늘은 늦었네.</code><span class="tut-res bubble">말풍선</span></div>
+      </section>
+
+      <section class="tut-sec">
+        <h4><span class="tut-num">5</span>잘못 인식됐다면 → 말풍선을 눌러서</h4>
+        <p>미리보기에서 말풍선을 누르면 그 말풍선만 화자 · 위치 · 모양을 바꾸거나 <b>말풍선 해제</b>로 나레이션으로 되돌릴 수 있어요.</p>
+      </section>
+
+      <section class="tut-sec">
+        <h4><span class="tut-num">6</span>서식 · 여백</h4>
+        <div class="tut-row"><code>**굵게**</code><code>*기울임*</code><code>__밑줄__</code><code>~~취소선~~</code><code>==형광펜==</code><small>입력창 위 서식 버튼으로도</small></div>
+        <div class="tut-row"><code>빈 줄 1개</code><small>문단 나눔</small><code>빈 줄 2개 이상</code><small>친 만큼 여백</small><code>---</code><small>구분선</small></div>
+      </section>
+
+      <section class="tut-sec">
+        <h4>단축키</h4>
+        <div class="help-item"><span class="kbd">Ctrl/⌘ Z</span><span>실행 취소 (입력창 밖에서)</span></div>
+        <div class="help-item"><span class="kbd">Ctrl/⌘ Shift Z</span><span>다시 실행</span></div>
+        <div class="help-item"><span class="kbd">Ctrl/⌘ B · I · U</span><span>굵게 · 기울임 · 밑줄 (입력창에서)</span></div>
+        <div class="help-item"><span class="kbd">Ctrl/⌘ Shift X · H</span><span>취소선 · 형광펜</span></div>
+        <div class="help-item"><span class="kbd">Ctrl/⌘ S</span><span>이미지 저장</span></div>
+        <div class="help-item"><span class="kbd">Ctrl/⌘ + / −</span><span>미리보기 확대 · 축소</span></div>
+      </section>
     </div>
   </div>
 </div>
+
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 

@@ -1401,3 +1401,20 @@ body.resizing iframe, body.resizing #stage { pointer-events: none; }
 .nameless-card { margin-top: 12px; }
 .nameless-card .row-label small { line-height: 1.5; }
 .nameless-card .select { flex: none; }
+
+/* 작성 튜토리얼 */
+.tut-lead { margin: 4px 0 6px; font-size: 14px; color: var(--text-2); line-height: 1.65; }
+.tut-sec { padding: 16px 0 14px; border-bottom: 1px solid var(--hair); }
+.tut-sec:last-child { border-bottom: 0; }
+.tut-sec h4 { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 15px; font-weight: 700; color: var(--text); }
+.tut-num { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 12px; display: grid; place-items: center; flex: none; }
+.tut-sec > p { margin: 0 0 10px; font-size: 13px; color: var(--text-2); line-height: 1.65; }
+.tut-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 6px 0; }
+.tut-row code { font-size: 12.5px; padding: 3px 7px; line-height: 1.55; }
+.tut-row small { font-size: 12px; color: var(--text-3); }
+.tut-res { margin-left: auto; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+.tut-res.bubble { background: var(--accent-soft); color: var(--accent); }
+.tut-res.narr { background: var(--fill); color: var(--text-3); }
+.tut-row small + code, .tut-row code + small { }
+.tut-row .tut-res + small { flex-basis: 100%; text-align: right; }
+.help-body .help-item:last-child { border-bottom: 0; }
