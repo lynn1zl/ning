@@ -119,7 +119,8 @@ const DEFAULTS = {
   credit: '출처',
   creator: '제작자',
   parse: { auto: true, formats: ['dq', 'sq', 'corner', 'wcorner'], custom: [], mode: 'marked', inline: false, strip: true, nameless: 'none', blank: 'para1', blankV3: true, mergeTl: true, tlShow: 'both', autoChars: true },
-  typo: { font: 'Noto Serif KR', fontCustom: '', size: 13.5, lh: 1.7, ls: -0.005, weight: 400, color: '#2a2826', align: 'left', paraMode: 'gap', gap: 10, indent: 1, hl: '#ffe58a', hlStyle: 'under' },
+  typo: { font: 'Noto Serif KR', fontCustom: '', size: 13.5, lh: 1.7, ls: -0.005, weight: 400, color: '#2a2826', align: 'left', paraMode: 'gap', gap: 10, indent: 1, hl: '#ffe58a', hlStyle: 'under',
+    wordBreak: 'auto', noOrphan: true, ws: 0, palt: false, kern: true, alignLast: 'auto', measure: 0, dropcap: false, dropLines: 2 },
   head: { font: 'Noto Serif KR', fontCustom: '', size: 17, weight: 700, color: '#1d1c1a', align: 'left', creditFont: 'Noto Serif KR', creditFontCustom: '', creditSize: 10.5, creditWeight: 400, creditColor: '#8a857c', creatorFont: 'Noto Serif KR', creatorFontCustom: '', creatorSize: 10.5, creatorWeight: 700, creatorColor: '#6b665e', creditAlign: 'right', creditLayout: 'inline', quoteMark: false, accent: '#c8a46a' },
   bubble: {
     speech: 'round', tail: true, side: 'left',
@@ -1005,7 +1006,15 @@ function genCSS() {
   --text-weight: ${t.weight};
   --text-color: ${t.color};
   --text-align: ${t.align};
-  --text-break: ${t.align === 'justify' ? 'normal' : 'keep-all'};
+  --text-break: ${t.wordBreak === 'char' ? 'break-all' : t.wordBreak === 'word' ? 'keep-all' : t.align === 'justify' ? 'normal' : 'keep-all'};
+  --b-break: ${t.wordBreak === 'char' ? 'break-all' : 'keep-all'};
+  --text-ws: ${t.ws || 0}em;
+  --text-feat: ${t.palt ? '"palt" 1' : 'normal'};
+  --text-kern: ${t.kern === false ? 'none' : 'normal'};
+  --text-align-last: ${t.align === 'justify' ? (t.alignLast || 'auto') : 'auto'};
+  --text-measure: ${t.measure > 0 ? `calc(${t.measure} * var(--text-size))` : 'none'};
+  --text-measure-mx: ${t.measure > 0 && t.align === 'center' ? 'auto' : '0'};
+  --drop-lines: ${t.dropLines || 2};
   --para-gap: ${t.paraMode === 'indent' ? '0px' : fit(t.gap)};
   --indent: ${t.paraMode === 'indent' ? t.indent : 0}em;
   --b-font: ${fontStack(b.font, b.fontCustom)};
@@ -1296,7 +1305,9 @@ let editingKey = null;
 
 function renderBlock(b) {
   if (b.type === 'narr') {
-    return h('p', { class: 'narr' + (b.ind && !b.cont ? ' ind' : '') + (b.cont ? ' cont' : '') + (b.key ? ' was-bubble' : ''), 'data-key': b.key || false, html: fmtNoOrphan(b.text, state.typo.align === 'justify') });
+    let drop = '';
+    if (dropcapPending && !b.cont) { drop = ' dropcap'; dropcapPending = false; }
+    return h('p', { class: 'narr' + drop + (b.ind && !b.cont ? ' ind' : '') + (b.cont ? ' cont' : '') + (b.key ? ' was-bubble' : ''), 'data-key': b.key || false, html: withDropcap(drop, state.typo.noOrphan === false ? fmt(b.text) : fmtNoOrphan(b.text, state.typo.align === 'justify' || state.typo.wordBreak === 'char')) });
   }
   if (b.type === 'gap') { const g = h('div', { class: 'gap' }); g.style.setProperty('--gap-n', b.n || 1); return g; }
   if (b.type === 'hr') return h('hr', { class: 'divider' });
@@ -1406,18 +1417,20 @@ function splitParagraph(page, el, b, alone) {
   if (tokens.length < 3) return null;
   const head = (k) => tokens.slice(0, k).join('').trimEnd();
   const tail = (k) => tokens.slice(k).join('').trimStart();
-  const show = (k) => { el.innerHTML = fmt(balanceMarks(head(k), tail(k))[0]); };
+  const dc = el.classList.contains('dropcap');
+  const put = (t) => { el.innerHTML = withDropcap(dc, fmt(t)); };
+  const show = (k) => put(balanceMarks(head(k), tail(k))[0]);
   const fits = (k) => { show(k); return !overflows(page); };
   let lo = 0, hi = tokens.length - 1;
   while (lo < hi) {
     const mid = Math.ceil((lo + hi) / 2);
     if (fits(mid)) lo = mid; else hi = mid - 1;
   }
-  if (lo === 0 || !tail(lo)) { el.innerHTML = fmt(b.text); return null; }
+  if (lo === 0 || !tail(lo)) { put(b.text); return null; }
   show(lo);
   const lh = parseFloat(getComputedStyle(el).lineHeight) || 24;
   const lines = Math.round(el.offsetHeight / lh);
-  if (lines < 2 && !alone) { el.innerHTML = fmt(b.text); return null; }
+  if (lines < 2 && !alone) { put(b.text); return null; }
   // 과부 줄: 넘어갈 글이 한 줄도 안 되면 한 줄을 함께 넘김
   const restLen = tail(lo).length;
   const perLine = head(lo).length / Math.max(1, lines);
@@ -1429,7 +1442,7 @@ function splitParagraph(page, el, b, alone) {
     show(lo);
   }
   const [a, rest] = balanceMarks(head(lo), tail(lo));
-  el.innerHTML = fmt(a);
+  put(a);
   return rest;
 }
 
@@ -1447,7 +1460,16 @@ function scheduleRender() {
 
 let lastStats = { bubbles: 0, pages: 1 };
 
+let dropcapPending = false;
+/* 드롭캡: 첫 글자(앞의 따옴표 등 문장부호 포함)를 실제 요소로 감쌈 — 이미지 저장에도 그대로 나오게 */
+function withDropcap(on, html) {
+  if (!on) return html;
+  const m = html.match(/^((?:<[^>]+>)*)((?:&[a-z]+;|[^\s<&\p{L}\p{N}])*)([\p{L}\p{N}])/u);
+  if (!m) return html;
+  return m[1] + `<span class="dc">${m[2]}${m[3]}</span>` + html.slice(m[0].length);
+}
 function render() {
+  dropcapPending = !!state.typo.dropcap;
   ensureFonts();
   $('#gen-style').textContent = genCSS();
   const blocks = parseText();
@@ -1729,6 +1751,17 @@ const SCHEMA = {
       { t: 'measure' },
       { t: 'color', p: 'typo.hl', l: '형광펜 색', sub: '텍스트 편집창의 형광펜 버튼에서도 바꿀 수 있어요' },
       { t: 'seg', p: 'typo.hlStyle', l: '형광펜 모양', o: [['under', '밑줄형'], ['thin', '얇게'], ['full', '전체']] },
+    ] },
+    { sec: '조판', note: '줄바꿈 단위 · 커닝 · 문장부호 폭은 말풍선 글자에도 함께 적용돼요. 최대 행 길이 0은 제한 없음이에요.', rows: [
+      { t: 'seg', p: 'typo.wordBreak', l: '줄바꿈 단위', o: [['auto', '자동'], ['word', '어절'], ['char', '글자']], block: true },
+      { t: 'switch', p: 'typo.noOrphan', l: '마지막 줄 외톨이 방지', sub: '문단 마지막 줄에 한 단어만 남지 않게 묶어요' },
+      { t: 'slider', p: 'typo.ws', l: '단어 간격', min: -0.2, max: 0.6, step: 0.01, u: 'em' },
+      { t: 'switch', p: 'typo.kern', l: '커닝', sub: '서체에 들어 있는 글자 쌍 간격 정보를 써요' },
+      { t: 'switch', p: 'typo.palt', l: '문장부호 폭 맞춤', sub: '따옴표 · 마침표 같은 전각 문장부호의 빈 여백을 줄여요 (지원 서체만)' },
+      { t: 'seg', p: 'typo.alignLast', l: '양쪽 정렬 마지막 줄', o: [['auto', '왼쪽'], ['center', '가운데'], ['justify', '양쪽']], block: true, show: () => state.typo.align === 'justify' },
+      { t: 'slider', p: 'typo.measure', l: '최대 행 길이', min: 0, max: 60, step: 1, u: '자' },
+      { t: 'switch', p: 'typo.dropcap', l: '드롭캡', sub: '첫 문단의 첫 글자를 여러 줄 높이로 크게' },
+      { t: 'slider', p: 'typo.dropLines', l: '드롭캡 높이', min: 2, max: 4, step: 1, u: '줄', show: () => !!state.typo.dropcap },
     ] },
     { sec: '말풍선 글자', rows: [
       { t: 'font', p: 'bubble.font', c: 'bubble.fontCustom' },

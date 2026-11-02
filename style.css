@@ -917,6 +917,12 @@ textarea.code {
   text-align: var(--text-align);
   text-indent: 0;
   word-break: var(--text-break, keep-all);
+  word-spacing: var(--text-ws, 0);
+  font-feature-settings: var(--text-feat, normal);
+  font-kerning: var(--text-kern, normal);
+  text-align-last: var(--text-align-last, auto);
+  max-width: var(--text-measure, none);
+  margin-inline: var(--text-measure-mx, 0);
   overflow-wrap: anywhere;
   white-space: pre-wrap;
   hanging-punctuation: first allow-end;
@@ -1016,7 +1022,9 @@ textarea.code {
   font-weight: var(--b-weight);
   filter: var(--b-shadow);
   white-space: pre-wrap;
-  word-break: keep-all;
+  word-break: var(--b-break, keep-all);
+  font-feature-settings: var(--text-feat, normal);
+  font-kerning: var(--text-kern, normal);
   overflow-wrap: anywhere;
   text-align: left;
 }
@@ -1418,3 +1426,14 @@ body.resizing iframe, body.resizing #stage { pointer-events: none; }
 .tut-row small + code, .tut-row code + small { }
 .tut-row .tut-res + small { flex-basis: 100%; text-align: right; }
 .help-body .help-item:last-child { border-bottom: 0; }
+
+/* 드롭캡: 첫 문단 첫 글자를 여러 줄 높이로 */
+.narr.dropcap .dc {
+  float: left;
+  font-size: calc(var(--text-size) * var(--text-lh) * var(--drop-lines) * .86);
+  line-height: 1;
+  font-weight: 700;
+  margin: calc(var(--text-size) * .12) .12em 0 0;
+  color: var(--title-color, inherit);
+}
+.narr.dropcap { text-indent: 0 !important; }
