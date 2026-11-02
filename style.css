@@ -1444,3 +1444,33 @@ body.resizing iframe, body.resizing #stage { pointer-events: none; }
 .tpl-group-title:first-child { margin-top: 8px; }
 .tpl-group-title small { font-size: 11.5px; font-weight: 600; color: var(--text-3); background: var(--fill); border-radius: 999px; padding: 1px 7px; }
 .tpl-groups .template-grid { padding-top: 0; }
+
+/* 첫 방문 튜토리얼 */
+.tour-block { position: fixed; inset: 0; z-index: 140; }
+.tour-spot {
+  position: fixed; z-index: 141; pointer-events: none;
+  border-radius: 16px;
+  box-shadow: 0 0 0 3px var(--accent), 0 0 0 9999px rgba(0, 12, 30, .55);
+  transition: left .28s var(--ease), top .28s var(--ease), width .28s var(--ease), height .28s var(--ease);
+}
+.tour-card {
+  position: fixed; z-index: 142; width: 300px; max-width: calc(100vw - 24px);
+  background: var(--surface); color: var(--text);
+  border-radius: var(--r-lg); box-shadow: var(--shadow-pop);
+  padding: 16px 18px 14px;
+  transition: left .28s var(--ease), top .28s var(--ease);
+  animation: pop-in .2s var(--ease);
+}
+.tour-step { font-size: 12px; font-weight: 700; color: var(--accent); }
+.tour-card h4 { margin: 4px 0 6px; font-size: 18px; font-weight: 700; letter-spacing: -0.02em; }
+.tour-card p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--text-2); }
+.tour-dots { display: flex; gap: 5px; margin: 14px 0 10px; }
+.tour-dots i { width: 6px; height: 6px; border-radius: 3px; background: var(--fill-strong); transition: width .2s; }
+.tour-dots i.on { width: 18px; background: var(--accent); }
+.tour-actions { display: flex; align-items: center; gap: 6px; }
+.tour-ask { align-items: center; text-align: center; padding: 26px 24px 22px; }
+.tour-ask h3 { margin: 12px 0 4px; font-size: 21px; font-weight: 700; letter-spacing: -0.03em; }
+.tour-bunny { width: 58px; height: 58px; border-radius: 18px; background: var(--accent); color: #fff; display: grid; place-items: center; margin: 0 auto; }
+.tour-bunny svg { width: 40px; height: 40px; }
+.tour-ask-actions { display: flex; gap: 8px; margin-top: 18px; width: 100%; }
+.tour-ask-actions .btn { flex: 1; height: 48px; border-radius: var(--r-md); font-size: 15px; }

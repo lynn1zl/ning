@@ -119,16 +119,16 @@ const DEFAULTS = {
   credit: '출처',
   creator: '제작자',
   parse: { auto: true, formats: ['dq', 'sq', 'corner', 'wcorner'], custom: [], mode: 'marked', inline: false, strip: true, nameless: 'none', blank: 'para1', blankV3: true, mergeTl: true, tlShow: 'both', autoChars: true },
-  typo: { font: 'Noto Serif KR', fontCustom: '', size: 13.5, lh: 1.7, ls: -0.005, weight: 400, color: '#2a2826', align: 'left', paraMode: 'gap', gap: 10, indent: 1, hl: '#ffe58a', hlStyle: 'under',
+  typo: { font: 'Noto Serif KR', fontCustom: '', size: 15, lh: 1.75, ls: -0.01, weight: 400, color: '#2a2826', align: 'left', paraMode: 'gap', gap: 10, indent: 1, hl: '#ffe58a', hlStyle: 'under',
     wordBreak: 'auto', noOrphan: true, ws: 0, palt: false, kern: true, alignLast: 'auto', measure: 0, dropcap: false, dropLines: 2 },
-  head: { font: 'Noto Serif KR', fontCustom: '', size: 17, weight: 700, color: '#1d1c1a', align: 'left', creditFont: 'Noto Serif KR', creditFontCustom: '', creditSize: 10.5, creditWeight: 400, creditColor: '#8a857c', creatorFont: 'Noto Serif KR', creatorFontCustom: '', creatorSize: 10.5, creatorWeight: 700, creatorColor: '#6b665e', creditAlign: 'right', creditLayout: 'inline', quoteMark: false, accent: '#c8a46a' },
+  head: { font: 'Noto Serif KR', fontCustom: '', size: 19, weight: 700, color: '#1d1c1a', align: 'left', creditFont: 'Noto Serif KR', creditFontCustom: '', creditSize: 11.5, creditWeight: 400, creditColor: '#8a857c', creatorFont: 'Noto Serif KR', creatorFontCustom: '', creatorSize: 11.5, creatorWeight: 700, creatorColor: '#6b665e', creditAlign: 'right', creditLayout: 'inline', quoteMark: false, accent: '#c8a46a' },
   bubble: {
     speech: 'round', tail: true, side: 'left',
-    font: 'Pretendard', fontCustom: '', size: 13, lh: 1.55, ls: 0, weight: 400,
+    font: 'Pretendard', fontCustom: '', size: 14, lh: 1.55, ls: 0, weight: 400,
     bg: '#ffffff', color: '#222222', border: '#2b2a27', bw: 0, radius: 14, px: 12, py: 8, maxw: 78, shadow: true, gap: 12,
     avatar: true, avatarSize: 34, avatarShape: 'circle', showName: true, nameSize: 10.5, nameColor: '#6b665e',
   },
-  canvas: { ratio: 'auto', width: 700, pad: 48, bgType: 'solid', bg: '#f7f3ea', bg2: '#e6dcc8', gradType: 'linear', gradAngle: 160, pattern: 'dots', patColor: '#8a7f6a', patOpacity: 0.22, patSize: 18, bgImage: '', overlay: 0, overlayColor: '#000000', valign: 'flex-start', fit: false, paginate: true, pageNum: false, scale: 2 },
+  canvas: { ratio: 'auto', width: 600, pad: 40, bgType: 'solid', bg: '#f7f3ea', bg2: '#e6dcc8', gradType: 'linear', gradAngle: 160, pattern: 'dots', patColor: '#8a7f6a', patOpacity: 0.22, patSize: 18, bgImage: '', overlay: 0, overlayColor: '#000000', valign: 'flex-start', fit: false, paginate: true, pageNum: false, scale: 2 },
   chars: [
     { id: 'c1', name: '닝', avatar: '', side: 'left', shape: '', custom: true, bg: '#f2f4f6', color: '#191f28', border: '#f2f4f6' },
   ],
@@ -1884,7 +1884,7 @@ function fieldEl(d) {
         num.value = show(v);
         setPath(d.p, v);
       });
-      const ptText = (v) => `${+(v * 0.75).toFixed(1)}pt`;
+      const ptText = (v) => `인쇄 기준 약 ${+(v * 0.75).toFixed(1)}pt`;
       const lab = labelEl(d.l, d.pt ? ptText(val) : null);
       if (d.pt) slider.addEventListener('input', () => { lab.querySelector('small').textContent = ptText(slider.value); });
       if (d.pt) num.addEventListener('change', () => { lab.querySelector('small').textContent = ptText(getPath(d.p)); });
@@ -3552,6 +3552,7 @@ document.addEventListener('click', (e) => {
   $('#menu').hidden = true;
   const a = act.dataset.act;
   if (a === 'help') openModal('#help');
+  else if (a === 'tour') showTour(0);
   else if (a === 'folder') pickFolder();
   else if (a === 'export-json') {
     const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
@@ -3698,3 +3699,92 @@ setPane('text', false);
 if (isMobile()) setSheet(true);
 rebuildAll();
 resetHistory();
+
+/* ── 첫 방문 튜토리얼: 메뉴를 하나씩 강조하며 설명 ── */
+const TOUR = [
+  { pane: 'text', title: '텍스트', body: '발췌할 글을 붙여넣고 편집해요. 제목 · 출처(작품명 · 제작자)도 여기서 입력해요.' },
+  { pane: 'bubble', title: '말풍선', body: '말풍선 모양 · 크기 · 색을 바꾸고, 말풍선 옆 사진과 이름 표시를 정해요.' },
+  { pane: 'chars', title: '캐릭터', body: '말풍선 캐릭터를 설정해요. 따로 입력하지 않아도 로그에서 인식된 캐릭터는 자동으로 추가돼요.' },
+  { pane: 'typo', title: '서체', body: '글꼴 · 크기 · 행간 · 자간부터 줄바꿈 · 드롭캡 같은 세세한 조판까지 다듬어요.' },
+  { pane: 'canvas', title: '화면', body: '배경색과 화면 비율을 정해요. ‘자유’(기본)는 길이 상관없이 한 장으로, 비율을 고르면 넘치는 글은 다음 장으로 넘어가요.' },
+  { pane: 'skin', title: '스킨', body: 'HTML · CSS를 넣어 자유롭게 꾸밀 수 있어요. 바로 쓸 수 있는 배경도 있어요.' },
+  { pane: 'template', title: '프리셋', body: '지금 쓰는 설정을 저장해 두고 불러와요. 바로 입혀 볼 수 있는 기본 템플릿 테마도 있어요.' },
+  { target: '#btn-save', title: '저장 · 복사', body: '다 꾸몄다면 이미지로 저장하거나 복사해서 바로 붙여넣으세요. 그럼, 니니닝!' },
+];
+let tourIdx = -1;
+const tourEls = {};
+function tourEnsure() {
+  if (tourEls.spot) return;
+  tourEls.spot = h('div', { class: 'tour-spot' });
+  tourEls.card = h('div', { class: 'tour-card', role: 'dialog', 'aria-live': 'polite' });
+  tourEls.block = h('div', { class: 'tour-block', onclick: (e) => e.stopPropagation() });
+  document.body.append(tourEls.block, tourEls.spot, tourEls.card);
+  window.addEventListener('resize', () => { if (tourIdx >= 0) placeTour(); });
+}
+function tourTarget(step) {
+  return step.target ? $(step.target) : $(`.rail-item[data-pane="${step.pane}"]`);
+}
+function placeTour() {
+  const step = TOUR[tourIdx];
+  const t = tourTarget(step);
+  if (!t) return;
+  const r = t.getBoundingClientRect();
+  const pad = 6;
+  Object.assign(tourEls.spot.style, { left: `${r.left - pad}px`, top: `${r.top - pad}px`, width: `${r.width + pad * 2}px`, height: `${r.height + pad * 2}px` });
+  const c = tourEls.card;
+  const cw = c.offsetWidth, chh = c.offsetHeight;
+  let x, y;
+  if (isMobile() && !step.target) { x = (innerWidth - cw) / 2; y = r.top - chh - 18; }
+  else if (step.target) { x = r.right - cw; y = r.bottom + 16; }
+  else { x = r.right + 18; y = r.top + r.height / 2 - chh / 2; }
+  c.style.left = `${Math.max(12, Math.min(x, innerWidth - cw - 12))}px`;
+  c.style.top = `${Math.max(12, Math.min(y, innerHeight - chh - 12))}px`;
+}
+function showTour(i) {
+  tourEnsure();
+  tourIdx = i;
+  const step = TOUR[i];
+  if (step.pane) {
+    setPane(step.pane, false);
+    if (isMobile()) setSheet(false);
+  }
+  const last = i === TOUR.length - 1;
+  tourEls.card.innerHTML = '';
+  tourEls.card.append(
+    h('div', { class: 'tour-step' }, `${i + 1} / ${TOUR.length}`),
+    h('h4', {}, step.title),
+    h('p', {}, step.body),
+    h('div', { class: 'tour-dots' }, TOUR.map((_, k) => h('i', { class: k === i ? 'on' : '' }))),
+    h('div', { class: 'tour-actions' },
+      h('button', { type: 'button', class: 'link-btn muted', onclick: endTour }, '건너뛰기'),
+      h('span', { class: 'spacer' }),
+      i > 0 ? h('button', { type: 'button', class: 'btn btn-sm', onclick: () => showTour(i - 1) }, '이전') : null,
+      h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: () => (last ? endTour() : showTour(i + 1)) }, last ? '시작하기' : '다음')));
+  [tourEls.spot, tourEls.card, tourEls.block].forEach((el) => (el.hidden = false));
+  requestAnimationFrame(placeTour);
+}
+function endTour() {
+  tourIdx = -1;
+  ['spot', 'card', 'block'].forEach((k) => tourEls[k] && (tourEls[k].hidden = true));
+  setPane('text', false);
+  if (isMobile()) setSheet(true);
+  uiState.tourSeen = true; saveUi();
+}
+document.addEventListener('keydown', (e) => {
+  if (tourIdx < 0) return;
+  if (e.key === 'Escape') endTour();
+  else if (e.key === 'ArrowRight') showTour(Math.min(TOUR.length - 1, tourIdx + 1));
+  else if (e.key === 'ArrowLeft') showTour(Math.max(0, tourIdx - 1));
+});
+function askTour() {
+  const m = h('div', { class: 'modal', id: 'tour-ask' },
+    h('div', { class: 'modal-box narrow tour-ask' },
+      h('div', { class: 'tour-bunny', html: BRAND }),
+      h('h3', {}, '튜토리얼 볼까요?'),
+      h('p', { class: 'modal-sub' }, '메뉴가 어디에 뭐가 있는지 1분 만에 알려 드릴게요.'),
+      h('div', { class: 'tour-ask-actions' },
+        h('button', { type: 'button', class: 'btn', onclick: () => { m.remove(); uiState.tourSeen = true; saveUi(); } }, 'ㄴㄴㄴ'),
+        h('button', { type: 'button', class: 'btn btn-primary', onclick: () => { m.remove(); showTour(0); } }, '니니닝!'))));
+  document.body.append(m);
+}
+if (!uiState.tourSeen) setTimeout(askTour, 400);
