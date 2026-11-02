@@ -211,21 +211,14 @@
   .k2 .bead { position: absolute; top: calc(102 * var(--u)); left: calc(26 * var(--u)); width: calc(16 * var(--u)); height: calc(16 * var(--u)); border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff, var(--soft)); box-shadow: 0 calc(19 * var(--u)) 0 calc(-2 * var(--u)) var(--c); }
   .keyring-off .keyring { display: none; }
 
-  /* 케이크 한 조각 */
-  .cake { left: calc(40 * var(--u)); bottom: calc(30 * var(--u)); width: calc(120 * var(--u)); height: calc(92 * var(--u)); filter: drop-shadow(0 calc(5 * var(--u)) calc(6 * var(--u)) rgba(90,30,30,.22)); }
-  .cake > i { position: absolute; display: block; }
-  .cake .plate { left: 0; bottom: 0; width: 100%; height: calc(30 * var(--u)); border-radius: 50%; background: radial-gradient(ellipse at 50% 40%, #fff 55%, #f3e5df 72%, #e5cfc7 100%); }
-  .cake .slice {
-    left: calc(18 * var(--u)); bottom: calc(13 * var(--u)); width: calc(84 * var(--u)); height: calc(50 * var(--u));
-    background:
-      linear-gradient(180deg, transparent calc(19 * var(--u)), var(--c) calc(19 * var(--u)) calc(23 * var(--u)), #fff calc(23 * var(--u)) calc(26 * var(--u)), transparent calc(26 * var(--u))),
-      linear-gradient(180deg, transparent calc(36 * var(--u)), var(--soft) calc(36 * var(--u)) calc(39 * var(--u)), transparent calc(39 * var(--u))),
-      linear-gradient(180deg, #f8e7d2, #efd5b8);
-    clip-path: polygon(0 24%, 100% 0, 100% 100%, 0 100%);
-    border-radius: calc(3 * var(--u));
-  }
-  .cake .cream { left: calc(18 * var(--u)); bottom: calc(57 * var(--u)); width: calc(84 * var(--u)); height: calc(9 * var(--u)); background: radial-gradient(circle, #fff calc(3.2 * var(--u)), transparent calc(3.6 * var(--u))) 0 0 / calc(8 * var(--u)) 100%; transform: skewY(-15deg); transform-origin: 0 100%; }
-  .cake .berry { left: calc(70 * var(--u)); bottom: calc(66 * var(--u)); width: calc(18 * var(--u)); height: calc(21 * var(--u)); border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%; background: radial-gradient(circle, #ffe08a calc(.8 * var(--u)), transparent calc(1.2 * var(--u))) 0 0 / calc(5 * var(--u)) calc(5 * var(--u)), linear-gradient(180deg, #e0213b, #ff4d5e); }
+  /* 라테 한 잔 (위에서 본 모습) */
+  .latte { left: calc(34 * var(--u)); bottom: calc(26 * var(--u)); width: calc(104 * var(--u)); height: calc(104 * var(--u)); filter: drop-shadow(0 calc(5 * var(--u)) calc(7 * var(--u)) rgba(90,30,30,.25)); }
+  .latte > i { position: absolute; display: block; border-radius: 50%; }
+  .latte .saucer { inset: 0; background: radial-gradient(circle, #fff 58%, #f1e8e4 70%, #fff 72%, #f6efec 100%); box-shadow: inset 0 0 0 calc(1 * var(--u)) rgba(150,110,100,.18); }
+  .latte .handle { left: calc(74 * var(--u)); top: calc(18 * var(--u)); width: calc(22 * var(--u)); height: calc(14 * var(--u)); border-radius: calc(8 * var(--u)); background: var(--soft); transform: rotate(-38deg); box-shadow: inset 0 0 0 calc(1 * var(--u)) rgba(0,0,0,.06); }
+  .latte .cup { inset: calc(17 * var(--u)); background: var(--soft); box-shadow: inset 0 0 0 calc(1 * var(--u)) rgba(0,0,0,.06), 0 calc(2 * var(--u)) calc(3 * var(--u)) rgba(90,30,30,.15); }
+  .latte .coffee { inset: calc(23 * var(--u)); background: radial-gradient(circle at 45% 40%, #c99a72, #a8754e 70%, #8f6040); }
+  .latte .art { left: calc(39 * var(--u)); top: calc(40 * var(--u)); width: calc(26 * var(--u)); height: calc(24 * var(--u)); border-radius: 0; background: #fbf1e6; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 20'%3E%3Cpath d='M11 20C2 13.6 0 9.1 0 5.9 0 2.5 2.5 0 5.7 0 8 0 9.8 1.4 11 3.3 12.2 1.4 14 0 16.3 0 19.5 0 22 2.5 22 5.9 22 9.1 20 13.6 11 20Z'/%3E%3C/svg%3E") center / 100% 100% no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 20'%3E%3Cpath d='M11 20C2 13.6 0 9.1 0 5.9 0 2.5 2.5 0 5.7 0 8 0 9.8 1.4 11 3.3 12.2 1.4 14 0 16.3 0 19.5 0 22 2.5 22 5.9 22 9.1 20 13.6 11 20Z'/%3E%3C/svg%3E") center / 100% 100% no-repeat; opacity: .92; }
 </style>
 
 <div class="dy {{키링표시}}">
@@ -237,7 +230,7 @@
   <div class="dateline"><span><small>DATE</small><span class="d">{{날짜}}</span></span><span class="w"><small>WEATHER</small>{{날씨}}</span></div>
   <div class="title"><div class="paper"><b><span>{{제목}}</span></b></div><div class="tape check"></div></div>
   <div class="memo"><div class="tape stripe"></div><b>{{메모제목}}</b>{{할일}}</div>
-  <div class="cake"><i class="plate"></i><i class="slice"></i><i class="cream"></i><i class="berry"></i></div>
+  <div class="latte"><i class="saucer"></i><i class="handle"></i><i class="cup"></i><i class="coffee"></i><i class="art"></i></div>
   <div class="credit"><b>{{출처}}</b><span>{{제작자}}</span></div>
   <div class="keyring k1" data-layer="top"><div class="ring"></div><div class="chain"></div><div class="letters">{{키링}}</div></div>
   <div class="keyring k2" data-layer="top"><div class="ring"></div><div class="chain"></div><div class="star"></div><div class="bead"></div></div>
