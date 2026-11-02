@@ -126,11 +126,12 @@
               <button type="button" class="link-btn muted" id="btn-html-clear">비우기</button>
             </span>
           </div>
+          <div class="chip-row" id="html-presets" style="margin-bottom:10px"></div>
           <div class="code-card">
             <textarea id="html-bg" class="code" spellcheck="false" placeholder="<style>&#10;  body { background: #e6f4fd; }&#10;  .deco { position: absolute; top: 20px; right: 20px; }&#10;</style>&#10;<div class=&quot;deco&quot;>★</div>"></textarea>
           </div>
           <p class="html-status" id="html-bg-status"></p>
-          <p class="footnote"><code>&lt;style&gt;</code> 태그와 HTML로 카드 배경을 직접 꾸밀 수 있어요. <code>body</code>가 카드 한 장 크기이고, 글과 말풍선 뒤에 깔려요. 글 위에 보여야 하는 장식에는 <code>data-layer="top"</code>을 넣어 주세요. 스크립트는 실행되지 않아요.</p>
+          <p class="footnote"><code>&lt;style&gt;</code> 태그와 HTML로 카드 배경을 직접 꾸밀 수 있어요. <code>body</code>가 카드 한 장 크기이고, 글과 말풍선 뒤에 깔려요. 글 위에 보여야 하는 장식에는 <code>data-layer="top"</code>을 넣어 주세요. <code>{{제목}}</code> · <code>{{출처}}</code> · <code>{{제작자}}</code>를 쓰면 텍스트 탭의 입력이 그 자리에 들어가요. 스크립트는 실행되지 않아요.</p>
           <div class="section-title sec-head"><span>CSS 스킨</span><span class="sec-actions"><button type="button" class="link-btn danger" data-reset="skin">스킨 모두 초기화</button></span></div>
           <div class="chip-row" id="skin-presets"></div>
           <div class="code-card" style="margin-top: 10px">

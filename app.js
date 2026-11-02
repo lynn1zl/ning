@@ -1036,8 +1036,9 @@ async function inlineCssUrls(css, base) {
 // @import 한 단계 펼치기 (웹폰트는 HTML 안 글자에 쓰이는 조각만)
 async function expandImports(css, text) {
   const codes = new Set([...(text || '')].map((c) => c.codePointAt(0)));
-  const re = /@import\s+(?:url\()?\s*['"]?([^'")\s;]+)['"]?\s*\)?[^;]*;/g;
-  const found = [...css.matchAll(re)];
+  // url('…') 또는 '…' — 주소 안에 ; 가 있어도 따옴표 · 괄호까지 정확히 읽음 (예: wght@400;700)
+  const re = /@import\s+(?:url\(\s*(['"]?)([^'")]+)\1\s*\)|(['"])([^'"]+)\3)[^;]*;/g;
+  const found = [...css.matchAll(re)].map((m) => [m[0], m[2] || m[4]]);
   let out = css;
   for (const m of found) {
     let inner = '';
@@ -1069,7 +1070,8 @@ async function buildHtmlBgURL(html, w, h, layer) {
     st.textContent = `@import url("${link.getAttribute('href')}");`;
     link.replaceWith(st);
   }
-  for (const st of doc.querySelectorAll('style')) st.textContent = await inlineCssUrls(await expandImports(st.textContent, text));
+  // SVG 그림 안에서는 :root가 바깥 <svg>를 가리켜 변수가 전달되지 않으므로 html로 바꿔 줌
+  for (const st of doc.querySelectorAll('style')) st.textContent = (await inlineCssUrls(await expandImports(st.textContent, text))).replace(/:root\b/g, 'html');
   for (const el of doc.querySelectorAll('[style]')) el.setAttribute('style', await inlineCssUrls(el.getAttribute('style')));
   for (const img of doc.querySelectorAll('img[src]')) img.setAttribute('src', await inlineUrl(img.getAttribute('src')));
   const baseStyle = doc.createElement('style');
@@ -1077,7 +1079,11 @@ async function buildHtmlBgURL(html, w, h, layer) {
   doc.head.insertBefore(baseStyle, doc.head.firstChild);
   const layerStyle = doc.createElement('style');
   layerStyle.textContent = layer === 'top'
-    ? 'html,body{background:transparent !important;}body *{visibility:hidden !important;}[data-layer="top"],[data-layer="top"] *{visibility:visible !important;}'
+    // 위층: data-layer="top" 요소만 보이게. 숨긴 요소의 SVG 필터(질감 등)가 새어 나오지 않도록 필터 · 혼합도 끔
+    ? 'html,body{background:transparent !important;}body *{visibility:hidden !important;}'
+      + 'body *:not([data-layer="top"], [data-layer="top"] *){filter:none !important;mix-blend-mode:normal !important;}'
+      + 'body svg:not([data-layer="top"] svg) rect[filter]{display:none !important;}'
+      + '[data-layer="top"],[data-layer="top"] *{visibility:visible !important;}'
     : '[data-layer="top"]{visibility:hidden !important;}';
   doc.head.appendChild(layerStyle);
   const xhtml = new XMLSerializer().serializeToString(doc.documentElement);
@@ -1088,11 +1094,28 @@ async function buildHtmlBgURL(html, w, h, layer) {
   await new Promise((res, rej) => { const im = new Image(); im.onload = res; im.onerror = () => rej(new Error('draw')); im.src = url; });
   return url;
 }
+/* HTML 배경 안의 {{제목}} · {{출처}} · {{제작자}} (또는 '제목을 입력하세요')를 발췌기 입력과 연동 */
+const TITLE_TOKEN = /\{\{\s*(제목|title)\s*\}\}|제목을 입력하세요/gi;
+const bgHasTitle = () => { TITLE_TOKEN.lastIndex = 0; return TITLE_TOKEN.test(state.bgHtml || ''); };
+function fillBgTokens(html) {
+  const e = (t) => esc((t || '').trim());
+  return (html || '')
+    .replace(TITLE_TOKEN, () => e(state.title))
+    .replace(/\{\{\s*(출처|credit)\s*\}\}/gi, () => e(state.credit))
+    .replace(/\{\{\s*(제작자|creator)\s*\}\}/gi, () => e(state.creator));
+}
+// 글이 들어갈 자리: <!-- ninining-safe: 위% 오른쪽% 아래% 왼쪽%; min-height: %--> (모두 카드 가로 기준)
+function bgSafeArea() {
+  const m = (state.bgHtml || '').match(/ninining-safe:\s*([\d.]+)%\s+([\d.]+)%\s+([\d.]+)%\s+([\d.]+)%(?:\s*;\s*min-height:\s*([\d.]+)%)?/);
+  return m ? { t: +m[1], r: +m[2], b: +m[3], l: +m[4], minH: m[5] ? +m[5] : 0 } : null;
+}
+
+function htmlBgKey(w, h, layer) { return `${layer}|${w}x${h}|${state.canvas.scale}|${fillBgTokens(state.bgHtml)}`; }
 function htmlBgURL(w, h, layer) {
-  const key = `${layer}|${w}x${h}|${state.canvas.scale}|${state.bgHtml}`;
+  const key = htmlBgKey(w, h, layer);
   if (!htmlBg.cache.has(key)) {
     if (htmlBg.cache.size > 24) htmlBg.cache.clear();
-    htmlBg.cache.set(key, buildHtmlBgURL(state.bgHtml, w, h, layer));
+    htmlBg.cache.set(key, buildHtmlBgURL(fillBgTokens(state.bgHtml), w, h, layer));
   }
   return htmlBg.cache.get(key);
 }
@@ -1102,28 +1125,44 @@ function setHtmlStatus(msg, bad) {
   if (el) { el.textContent = msg; el.classList.toggle('bad', !!bad); }
 }
 let htmlBgSeq = 0;
+const lastBg = [];
 function applyHtmlBg(pages) {
   const code = (state.bgHtml || '').trim();
   if (!code) { setHtmlStatus(''); return Promise.resolve(); }
   const hasTop = /data-layer\s*=\s*["']?top/i.test(code);
   const seq = ++htmlBgSeq;
+  // 새로 그려야 하는 동안에는 직전 그림을 먼저 보여 줌 (깜빡임 · 끊김 방지)
+  pages.forEach((p, i) => {
+    if (!p.bgImg || !lastBg[i]) return;
+    p.bgImg.src = lastBg[i].base; p.bgImg.hidden = false;
+    if (lastBg[i].top && p.topImg) { p.topImg.src = lastBg[i].top; p.topImg.hidden = false; }
+  });
+  const uncached = pages.some((p) => !htmlBg.cache.has(htmlBgKey(p.card.offsetWidth, p.card.offsetHeight, 'base')));
   setHtmlStatus('그리는 중…');
-  return Promise.all(pages.map(async (p) => {
+  // 글자를 치는 동안 매번 다시 그리지 않도록 잠깐 기다렸다가 그림
+  const wait = uncached ? new Promise((r) => setTimeout(r, 350)) : Promise.resolve();
+  return wait.then(() => seq !== htmlBgSeq ? null : Promise.all(pages.map(async (p, i) => {
     const w = p.card.offsetWidth, hgt = p.card.offsetHeight;
     const [base, top] = await Promise.all([htmlBgURL(w, hgt, 'base'), hasTop ? htmlBgURL(w, hgt, 'top') : null]);
     if (seq !== htmlBgSeq) return;
     if (!p.bgImg) return;
     p.bgImg.src = base; p.bgImg.hidden = false;
     if (top && p.topImg) { p.topImg.src = top; p.topImg.hidden = false; }
+    lastBg[i] = { base, top };
     return `${w} × ${hgt}px`;
-  })).then((sizes) => {
-    if (seq === htmlBgSeq) setHtmlStatus(`적용됨 · 카드 크기 ${[...new Set(sizes)].join(', ')}`);
+  }))).then((sizes) => {
+    if (sizes && seq === htmlBgSeq) setHtmlStatus(`적용됨 · 카드 크기 ${[...new Set(sizes)].join(', ')}${bgSafeArea() ? ' · 글은 배경이 정한 자리에 들어가요' : ''}`);
   }).catch((e) => {
     console.warn(e);
     if (seq === htmlBgSeq) setHtmlStatus('HTML을 그리지 못했어요. 닫는 태그나 따옴표를 확인해 주세요.', true);
   });
 }
 let htmlBgReady = Promise.resolve();
+// HTML 배경 프리셋: 고를 때만 불러와서 사이트는 가볍게 유지
+const HTML_BG_PRESETS = [
+  { name: '언덕 위의 마녀', file: 'bg/witch.html' },
+  { name: '언덕 위의 마왕', file: 'bg/demon.html' },
+];
 
 function applySkin() {
   const src = state.skin || '';
@@ -1201,7 +1240,13 @@ function newPage(idx, W, H) {
   const topImg = useHtml ? h('img', { class: 'card-htmltop', alt: '', hidden: true, 'aria-hidden': 'true' }) : null;
   if (bgImg) card.append(bgImg);
   if (idx === 0 && state.head.quoteMark) card.append(h('div', { class: 'quote-mark', 'aria-hidden': 'true' }, '“'));
-  if (idx === 0 && state.title.trim()) card.append(h('h2', { class: 'card-title', html: fmt(state.title) }));
+  if (idx === 0 && state.title.trim() && !(state.bgHtml && bgHasTitle())) card.append(h('h2', { class: 'card-title', html: fmt(state.title) }));
+  const safe = state.bgHtml ? bgSafeArea() : null;
+  if (safe) {
+    const px = (v) => `${Math.round((v * W) / 100)}px`;
+    card.style.padding = `${px(safe.t)} ${px(safe.r)} ${px(safe.b)} ${px(safe.l)}`;
+    if (!H && safe.minH) card.style.minHeight = px(safe.minH);
+  }
   const content = h('div', { class: 'card-content' });
   const flow = h('div', { class: 'flow' });
   content.append(flow);
@@ -2783,6 +2828,20 @@ function buildSkin() {
   }, label));
   chip('없음', '');
   for (const s of Object.values(SKINS)) chip(s.name, s.css);
+  const hrow = $('#html-presets');
+  hrow.innerHTML = '';
+  HTML_BG_PRESETS.forEach((bp) => hrow.append(h('button', {
+    type: 'button', class: 'chip',
+    onclick: async () => {
+      try {
+        const html = await (await fetch(bp.file)).text();
+        state.bgHtml = html;
+        $('#html-bg').value = html;
+        changed();
+        toast(`‘${bp.name}’ 배경을 적용했어요 · 제목은 텍스트 탭의 제목과 연동돼요`, { label: '되돌리기', fn: undo }, 3600);
+      } catch (e) { toast('배경을 불러오지 못했어요'); }
+    },
+  }, bp.name)));
   $('#skin-css').value = state.skin;
   $('#html-bg').value = state.bgHtml || '';
   setHtmlStatus(htmlBg.status);
