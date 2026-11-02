@@ -1587,3 +1587,30 @@ body.resizing iframe, body.resizing #stage { pointer-events: none; }
 .sc-dot { width: 24px; height: 24px; border-radius: 50%; border: 1px solid rgba(0,0,0,.15); cursor: pointer; padding: 0; }
 .sc-dot.on { box-shadow: 0 0 0 2px var(--bg, #fff), 0 0 0 4px var(--accent); }
 .sc-pick { width: 28px; height: 28px; padding: 0; border: 0; background: none; cursor: pointer; }
+
+/* 이미지 도구 막대 */
+.img-bar {
+  position: fixed; z-index: 85; display: flex; align-items: center; gap: 2px; padding: 4px;
+  background: var(--surface); border-radius: 12px; box-shadow: var(--shadow-pop), 0 0 0 1px var(--hair);
+  animation: pop-in .14s var(--ease);
+}
+.img-bar[hidden] { display: none; }
+.ib-btn {
+  display: inline-flex; align-items: center; gap: 5px; height: 32px; padding: 0 10px; border: 0; border-radius: 9px;
+  background: transparent; color: var(--text-2, #4e5968); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.ib-btn span:first-child { display: grid; place-items: center; }
+.ib-btn svg { width: 16px; height: 16px; }
+.ib-btn:hover { background: var(--fill); }
+.ib-btn.on { background: var(--accent-soft); color: var(--accent); }
+.ib-btn.danger:hover { color: #f04452; }
+.ib-sep { width: 1px; height: 18px; margin: 0 3px; background: var(--hair); }
+.page-wrap .inline-img.sel .img-box { outline: 2px solid #3182f6; outline-offset: 2px; }
+@media (max-width: 600px) {
+  .ib-btn { padding: 0 8px; }
+  .ib-btn.mo .ib-l { display: none; }
+  .ib-btn svg { width: 18px; height: 18px; }
+  .pop.sheet.compact { max-height: 46dvh; }
+}
+.shadow-ctl.bare { margin-top: 0; padding-top: 0; border-top: 0; }
+.shadow-ctl.bare > .shadow-head:first-child { margin-top: 2px; }

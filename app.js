@@ -20,6 +20,9 @@ const ICONS = {
   plus: '<path d="M12 5v14M5 12h14"/>',
   minus: '<path d="M5 12h14"/>',
   rotate: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
+  shadow: '<rect x="3.5" y="3.5" width="12" height="12" rx="2"/><path d="M19.5 8v9.5a2 2 0 0 1-2 2H8" stroke-opacity=".45"/>',
+  border: '<rect x="3.5" y="3.5" width="17" height="17" rx="2.5"/><rect x="8" y="8" width="8" height="8" rx="1" stroke-opacity=".45"/>',
+  crop: '<path d="M6.5 2.5v13a2 2 0 0 0 2 2h13"/><path d="M17.5 21.5v-13a2 2 0 0 0-2-2h-13"/>',
   fit: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
   check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
   close: '<path d="M6 6l12 12M18 6 6 18"/>',
@@ -1567,7 +1570,7 @@ function renderStickers(pages) {
   (state.stickers || []).forEach((st) => {
     const page = pages[Math.min(st.page || 0, pages.length - 1)];
     if (!page) return;
-    const el = h('div', { class: `sticker layer-${st.layer || 'front'}${st.id === selSticker ? ' sel' : ''}`, 'data-sticker': st.id },
+    const el = h('div', { class: `sticker layer-${st.layer || 'front'}${st.id === selSticker ? ' sel' : ''}`, 'data-sticker': st.id, title: '끌어서 옮기기 · 눌러서 그림자 · 테두리 · 자르기' },
       h('img', { src: st.src, alt: '', draggable: 'false' }),
       h('span', { class: 'stk-ui stk-handle', title: '끌어서 크기 조절' }),
       h('span', { class: 'stk-ui stk-rot', title: '끌어서 회전 (Shift: 15° 단위)', html: icon('rotate') }));
@@ -1576,6 +1579,108 @@ function renderStickers(pages) {
     else page.card.append(el);
   });
 }
+/* ── 이미지 선택 시 위에 뜨는 작은 도구 막대: 그림자 · 테두리 · 자르기 · 설정 · 삭제 ── */
+let selInline = null;
+const imgBar = h('div', { class: 'img-bar', hidden: true, role: 'toolbar', 'aria-label': '이미지 도구' });
+document.body.append(imgBar);
+function selTarget() {
+  if (selSticker) {
+    const st = (state.stickers || []).find((x) => x.id === selSticker);
+    const el = $(`#stage .sticker[data-sticker="${CSS.escape(selSticker)}"]`);
+    if (st && el) return { kind: 'sticker', obj: st, el, box: el };
+  }
+  if (selInline) {
+    const info = state.images[selInline];
+    const el = $(`#stage .inline-img[data-img="${CSS.escape(selInline)}"]`);
+    if (info && el) return { kind: 'inline', obj: info, el, box: el.querySelector('.img-box') || el };
+  }
+  return null;
+}
+function updSel(patch) {
+  const t = selTarget();
+  if (!t) return;
+  if (t.kind === 'sticker') { Object.assign(t.obj, patch); placeSticker(t.el, t.obj); }
+  else {
+    state.images = { ...state.images, [selInline]: { ...state.images[selInline], ...patch } };
+    const info = state.images[selInline];
+    const im = t.el.querySelector('img');
+    if (im) { im.style.filter = shadowFilter(info.sh); applyImgBorder(im, info); }
+  }
+  save(); commitSoon(); drawImgBar();
+}
+function selectImage(kind, id) {
+  closePop();
+  if (kind === 'inline') {
+    selSticker = null; $$('#stage .sticker.sel').forEach((x) => x.classList.remove('sel'));
+    selInline = id;
+    $$('#stage .inline-img').forEach((x) => x.classList.toggle('sel', x.dataset.img === id));
+  }
+  showImgBar();
+}
+function deselectImage() {
+  if (!selSticker && !selInline) return;
+  selSticker = null; selInline = null;
+  $$('#stage .sticker.sel, #stage .inline-img.sel').forEach((x) => x.classList.remove('sel'));
+  imgBar.hidden = true;
+}
+function drawImgBar() {
+  const t = selTarget();
+  if (!t) { imgBar.hidden = true; return; }
+  const o = t.obj;
+  const btn = (ic, label, on, fn, cls = '') => h('button', { type: 'button', class: `ib-btn${on ? ' on' : ''}${cls}`, title: label, 'aria-pressed': on == null ? false : String(!!on), onclick: fn },
+    h('span', { html: icon(ic) }), h('span', { class: 'ib-l' }, label));
+  const panel = (title, ctl) => (ctl.classList.add('bare'), openPop(h('div', { 'aria-label': title }, ctl,
+    h('div', { class: 'pop-foot' }, h('span'), h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: closePop }, '완료'))), t.box, null, { beside: t.box }));
+  imgBar.innerHTML = '';
+  imgBar.append(
+    btn('shadow', '그림자', o.sh && o.sh.on, () => {
+      if (!(o.sh && o.sh.on)) updSel({ sh: { ...SHADOW_DEF, ...(o.sh || {}), on: true } });
+      const tt = selTarget(); if (!tt) return;
+      panel('그림자', shadowControls(() => selTarget() && selTarget().obj.sh, (v) => updSel({ sh: v })));
+    }),
+    btn('border', '테두리', o.bd && o.bd.on, () => {
+      if (!(o.bd && o.bd.on)) updSel({ bd: { ...BORDER_DEF, ...(o.bd || {}), on: true } });
+      panel('테두리', borderControls(() => selTarget() && selTarget().obj.bd, (v) => updSel({ bd: v })));
+    }),
+    btn('crop', '자르기', null, async () => {
+      const src0 = o.src;
+      const out = await cropImage(src0);
+      if (out && out !== src0) { updSel({ src: out, round: lastCropShape === 'circle' }); changed(); commit(); }
+    }),
+    h('i', { class: 'ib-sep' }),
+    btn('more', '설정', null, () => (t.kind === 'sticker' ? openStickerPop(t.el, o.id) : openInlineImagePop(t.el, selInline)), ' mo'),
+    btn('trash', '삭제', null, () => {
+      if (t.kind === 'sticker') state.stickers = state.stickers.filter((x) => x.id !== o.id);
+      else removeImageToken(selInline);
+      deselectImage(); closePop(); changed();
+      toast('이미지를 지웠어요', { label: '되돌리기', fn: undo });
+    }, ' danger mo'));
+  placeImgBar();
+}
+function placeImgBar() {
+  const t = selTarget();
+  if (!t) { imgBar.hidden = true; return; }
+  const r = t.el.getBoundingClientRect();
+  const sr = $('#stage').getBoundingClientRect();
+  if (r.bottom < sr.top || r.top > sr.bottom) { imgBar.hidden = true; return; }
+  imgBar.hidden = false;
+  const bw = imgBar.offsetWidth, bh = imgBar.offsetHeight;
+  // 회전 손잡이와 겹치지 않게 자유 배치 이미지는 조금 더 위에
+  const gap = t.kind === 'sticker' ? 50 : 10;
+  let y = r.top - bh - gap;
+  if (y < Math.max(8, sr.top)) y = r.bottom + 12;
+  const x = Math.max(8, Math.min(r.left + r.width / 2 - bw / 2, innerWidth - bw - 8));
+  imgBar.style.left = `${x}px`; imgBar.style.top = `${y}px`;
+}
+function showImgBar() { drawImgBar(); }
+$('#stage').addEventListener('scroll', () => { if (!imgBar.hidden) placeImgBar(); }, { passive: true });
+addEventListener('resize', () => { if (!imgBar.hidden) placeImgBar(); });
+// 미리보기 밖(패널 등)을 누르면 선택 해제 (도구 막대 · 설정 창 · 자르기 창은 제외)
+document.addEventListener('pointerdown', (e) => {
+  if (e.target.closest('#stage, .img-bar, .pop, .modal')) return;
+  deselectImage();
+});
+
 function placeSticker(el, st) {
   Object.assign(el.style, { left: `${st.x}px`, top: `${st.y}px`, width: `${st.w}px`, transform: `rotate(${st.rot || 0}deg)`, opacity: st.op ?? 1 });
   const im = el.querySelector('img');
@@ -1678,7 +1783,7 @@ function borderControls(getBd, setBd) {
 
 function inlineFigure(id, alt) {
   const info = state.images[id];
-  const fig = h('figure', { class: `inline-img wrap-${info.wrap || 'block'} align-${info.align || 'center'}`, 'data-img': id },
+  const fig = h('figure', { class: `inline-img wrap-${info.wrap || 'block'} align-${info.align || 'center'}${id === selInline ? ' sel' : ''}`, 'data-img': id, title: '눌러서 그림자 · 테두리 · 자르기' },
     h('span', { class: 'img-box' }, h('img', { src: info.src, alt: alt || '', draggable: 'false' }), h('span', { class: 'stk-ui rs-handle', title: '끌어서 크기 조절' })));
   fig.style.setProperty('--img-w', `${info.w || 100}%`);
   const f = shadowFilter(info.sh);
@@ -1791,6 +1896,7 @@ function render() {
   renderStickers(pages);
   htmlBgReady = applyHtmlBg(pages);
   rescale();
+  if (selSticker || selInline) requestAnimationFrame(drawImgBar);
   stage.scrollTop = scrollTop;
 }
 
@@ -1846,6 +1952,7 @@ function rescale() {
     wrap.style.height = Hc * s + 'px';
   });
   $('#zoom-label').textContent = `${Math.round(s * 100)}%`;
+  if (typeof imgBar !== 'undefined' && !imgBar.hidden) placeImgBar();
 }
 function stepZoom(dir) {
   const cur = currentScale;
@@ -2555,7 +2662,7 @@ const pop = $('#pop');
 let popAnchor = null;
 let popOnClose = null;
 
-function openPop(content, anchor, onClose) {
+function openPop(content, anchor, onClose, opts = {}) {
   closePop();
   pop.innerHTML = '';
   pop.append(content);
@@ -2564,11 +2671,20 @@ function openPop(content, anchor, onClose) {
   popOnClose = onClose || null;
   const sheet = isMobile();
   pop.classList.toggle('sheet', sheet);
+  pop.classList.toggle('compact', !!opts.beside);
   pop.style.left = pop.style.top = '';
   if (sheet) return;
   const pr = pop.getBoundingClientRect();
   let x, y;
-  if (popAnchor) {
+  if (opts.beside) {
+    // 이미지 설정: 이미지를 가리지 않도록 오른쪽 → 왼쪽 → 아래 → 위 순서로 빈 곳에
+    const r = opts.beside.getBoundingClientRect();
+    const g = 14;
+    if (r.right + g + pr.width <= innerWidth - 12) { x = r.right + g; y = r.top; }
+    else if (r.left - g - pr.width >= 12) { x = r.left - g - pr.width; y = r.top; }
+    else if (r.bottom + g + pr.height <= innerHeight - 12) { x = r.left + r.width / 2 - pr.width / 2; y = r.bottom + g; }
+    else { x = r.left + r.width / 2 - pr.width / 2; y = r.top - g - pr.height; }
+  } else if (popAnchor) {
     const r = popAnchor.getBoundingClientRect();
     x = r.right - pr.width;
     if (x < 12) x = r.left;
@@ -2718,7 +2834,7 @@ function openBubbleEditor(key, anchor) {
 $('#stage').addEventListener('click', (e) => {
   if (e.target.closest('.sticker') || e.target.closest('.rs-handle')) return;
   const fig = e.target.closest('.inline-img');
-  if (fig) { openInlineImagePop(fig, fig.dataset.img); return; }
+  if (fig) { selectImage('inline', fig.dataset.img); return; }
   const wb = e.target.closest('.narr.was-bubble');
   if (wb) {
     const key = wb.dataset.key;
@@ -3408,9 +3524,9 @@ function addImage(src, mode, round) {
     const w = Math.round(W * 0.34);
     const st = { id: newId(), src, x: Math.round(W - w - state.canvas.pad), y: Math.round(state.canvas.pad), w, rot: 0, layer: 'front', page: 0, op: 1, round: !!round };
     state.stickers = [...(state.stickers || []), st];
-    selSticker = st.id;
+    selSticker = st.id; selInline = null;
     changed();
-    toast('카드 위에 놓았어요 · 끌어서 옮기고 모서리를 끌어 크기를 바꿔요', { label: '되돌리기', fn: undo }, 3600);
+    toast('카드 위에 놓았어요 · 끌어서 옮기고, 위 막대에서 그림자 · 테두리 · 자르기를 바꿔요', { label: '되돌리기', fn: undo }, 3600);
   } else {
     const id = newId();
     const float = mode === 'float';
@@ -3486,7 +3602,7 @@ function openInlineImagePop(fig, id) {
         state.stickers = [...(state.stickers || []), { id: newId(), src: info.src, x: Math.round(W - w - state.canvas.pad), y: state.canvas.pad, w, rot: 0, layer: 'front', page: 0, op: 1, sh: info.sh, bd: info.bd, round: info.round }];
         changed(); closePop(); toast('자유 배치로 바꿨어요', { label: '되돌리기', fn: undo });
       } }, '자유 배치로'),
-      h('button', { type: 'button', class: 'link-btn danger', onclick: () => { removeImageToken(id); changed(); closePop(); toast('이미지를 지웠어요', { label: '되돌리기', fn: undo }); } }, '삭제'))), fig);
+      h('button', { type: 'button', class: 'link-btn danger', onclick: () => { removeImageToken(id); changed(); closePop(); toast('이미지를 지웠어요', { label: '되돌리기', fn: undo }); } }, '삭제'))), fig, null, { beside: fig.querySelector('.img-box') || fig });
 }
 
 /* 자유 배치 이미지: 끌어서 이동 · 모서리로 크기 · 눌러서 설정 */
@@ -3524,7 +3640,7 @@ function openStickerPop(el, id) {
         state.stickers = state.stickers.filter((x) => x.id !== id); selSticker = null; changed(); closePop();
         toast('이미지를 지웠어요', { label: '되돌리기', fn: undo });
       } }, '삭제'),
-      h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: closePop }, '완료'))), el);
+      h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: closePop }, '완료'))), el, null, { beside: el });
 }
 
 (function imageResizeDrag() {
@@ -3571,13 +3687,16 @@ function openStickerPop(el, id) {
   stage.addEventListener('pointerdown', (e) => {
     const el = e.target.closest('.sticker');
     if (!el) {
-      if (selSticker && !e.target.closest('.pop')) { selSticker = null; $$('#stage .sticker.sel').forEach((x) => x.classList.remove('sel')); }
+      if (!e.target.closest('.pop') && !e.target.closest('.inline-img')) deselectImage();
       return;
     }
     const st = state.stickers.find((x) => x.id === el.dataset.sticker);
     if (!st) return;
     e.preventDefault();
     closePop();
+    selInline = null;
+    $$('#stage .inline-img.sel').forEach((x) => x.classList.remove('sel'));
+    imgBar.hidden = true;
     selSticker = st.id;
     $$('#stage .sticker').forEach((x) => x.classList.toggle('sel', x === el));
     const r = el.getBoundingClientRect();
@@ -3606,7 +3725,7 @@ function openStickerPop(el, id) {
     const d = drag;
     drag = null;
     if (d.moved) { save(); commitSoon(); }
-    else openStickerPop(d.el, d.st.id);
+    showImgBar();
   };
   stage.addEventListener('pointerup', end);
   stage.addEventListener('pointercancel', end);
