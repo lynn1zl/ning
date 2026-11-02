@@ -1522,3 +1522,11 @@ body.resizing iframe, body.resizing #stage { pointer-events: none; }
 .ft-img svg { width: 17px; height: 17px; }
 .pop-label.row-top { display: flex; justify-content: space-between; }
 .pop-label.row-top output { color: var(--text-2); font-variant-numeric: tabular-nums; }
+
+/* 등록된 HTML 배경 사용 중 표시 */
+.html-ref { display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 16px; background: var(--surface); border-radius: var(--r-lg); }
+.html-ref-ico { width: 36px; height: 36px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-size: 16px; flex: none; }
+.html-ref-text { flex: 1; min-width: 0; }
+.html-ref-text b { display: block; font-size: 15px; }
+.html-ref-text small { display: block; font-size: 12.5px; color: var(--text-3); }
+#html-presets .chip.on { background: var(--accent); color: #fff; }

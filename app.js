@@ -141,6 +141,7 @@ const DEFAULTS = {
   overrides: {},
   skin: '',
   bgHtml: '',
+  bgRef: '', // 등록된 배경 파일 (코드는 저장하지 않음)
   scene: { show: true, place: '', alive: '', total: '' },
   images: {},   // 글자처럼 넣은 이미지: id → { src, w(%), align }
   stickers: [], // 자유 배치 이미지: { id, src, x, y, w(px), rot, layer: 'front'|'back', page, op }
@@ -553,6 +554,13 @@ function dropTarget(el, accept, onFile) {
 let state = loadState();
 
 function migrate(st, raw) {
+  // 이전 버전: 등록된 배경 코드가 그대로 저장돼 있으면 이름(파일)으로 바꿈
+  if (st.bgHtml && !st.bgRef) {
+    const sig = [['bg/witch.html', '언덕 위의 마녀'], ['bg/demon.html', '언덕 위의 마왕'], ['bg/survival.html', 'BROADCAST']];
+    for (const [file, mark] of sig) {
+      if (st.bgHtml.includes(mark) && /ninining-safe/.test(st.bgHtml)) { st.bgRef = file; st.bgHtml = ''; break; }
+    }
+  }
   // 이전 버전: 배경 이미지만 있던 설정은 '이미지' 배경으로
   if (raw && raw.canvas && !raw.canvas.bgType && raw.canvas.bgImage) st.canvas.bgType = 'image';
   // 이전 버전: 따옴표 / 괄호 스위치 → 지문 형식
@@ -1232,8 +1240,18 @@ async function buildHtmlBgURL(html, w, h, layer) {
 }
 /* HTML 배경 안의 {{제목}} · {{출처}} · {{제작자}} (또는 '제목을 입력하세요')를 발췌기 입력과 연동 */
 const TITLE_TOKEN = /\{\{\s*(제목|title)\s*\}\}|제목을 입력하세요/gi;
-const bgHasTitle = () => { TITLE_TOKEN.lastIndex = 0; return TITLE_TOKEN.test(state.bgHtml || ''); };
-const bgUsesScene = () => /\{\{\s*(장소|생존|전체|place|alive|total)\s*\}\}/i.test(state.bgHtml || '');
+/* 등록된 배경(프리셋)은 코드 대신 이름만 저장 · 표시하고, 코드는 필요할 때 불러와 메모리에만 둠 */
+const bgCodeCache = {};
+function bgCode() {
+  if (state.bgRef) return bgCodeCache[state.bgRef] || '';
+  return state.bgHtml || '';
+}
+async function loadBgRef(file) {
+  if (!bgCodeCache[file]) bgCodeCache[file] = await (await fetch(file)).text();
+  return bgCodeCache[file];
+}
+const bgHasTitle = () => { TITLE_TOKEN.lastIndex = 0; return TITLE_TOKEN.test(bgCode()); };
+const bgUsesScene = () => /\{\{\s*(장소|생존|전체|place|alive|total)\s*\}\}/i.test(bgCode());
 function fillBgTokens(html) {
   const e = (t) => esc((t || '').trim());
   const sc = state.scene || {};
@@ -1253,16 +1271,16 @@ function fillBgTokens(html) {
 }
 // 글이 들어갈 자리: <!-- ninining-safe: 위% 오른쪽% 아래% 왼쪽%; min-height: %--> (모두 카드 가로 기준)
 function bgSafeArea() {
-  const m = (state.bgHtml || '').match(/ninining-safe:\s*([\d.]+)%\s+([\d.]+)%\s+([\d.]+)%\s+([\d.]+)%(?:\s*;\s*min-height:\s*([\d.]+)%)?/);
+  const m = bgCode().match(/ninining-safe:\s*([\d.]+)%\s+([\d.]+)%\s+([\d.]+)%\s+([\d.]+)%(?:\s*;\s*min-height:\s*([\d.]+)%)?/);
   return m ? { t: +m[1], r: +m[2], b: +m[3], l: +m[4], minH: m[5] ? +m[5] : 0 } : null;
 }
 
-function htmlBgKey(w, h, layer) { return `${layer}|${w}x${h}|${state.canvas.scale}|${fillBgTokens(state.bgHtml)}`; }
+function htmlBgKey(w, h, layer) { return `${layer}|${w}x${h}|${state.canvas.scale}|${fillBgTokens(bgCode())}`; }
 function htmlBgURL(w, h, layer) {
   const key = htmlBgKey(w, h, layer);
   if (!htmlBg.cache.has(key)) {
     if (htmlBg.cache.size > 24) htmlBg.cache.clear();
-    htmlBg.cache.set(key, buildHtmlBgURL(fillBgTokens(state.bgHtml), w, h, layer));
+    htmlBg.cache.set(key, buildHtmlBgURL(fillBgTokens(bgCode()), w, h, layer));
   }
   return htmlBg.cache.get(key);
 }
@@ -1274,7 +1292,7 @@ function setHtmlStatus(msg, bad) {
 let htmlBgSeq = 0;
 const lastBg = [];
 function applyHtmlBg(pages) {
-  const code = (state.bgHtml || '').trim();
+  const code = bgCode().trim();
   if (!code) { setHtmlStatus(''); return Promise.resolve(); }
   const hasTop = /data-layer\s*=\s*["']?top/i.test(code);
   const seq = ++htmlBgSeq;
@@ -1399,13 +1417,13 @@ function newPage(idx, W, H) {
   if (H) card.style.height = H + 'px';
   card.append(h('div', { class: 'card-overlay' }));
   // HTML 배경이 있을 때만 그림 자리를 만듦 (빈 <img>는 이미지 저장을 실패시킴)
-  const useHtml = !!(state.bgHtml || '').trim();
+  const useHtml = !!bgCode().trim();
   const bgImg = useHtml ? h('img', { class: 'card-htmlbg', alt: '', hidden: true, 'aria-hidden': 'true' }) : null;
   const topImg = useHtml ? h('img', { class: 'card-htmltop', alt: '', hidden: true, 'aria-hidden': 'true' }) : null;
   if (bgImg) card.append(bgImg);
   if (idx === 0 && state.head.quoteMark) card.append(h('div', { class: 'quote-mark', 'aria-hidden': 'true' }, '“'));
-  if (idx === 0 && state.title.trim() && !(state.bgHtml && bgHasTitle())) card.append(h('h2', { class: 'card-title', html: fmt(state.title) }));
-  const safe = state.bgHtml ? bgSafeArea() : null;
+  if (idx === 0 && state.title.trim() && !(bgCode() && bgHasTitle())) card.append(h('h2', { class: 'card-title', html: fmt(state.title) }));
+  const safe = bgCode() ? bgSafeArea() : null;
   if (safe) {
     const px = (v) => `${Math.round((v * W) / 100)}px`;
     card.style.padding = `${px(safe.t)} ${px(safe.r)} ${px(safe.b)} ${px(safe.l)}`;
@@ -1416,7 +1434,7 @@ function newPage(idx, W, H) {
   content.append(flow);
   card.append(content);
   // HTML 배경이 출처 · 제작자를 직접 보여 주면 카드 아래쪽 출처 줄은 생략
-  const bgCredit = state.bgHtml && /\{\{\s*(출처|credit|제작자|creator)\s*\}\}/i.test(state.bgHtml);
+  const bgCredit = /\{\{\s*(출처|credit|제작자|creator)\s*\}\}/i.test(bgCode());
   const work = bgCredit ? '' : (state.credit || '').trim(), author = bgCredit ? '' : (state.creator || '').trim();
   if (work || author || state.canvas.pageNum) {
     const foot = h('div', { class: 'card-footer' });
@@ -2702,7 +2720,7 @@ function buildQuickInsert() {
 }
 
 /* 내 양식: 디자인 · 대사 인식 설정을 저장/불러오기 (글은 제외) */
-const STYLE_KEYS = ['typo', 'head', 'bubble', 'canvas', 'parse', 'skin', 'bgHtml', 'scene'];
+const STYLE_KEYS = ['typo', 'head', 'bubble', 'canvas', 'parse', 'skin', 'bgHtml', 'bgRef', 'scene'];
 let myStyles = [];
 
 function styleSnapshot(name, withChars) {
@@ -2715,7 +2733,7 @@ function applyStyle(st) {
   const data = st.data || st; // 전체 설정 파일도 받기
   for (const k of STYLE_KEYS) {
     if (!(k in data)) continue;
-    state[k] = k === 'skin' || k === 'bgHtml' ? data[k] || '' : deepMerge(copyState(DEFAULTS[k] || {}), data[k]);
+    state[k] = k === 'skin' || k === 'bgHtml' || k === 'bgRef' ? data[k] || '' : deepMerge(copyState(DEFAULTS[k] || {}), data[k]);
   }
   if (Array.isArray(data.chars)) state.chars = copyState(data.chars);
   commit(); rebuildAll(); save();
@@ -3323,10 +3341,11 @@ function buildSkin() {
     type: 'button', class: 'chip',
     onclick: async () => {
       try {
-        const html = await (await fetch(bp.file)).text();
+        await loadBgRef(bp.file);
         commit();
-        state.bgHtml = html;
-        $('#html-bg').value = html;
+        state.bgRef = bp.file;
+        state.bgHtml = '';
+        syncHtmlEditor();
         // 이 배경의 기본 캐릭터 등록 (기본 모양: 하얀 배경 · 검은 글씨 · 하얀 테두리 · 왼쪽, 이미 있는 이름은 건너뜀)
         // 프로필 사진이 있으면 받아서 넣음 (이미 있는 캐릭터도 사진이 비어 있으면 채움)
         const list = (bp.chars || []).map((c) => (typeof c === 'string' ? { name: c } : c));
@@ -3354,8 +3373,19 @@ function buildSkin() {
     },
   }, bp.name)));
   $('#skin-css').value = state.skin;
-  $('#html-bg').value = state.bgHtml || '';
+  syncHtmlEditor();
   setHtmlStatus(htmlBg.status);
+}
+// 등록된 배경을 쓰는 중이면 코드 칸 대신 이름 카드를 보여 줌
+function syncHtmlEditor() {
+  const card = $('#html-ref');
+  const ta = $('#html-bg');
+  const bp = state.bgRef && HTML_BG_PRESETS.find((x) => x.file === state.bgRef);
+  ta.closest('.code-card').hidden = !!state.bgRef;
+  card.hidden = !state.bgRef;
+  if (state.bgRef) $('#html-ref-name').textContent = bp ? bp.name : '등록된 배경';
+  else if (ta.value !== (state.bgHtml || '')) ta.value = state.bgHtml || '';
+  $$('#html-presets .chip').forEach((c) => c.classList.toggle('on', !!bp && c.textContent === bp.name));
 }
 let skinTimer;
 $('#skin-css').addEventListener('input', (e) => {
@@ -3365,9 +3395,10 @@ $('#skin-css').addEventListener('input', (e) => {
     // 배경 코드(body 규칙 · 장식 HTML)는 HTML 배경으로 옮겨서 그림
     if (looksLikeHtmlBg(state.skin)) {
       state.bgHtml = state.skin;
+      state.bgRef = '';
       state.skin = '';
       $('#skin-css').value = '';
-      $('#html-bg').value = state.bgHtml;
+      syncHtmlEditor();
       toast('배경용 HTML 코드라서 ‘HTML 배경’ 칸으로 옮겨 적용했어요', { label: '되돌리기', fn: undo }, 3600);
     }
     applySkin(); changed();
@@ -3380,7 +3411,8 @@ $('#html-bg').addEventListener('input', (e) => {
   htmlTimer = setTimeout(changed, 300);
 });
 $('#btn-html-example').addEventListener('click', () => {
-  if (state.bgHtml.trim() && !confirm('지금 HTML 배경을 예시로 바꿀까요?')) return;
+  if ((state.bgRef || state.bgHtml.trim()) && !confirm('지금 HTML 배경을 예시로 바꿀까요?')) return;
+  state.bgRef = '';
   state.bgHtml = `<style>
   body { background: linear-gradient(160deg, #fdf6ec, #f3e7d9); }
   .frame { position: absolute; inset: 14px; border: 1.5px solid rgba(120, 90, 60, .35); border-radius: 18px; }
@@ -3388,13 +3420,15 @@ $('#btn-html-example').addEventListener('click', () => {
 </style>
 <div class="frame"></div>
 <div class="star" style="top: 22px; right: 28px;" data-layer="top">★</div>`;
-  $('#html-bg').value = state.bgHtml;
+  syncHtmlEditor();
   changed();
 });
+$('#btn-html-ref-clear').addEventListener('click', () => $('#btn-html-clear').click());
 $('#btn-html-clear').addEventListener('click', () => {
-  if (!state.bgHtml.trim()) return;
+  if (!state.bgRef && !state.bgHtml.trim()) return;
   state.bgHtml = '';
-  $('#html-bg').value = '';
+  state.bgRef = '';
+  syncHtmlEditor();
   changed();
   toast('HTML 배경을 비웠어요', { label: '되돌리기', fn: undo });
 });
@@ -3895,11 +3929,11 @@ document.addEventListener('click', (e) => {
 /* 초기화: 필요한 범위만 골라서 (모두 되돌리기 가능) */
 const RESETS = [
   { id: 'skin', icon: 'code', title: '스킨만 초기화', desc: 'CSS 스킨과 HTML 배경을 비워요', done: '스킨을 초기화했어요',
-    run() { state.skin = ''; state.bgHtml = ''; } },
+    run() { state.skin = ''; state.bgHtml = ''; state.bgRef = ''; } },
   { id: 'design', icon: 'type', title: '디자인 초기화', desc: '서체 · 말풍선 · 화면 · 스킨을 기본 디자인으로. 글과 캐릭터는 그대로예요', done: '디자인을 기본으로 되돌렸어요',
     run() {
       for (const k of DESIGN_KEYS) state[k] = copyState(DEFAULTS[k]);
-      state.skin = ''; state.bgHtml = '';
+      state.skin = ''; state.bgHtml = ''; state.bgRef = '';
       state.overrides = Object.fromEntries(Object.entries(state.overrides).map(([k, v]) => {
         const { shape, side, ...rest } = v;
         return [k, rest];
@@ -4025,6 +4059,7 @@ setPane('text', false);
 if (isMobile()) setSheet(true);
 rebuildAll();
 resetHistory();
+if (state.bgRef) loadBgRef(state.bgRef).then(() => { htmlBg.cache.clear(); render(); }).catch(() => toast('배경을 불러오지 못했어요'));
 
 /* ── 첫 방문 튜토리얼: 메뉴를 하나씩 강조하며 설명 ── */
 const TOUR = [
