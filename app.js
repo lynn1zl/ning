@@ -1221,7 +1221,9 @@ html body .card .name { font-size: var(--name-size); }`;
       + (P.fontOn ? ` font-family: ${fontStack(P.font, P.fontCustom)};` : '')
       + (+P.weight ? ` font-weight: ${+P.weight};` : '')
       + (P.colorOn ? ` color: ${P.color};` : '')
-      + (P.italic ? ' font-style: italic;' : '') + ' }';
+      + (P.italic ? ' font-style: italic;' : '') + ' }'
+      // '번역만' 보기에서는 번역이 본문이라 크기는 줄이지 않음
+      + '\nhtml body .card .bubble .paren.paren-main { font-size: 1em; }';
   }
   return css;
 }
@@ -1596,12 +1598,19 @@ function renderBlock(b) {
   const strip = state.parse.strip;
   let inner = fmt(strip ? b.inner : b.full);
   const show = state.parse.tlShow || 'both';
+  // 괄호로 쓴 번역 줄은 '기호 숨기기'로 괄호가 빠져도 '괄호 안 글자' 꾸미기를 그대로 받음
+  const P = state.typo.paren;
+  const tlHtml = (t, main) => {
+    const x = fmt(strip ? t.inner : t.full);
+    const wasParen = strip && P && P.on && /^\s*[(（][\s\S]*[)）]\s*$/.test(t.full);
+    return wasParen ? `<span class="paren${main ? ' paren-main' : ''}">${x}</span>` : x;
+  };
   if (b.tl && show === 'tl') {
     // 번역만: 원문(외국어)을 빼고 번역을 본문 크기로
-    inner = b.tl.map((t) => fmt(strip ? t.inner : t.full)).join('\n');
+    inner = b.tl.map((t) => tlHtml(t, true)).join('\n');
   } else if (b.tl && show === 'both') {
     // 번역 줄: 줄바꿈 뒤에 작은 글씨로 (말풍선 안 기호는 '기호 숨기기'를 따름)
-    for (const t of b.tl) inner += '\n<span class="tl">' + fmt(strip ? t.inner : t.full) + '</span>';
+    for (const t of b.tl) inner += '\n<span class="tl">' + tlHtml(t, false) + '</span>';
   }
   const bub = h('div', { class: 'bubble', html: wrapParens(inner) });
   const ov = state.overrides[b.key] || {};
