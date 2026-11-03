@@ -19,6 +19,7 @@ const ICONS = {
   copy: '<rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V6.5A2.5 2.5 0 0 1 7.5 4H15"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   minus: '<path d="M5 12h14"/>',
+  search: '<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.3-4.3"/>',
   rotate: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
   shadow: '<rect x="3.5" y="3.5" width="12" height="12" rx="2"/><path d="M19.5 8v9.5a2 2 0 0 1-2 2H8" stroke-opacity=".45"/>',
   border: '<rect x="3.5" y="3.5" width="17" height="17" rx="2.5"/><rect x="8" y="8" width="8" height="8" rx="1" stroke-opacity=".45"/>',
@@ -3192,7 +3193,148 @@ function buildFmtBar() {
   const imgBtn = h('button', { type: 'button', class: 'ft ft-img', title: '이미지 넣기', 'aria-label': '이미지 넣기', onmousedown: keep, html: icon('image') + '<span>이미지</span>' });
   imgBtn.addEventListener('click', () => openImageInsertPop(imgBtn));
   bar.append(imgBtn);
+  bar.append(h('button', { type: 'button', class: 'ft ft-img', title: `찾아 바꾸기 (${modName}+F)`, 'aria-label': '찾아 바꾸기', onclick: () => openFind(), html: icon('search') + '<span>찾기</span>' }));
 }
+
+/* =========================================================
+   찾아 바꾸기: 글 속 단어를 찾아 하나씩 · 모두 바꾸거나 지우기
+   - 찾은 곳은 입력창 뒤에 깐 같은 모양의 층에 색칠해서 보여 줌 (검색창에 커서를 둔 채로 볼 수 있게)
+   ========================================================= */
+const find = { q: '', rep: '', cs: false, idx: -1, list: [] };
+const findBar = $('#find-bar');
+const srcHl = $('#src-hl');
+const reEsc = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function findRegex() { return find.q ? new RegExp(reEsc(find.q), find.cs ? 'g' : 'gi') : null; }
+function findScan(keepNear) {
+  const re = findRegex();
+  const prevPos = find.list[find.idx] ? find.list[find.idx][0] : -1;
+  find.list = [];
+  if (re) for (const m of src.value.matchAll(re)) find.list.push([m.index, m.index + m[0].length]);
+  if (!find.list.length) find.idx = -1;
+  else if (keepNear && prevPos >= 0) { const k = find.list.findIndex(([st]) => st >= prevPos); find.idx = k < 0 ? 0 : k; }
+  else if (find.idx < 0 || find.idx >= find.list.length) find.idx = 0;
+  findPaint();
+}
+function findPaint(scroll) {
+  const open = !findBar.hidden && find.list.length > 0;
+  srcHl.hidden = !open;
+  const cnt = $('#find-count');
+  if (cnt) {
+    cnt.textContent = !find.q ? '' : find.list.length ? `${find.idx + 1} / ${find.list.length}` : '없음';
+    cnt.classList.toggle('none', !!find.q && !find.list.length);
+  }
+  $$('#find-bar .fb-need').forEach((b) => (b.disabled = !find.list.length));
+  if (!open) return;
+  // 입력창과 같은 글자 · 여백 · 줄바꿈으로 맞춘 층에 찾은 곳만 색칠
+  const cs = getComputedStyle(src);
+  Object.assign(srcHl.style, {
+    font: cs.font, letterSpacing: cs.letterSpacing, padding: cs.padding, lineHeight: cs.lineHeight,
+    width: `${src.clientWidth}px`, height: `${src.clientHeight}px`,
+  });
+  const v = src.value;
+  let html = '', at = 0;
+  find.list.forEach(([st, en], i) => {
+    html += esc(v.slice(at, st)) + `<mark class="${i === find.idx ? 'cur' : ''}">${esc(v.slice(st, en))}</mark>`;
+    at = en;
+  });
+  srcHl.innerHTML = html + esc(v.slice(at)) + '\n';
+  if (scroll) {
+    const cur = srcHl.querySelector('mark.cur');
+    if (cur) src.scrollTop = Math.max(0, cur.offsetTop - src.clientHeight / 3);
+  }
+  srcHl.scrollTop = src.scrollTop;
+}
+function findGo(step) {
+  if (!find.list.length) return;
+  find.idx = (find.idx + step + find.list.length) % find.list.length;
+  findPaint(true);
+}
+function setText(v) {
+  src.value = v;
+  state.text = v;
+  updateStats();
+  changed();
+}
+function findReplaceOne() {
+  const m = find.list[find.idx];
+  if (!m) return;
+  const v = src.value;
+  commit();
+  setText(v.slice(0, m[0]) + find.rep + v.slice(m[1]));
+  commit();
+  findScan(false);
+  // 바꾼 자리 다음 것으로
+  const k = find.list.findIndex(([st]) => st >= m[0] + find.rep.length);
+  find.idx = find.list.length ? (k < 0 ? 0 : k) : -1;
+  findPaint(true);
+}
+function findReplaceAll(withText) {
+  const re = findRegex();
+  if (!re || !find.list.length) return;
+  const n = find.list.length;
+  commit();
+  setText(src.value.replace(re, () => withText));
+  commit();
+  findScan(false);
+  toast(withText ? `${n}곳을 ‘${withText}’(으)로 바꿨어요` : `‘${find.q}’ ${n}곳을 지웠어요`, { label: '되돌리기', fn: undo }, 3600);
+}
+function openFind() {
+  if (findBar.hidden) {
+    findBar.hidden = false;
+    const qIn = h('input', { type: 'text', class: 'input fb-in', id: 'find-q', placeholder: '찾을 말', value: find.q, 'aria-label': '찾을 말', autocomplete: 'off' });
+    const rIn = h('input', { type: 'text', class: 'input fb-in', id: 'find-r', placeholder: '바꿀 말', value: find.rep, 'aria-label': '바꿀 말', autocomplete: 'off' });
+    const cs = h('input', { type: 'checkbox', checked: find.cs });
+    qIn.addEventListener('input', () => { find.q = qIn.value; find.idx = -1; findScan(false); findPaint(true); });
+    qIn.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); findGo(e.shiftKey ? -1 : 1); }
+      if (e.key === 'Escape') { e.preventDefault(); closeFind(); }
+    });
+    rIn.addEventListener('input', () => { find.rep = rIn.value; $('#find-all').textContent = find.rep ? '모두 바꾸기' : '모두 지우기'; });
+    rIn.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); findReplaceOne(); }
+      if (e.key === 'Escape') { e.preventDefault(); closeFind(); }
+    });
+    cs.addEventListener('change', () => { find.cs = cs.checked; findScan(true); findPaint(true); });
+    const ib = (ic, label, fn, cls = '') => h('button', { type: 'button', class: `icon-btn sm ${cls}`, title: label, 'aria-label': label, html: icon(ic), onclick: fn });
+    findBar.append(
+      h('div', { class: 'fb-row' }, h('span', { class: 'fb-ico', html: icon('search') }), qIn,
+        h('span', { class: 'fb-count', id: 'find-count' }),
+        ib('up', '이전 (Shift+Enter)', () => findGo(-1), 'fb-need'), ib('down', '다음 (Enter)', () => findGo(1), 'fb-need'),
+        ib('close', '닫기 (Esc)', closeFind)),
+      h('div', { class: 'fb-row' }, h('span', { class: 'fb-ico', html: icon('refresh') }), rIn,
+        h('button', { type: 'button', class: 'btn btn-sm fb-need', onclick: findReplaceOne, title: '지금 표시된 한 곳만 (Enter)' }, '바꾸기'),
+        h('button', { type: 'button', class: 'btn btn-sm btn-primary fb-need', id: 'find-all', onclick: () => findReplaceAll(find.rep) }, find.rep ? '모두 바꾸기' : '모두 지우기')),
+      h('label', { class: 'fb-opt' }, cs, h('span', {}, '영문 대소문자 구분')));
+  }
+  // 입력창에서 고른 글자가 있으면 그걸로 찾기
+  const sel = src.value.slice(src.selectionStart, src.selectionEnd);
+  const qIn = $('#find-q');
+  if (sel && !sel.includes('\n') && sel.length < 60) { qIn.value = find.q = sel; find.idx = -1; }
+  findScan(false);
+  findPaint(true);
+  qIn.focus(); qIn.select();
+}
+function closeFind() {
+  findBar.hidden = true;
+  findBar.innerHTML = '';
+  srcHl.hidden = true;
+  src.focus();
+}
+src.addEventListener('input', () => { if (!findBar.hidden) findScan(true); });
+// Esc: 찾기 창 안이나, 버튼이 비활성돼 포커스가 빠진 상태에서도 닫힘
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || findBar.hidden) return;
+  const a = document.activeElement;
+  if (!a || a === document.body || findBar.contains(a) || a === src) { e.preventDefault(); closeFind(); }
+});
+src.addEventListener('scroll', () => { if (!srcHl.hidden) srcHl.scrollTop = src.scrollTop; }, { passive: true });
+if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => { if (!srcHl.hidden) findPaint(); }).observe(src);
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && !e.altKey && /^[fFhH]$/.test(e.key) && (e.target === src || e.target.closest('#find-bar'))) {
+    e.preventDefault();
+    openFind();
+  }
+});
 
 function openHighlightPop(anchor) {
   const grid = h('div', { class: 'palette hl' });

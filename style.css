@@ -1641,3 +1641,25 @@ img[src^="nnimg:"] { visibility: hidden; }
 .folder-now b { display: block; font-size: 14.5px; }
 .folder-now small { display: block; margin-top: 2px; font-size: 12.5px; color: var(--text-3); line-height: 1.5; }
 .folder-actions { display: flex; align-items: center; gap: 10px; }
+
+/* 찾아 바꾸기 */
+.find-bar { display: flex; flex-direction: column; gap: 6px; padding: 10px 10px 8px; border-bottom: 1px solid var(--hair); background: var(--surface); }
+.find-bar[hidden] { display: none; }
+.fb-row { display: flex; align-items: center; gap: 6px; }
+.fb-ico { display: grid; place-items: center; width: 22px; color: var(--text-3); flex: none; }
+.fb-ico svg { width: 16px; height: 16px; }
+.fb-in { flex: 1; min-width: 0; height: 34px; padding: 6px 10px; font-size: 14px; }
+.fb-count { flex: none; min-width: 44px; text-align: center; font-size: 12.5px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.fb-count.none { color: #f04452; }
+.find-bar .btn-sm { flex: none; height: 34px; }
+.find-bar button:disabled { opacity: .4; pointer-events: none; }
+.fb-opt { display: inline-flex; align-items: center; gap: 6px; margin-left: 28px; font-size: 12.5px; color: var(--text-3); cursor: pointer; }
+.src-wrap { position: relative; }
+.src-wrap #src { position: relative; z-index: 1; }
+.src-hl {
+  position: absolute; left: 0; top: 0; z-index: 0; overflow: hidden; pointer-events: none;
+  white-space: pre-wrap; overflow-wrap: break-word; word-break: normal; color: transparent; box-sizing: border-box;
+}
+.src-hl[hidden] { display: none; }
+.src-hl mark { color: transparent; background: rgba(255, 214, 0, .45); border-radius: 3px; }
+.src-hl mark.cur { background: rgba(255, 145, 0, .65); box-shadow: 0 0 0 1px rgba(230, 120, 0, .6); }

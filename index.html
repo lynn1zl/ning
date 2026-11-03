@@ -65,8 +65,9 @@
         <section class="pane" data-pane="text">
           <div class="editor-card">
             <div class="fmt-bar" id="fmt-bar" role="toolbar" aria-label="서식"></div>
+            <div class="find-bar" id="find-bar" hidden></div>
             <div class="quick-insert" id="quick-insert"></div>
-            <textarea id="src" spellcheck="false" placeholder="여기에 발췌할 글을 붙여넣으세요."></textarea>
+            <div class="src-wrap"><div class="src-hl" id="src-hl" aria-hidden="true" hidden></div><textarea id="src" spellcheck="false" placeholder="여기에 발췌할 글을 붙여넣으세요."></textarea></div>
             <div class="editor-foot">
               <span id="text-stats"></span>
               <button type="button" class="link-btn" data-act="help">작성 튜토리얼</button>
