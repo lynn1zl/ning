@@ -131,7 +131,9 @@ const DEFAULTS = {
   creator: '제작자',
   parse: { auto: true, formats: ['dq', 'sq', 'corner', 'wcorner'], custom: [], mode: 'marked', inline: false, strip: true, nameless: 'none', blank: 'para1', blankV3: true, mergeTl: true, tlShow: 'both', autoChars: true },
   typo: { font: 'Noto Serif KR', fontCustom: '', size: 15, lh: 1.75, ls: -0.01, weight: 400, color: '#2a2826', align: 'left', paraMode: 'gap', gap: 10, indent: 1, hl: '#ffe58a', hlStyle: 'under',
-    wordBreak: 'auto', noOrphan: true, ws: 0, palt: false, kern: true, alignLast: 'auto', measure: 0, dropcap: false, dropLines: 2 },
+    wordBreak: 'auto', noOrphan: true, ws: 0, palt: false, kern: true, alignLast: 'auto', measure: 0, dropcap: false, dropLines: 2,
+    // 괄호 안 글자: ( ) 안을 본문과 다르게 (크기는 둘레 글자에 대한 비율)
+    paren: { on: false, fontOn: false, font: 'Gowun Batang', fontCustom: '', scale: 90, weight: 0, colorOn: false, color: '#8b95a1', italic: false } },
   head: { font: 'Noto Serif KR', fontCustom: '', size: 19, weight: 700, color: '#1d1c1a', align: 'left', creditFont: 'Noto Serif KR', creditFontCustom: '', creditSize: 11.5, creditWeight: 400, creditColor: '#8a857c', creatorFont: 'Noto Serif KR', creatorFontCustom: '', creatorSize: 11.5, creatorWeight: 700, creatorColor: '#6b665e', creditAlign: 'right', creditLayout: 'inline', quoteMark: false, accent: '#c8a46a' },
   bubble: {
     speech: 'round', tail: true, side: 'left',
@@ -495,6 +497,41 @@ function fmtNoOrphan(text, justify) {
   return fmt(m[1]) + '<span class="nobr">' + fmt(m[2]) + '</span>';
 }
 
+/* 괄호 안 글자를 <span class="paren">으로 감쌈.
+   서식 태그(굵게 · 줄바꿈 방지 묶음 등)를 넘나드는 괄호도 되도록, 태그 사이 글자 조각마다 따로 감쌈 */
+function wrapParens(html) {
+  const P = state.typo.paren;
+  if (!P || !P.on || !/[(（]/.test(html)) return html;
+  const parts = html.split(/(<[^>]+>)/);
+  // 1) 태그를 뺀 글자만 이어 붙인 위치로 괄호 구간 찾기 (짝이 맞는 가장 바깥 괄호)
+  const ranges = [];
+  let pos = 0, open = -1, depth = 0;
+  parts.forEach((part, i) => {
+    if (i % 2) return;
+    for (let j = 0; j < part.length; j++, pos++) {
+      const c = part[j];
+      if (c === '(' || c === '（') { if (!depth) open = pos; depth++; }
+      else if ((c === ')' || c === '）') && depth) { depth--; if (!depth) ranges.push([open, pos + 1]); }
+    }
+  });
+  if (!ranges.length) return html;
+  // 2) 글자 조각마다 구간에 걸친 부분만 감쌈
+  pos = 0;
+  return parts.map((part, i) => {
+    if (i % 2) return part;
+    const a = pos, b = pos + part.length;
+    pos = b;
+    let out = '', at = 0;
+    for (const [s0, e0] of ranges) {
+      const s1 = Math.max(s0, a), e1 = Math.min(e0, b);
+      if (s1 >= e1) continue;
+      out += part.slice(at, s1 - a) + '<span class="paren">' + part.slice(s1 - a, e1 - a) + '</span>';
+      at = e1 - a;
+    }
+    return out + part.slice(at);
+  }).join('');
+}
+
 let toastTimer;
 function toast(msg, action, ms = 2600) {
   const t = $('#toast');
@@ -781,6 +818,8 @@ function ensureFonts() {
   ensureFont(fontName(state.head.font, state.head.fontCustom));
   ensureFont(fontName(state.head.creditFont, state.head.creditFontCustom));
   ensureFont(fontName(state.head.creatorFont, state.head.creatorFontCustom));
+  const P = state.typo.paren;
+  if (P && P.on && P.fontOn) ensureFont(fontName(P.font, P.fontCustom));
 }
 
 /* 글꼴 목록 미리보기용: 라벨 글자만 담은 작은 폰트를 따로 불러옴 */
@@ -1176,6 +1215,14 @@ function genCSS() {
 html body .card .narr:not(.placeholder) { font-family: var(--text-font); font-size: var(--text-size); line-height: var(--text-lh); letter-spacing: var(--text-ls); font-weight: var(--text-weight); text-align: var(--text-align); word-break: var(--text-break, keep-all); word-spacing: var(--text-ws, 0); }
 html body .card .bubble { font-family: var(--b-font); font-size: var(--b-size); line-height: var(--b-lh); letter-spacing: var(--b-ls); font-weight: var(--b-weight); }
 html body .card .name { font-size: var(--name-size); }`;
+  const P = t.paren;
+  if (P && P.on) {
+    css += `\nhtml body .card .narr .paren, html body .card .bubble .paren { font-size: ${(P.scale || 100) / 100}em;`
+      + (P.fontOn ? ` font-family: ${fontStack(P.font, P.fontCustom)};` : '')
+      + (+P.weight ? ` font-weight: ${+P.weight};` : '')
+      + (P.colorOn ? ` color: ${P.color};` : '')
+      + (P.italic ? ' font-style: italic;' : '') + ' }';
+  }
   return css;
 }
 
@@ -1506,7 +1553,7 @@ function renderBlock(b) {
   if (b.type === 'narr') {
     let drop = '';
     if (dropcapPending && !b.cont) { drop = ' dropcap'; dropcapPending = false; }
-    const p = h('p', { class: 'narr' + drop + (b.ind && !b.cont ? ' ind' : '') + (b.cont ? ' cont' : '') + (b.key ? ' was-bubble' : ''), 'data-key': b.key || false, html: withDropcap(drop, state.typo.noOrphan === false ? fmt(b.text) : fmtNoOrphan(b.text, state.typo.align === 'justify' || state.typo.wordBreak === 'char')) });
+    const p = h('p', { class: 'narr' + drop + (b.ind && !b.cont ? ' ind' : '') + (b.cont ? ' cont' : '') + (b.key ? ' was-bubble' : ''), 'data-key': b.key || false, html: wrapParens(withDropcap(drop, state.typo.noOrphan === false ? fmt(b.text) : fmtNoOrphan(b.text, state.typo.align === 'justify' || state.typo.wordBreak === 'char'))) });
     if (b.floatImg && state.images[b.floatImg.id]) { p._float = inlineFigure(b.floatImg.id, b.floatImg.alt); p.prepend(p._float); }
     return p;
   }
@@ -1556,7 +1603,7 @@ function renderBlock(b) {
     // 번역 줄: 줄바꿈 뒤에 작은 글씨로 (말풍선 안 기호는 '기호 숨기기'를 따름)
     for (const t of b.tl) inner += '\n<span class="tl">' + fmt(strip ? t.inner : t.full) + '</span>';
   }
-  const bub = h('div', { class: 'bubble', html: inner });
+  const bub = h('div', { class: 'bubble', html: wrapParens(inner) });
   const ov = state.overrides[b.key] || {};
   if (ov.img) {
     const box = h('span', { class: 'bimg-box', 'data-key': b.key }, h('img', { src: ov.img, alt: '', draggable: 'false' }), h('span', { class: 'stk-ui rs-handle', title: '끌어서 크기 조절' }));
@@ -1634,7 +1681,7 @@ function splitParagraph(page, el, b, alone) {
   const head = (k) => tokens.slice(0, k).join('').trimEnd();
   const tail = (k) => tokens.slice(k).join('').trimStart();
   const dc = el.classList.contains('dropcap');
-  const put = (t) => { el.innerHTML = withDropcap(dc, fmt(t)); if (el._float) el.prepend(el._float); };
+  const put = (t) => { el.innerHTML = wrapParens(withDropcap(dc, fmt(t))); if (el._float) el.prepend(el._float); };
   const show = (k) => put(balanceMarks(head(k), tail(k))[0]);
   const fits = (k) => { show(k); return !overflows(page); };
   let lo = 0, hi = tokens.length - 1;
@@ -2267,63 +2314,73 @@ const SCHEMA = {
     ] },
   ],
   typo: [
-    { sec: '나레이션', note: '긴 글은 한 줄 25~35자, 행간 1.6~1.8, 문단은 간격과 들여쓰기 중 하나로만 구분할 때 가장 읽기 편해요. 들여쓰기는 장면 전환이나 말풍선 다음 첫 문단에는 자동으로 빠져요.', rows: [
+    { sec: '본문 글자', note: '나레이션(말풍선 밖 글)의 글자예요. 긴 글은 한 줄 25~35자, 행간 1.6~1.8일 때 가장 읽기 편해요.', rows: [
       { t: 'font', p: 'typo.font', c: 'typo.fontCustom' },
-      { t: 'slider', p: 'typo.size', l: '크기', min: 10, max: 40, step: 0.5, u: 'px' , pt: true },
+      { t: 'slider', p: 'typo.size', l: '크기', min: 10, max: 40, step: 0.5, u: 'px', pt: true },
+      { t: 'select', p: 'typo.weight', l: '굵기', o: WEIGHTS, num: true },
+      { t: 'color', p: 'typo.color', l: '색' },
       { t: 'slider', p: 'typo.lh', l: '행간', min: 1, max: 3, step: 0.05, u: '' },
       { t: 'slider', p: 'typo.ls', l: '자간', min: -0.1, max: 0.3, step: 0.005, u: 'em' },
-      { t: 'select', p: 'typo.weight', l: '굵기', o: WEIGHTS, num: true },
-      { t: 'color', p: 'typo.color', l: '글자 색' },
+      { t: 'measure' },
+    ] },
+    { sec: '문단', note: '문단은 간격과 들여쓰기 중 하나로만 구분하는 게 좋아요. 들여쓰기는 장면 전환이나 말풍선 다음 첫 문단에는 자동으로 빠져요.', rows: [
       { t: 'seg', p: 'typo.align', l: '정렬', o: ALIGN4, block: true },
+      { t: 'seg', p: 'typo.alignLast', l: '양쪽 정렬 마지막 줄', o: [['auto', '왼쪽'], ['center', '가운데'], ['justify', '양쪽']], block: true, show: () => state.typo.align === 'justify' },
       { t: 'seg', p: 'typo.paraMode', l: '문단 구분', o: [['gap', '문단 사이 간격'], ['indent', '첫 줄 들여쓰기']], block: true },
       { t: 'slider', p: 'typo.gap', l: '문단 간격', min: 0, max: 40, step: 1, u: 'px', show: () => state.typo.paraMode !== 'indent' },
       { t: 'slider', p: 'typo.indent', l: '들여쓰기', min: 0.5, max: 4, step: 0.5, u: 'em', show: () => state.typo.paraMode === 'indent' },
-      { t: 'measure' },
-      { t: 'color', p: 'typo.hl', l: '형광펜 색', sub: '텍스트 편집창의 형광펜 버튼에서도 바꿀 수 있어요' },
-      { t: 'seg', p: 'typo.hlStyle', l: '형광펜 모양', o: [['under', '밑줄형'], ['thin', '얇게'], ['full', '전체']] },
+      { t: 'slider', p: 'typo.measure', l: '최대 행 길이', sub: '0이면 제한 없음', min: 0, max: 60, step: 1, u: '자' },
+      { t: 'switch', p: 'typo.dropcap', l: '드롭캡', sub: '첫 문단의 첫 글자를 여러 줄 높이로 크게' },
+      { t: 'slider', p: 'typo.dropLines', l: '드롭캡 높이', min: 2, max: 4, step: 1, u: '줄', show: () => !!state.typo.dropcap },
     ] },
-    { sec: '조판', note: '줄바꿈 단위 · 커닝 · 문장부호 폭은 말풍선 글자에도 함께 적용돼요. 최대 행 길이 0은 제한 없음이에요.', rows: [
+    { sec: '줄바꿈 · 조판', note: '본문과 말풍선 글자에 함께 적용돼요.', rows: [
       { t: 'seg', p: 'typo.wordBreak', l: '줄바꿈 단위', o: [['auto', '자동'], ['word', '어절'], ['char', '글자']], block: true },
       { t: 'switch', p: 'typo.noOrphan', l: '마지막 줄 외톨이 방지', sub: '문단 마지막 줄에 한 단어만 남지 않게 묶어요' },
       { t: 'slider', p: 'typo.ws', l: '단어 간격', min: -0.2, max: 0.6, step: 0.01, u: 'em' },
       { t: 'switch', p: 'typo.kern', l: '커닝', sub: '서체에 들어 있는 글자 쌍 간격 정보를 써요' },
       { t: 'switch', p: 'typo.palt', l: '문장부호 폭 맞춤', sub: '따옴표 · 마침표 같은 전각 문장부호의 빈 여백을 줄여요 (지원 서체만)' },
-      { t: 'seg', p: 'typo.alignLast', l: '양쪽 정렬 마지막 줄', o: [['auto', '왼쪽'], ['center', '가운데'], ['justify', '양쪽']], block: true, show: () => state.typo.align === 'justify' },
-      { t: 'slider', p: 'typo.measure', l: '최대 행 길이', min: 0, max: 60, step: 1, u: '자' },
-      { t: 'switch', p: 'typo.dropcap', l: '드롭캡', sub: '첫 문단의 첫 글자를 여러 줄 높이로 크게' },
-      { t: 'slider', p: 'typo.dropLines', l: '드롭캡 높이', min: 2, max: 4, step: 1, u: '줄', show: () => !!state.typo.dropcap },
+    ] },
+    { sec: '강조 · 괄호', rows: [
+      { t: 'color', p: 'typo.hl', l: '형광펜 색', sub: '텍스트 편집창의 형광펜 버튼에서도 바꿀 수 있어요' },
+      { t: 'seg', p: 'typo.hlStyle', l: '형광펜 모양', o: [['under', '밑줄형'], ['thin', '얇게'], ['full', '전체']] },
+      { t: 'switch', p: 'typo.paren.on', l: '괄호 안 글자 따로 꾸미기', sub: '( ) 안의 글자를 본문 · 말풍선과 다르게', rebuild: true },
+      { t: 'slider', p: 'typo.paren.scale', l: '괄호 글자 크기', sub: '둘레 글자에 대한 비율', min: 50, max: 130, step: 1, u: '%', show: () => state.typo.paren.on },
+      { t: 'select', p: 'typo.paren.weight', l: '괄호 글자 굵기', o: [[0, '둘레와 같게'], ...WEIGHTS], num: true, show: () => state.typo.paren.on },
+      { t: 'switch', p: 'typo.paren.italic', l: '기울임', show: () => state.typo.paren.on },
+      { t: 'switch', p: 'typo.paren.colorOn', l: '다른 색', show: () => state.typo.paren.on },
+      { t: 'color', p: 'typo.paren.color', l: '괄호 글자 색', show: () => state.typo.paren.on && state.typo.paren.colorOn },
+      { t: 'switch', p: 'typo.paren.fontOn', l: '다른 서체', show: () => state.typo.paren.on },
+      { t: 'font', p: 'typo.paren.font', c: 'typo.paren.fontCustom', l: '괄호 글자 서체', show: () => state.typo.paren.on && state.typo.paren.fontOn },
     ] },
     { sec: '말풍선 글자', rows: [
       { t: 'font', p: 'bubble.font', c: 'bubble.fontCustom' },
-      { t: 'slider', p: 'bubble.size', l: '크기', min: 10, max: 36, step: 0.5, u: 'px' , pt: true },
+      { t: 'slider', p: 'bubble.size', l: '크기', min: 10, max: 36, step: 0.5, u: 'px', pt: true },
+      { t: 'select', p: 'bubble.weight', l: '굵기', o: WEIGHTS, num: true },
       { t: 'slider', p: 'bubble.lh', l: '행간', min: 1, max: 2.6, step: 0.05, u: '' },
       { t: 'slider', p: 'bubble.ls', l: '자간', min: -0.1, max: 0.3, step: 0.005, u: 'em' },
-      { t: 'select', p: 'bubble.weight', l: '굵기', o: WEIGHTS, num: true },
     ] },
     { sec: '제목', rows: [
       { t: 'font', p: 'head.font', c: 'head.fontCustom' },
-      { t: 'slider', p: 'head.size', l: '크기', min: 12, max: 64, step: 1, u: 'px' , pt: true },
+      { t: 'slider', p: 'head.size', l: '크기', min: 12, max: 64, step: 1, u: 'px', pt: true },
       { t: 'select', p: 'head.weight', l: '굵기', o: WEIGHTS, num: true },
       { t: 'color', p: 'head.color', l: '색' },
       { t: 'seg', p: 'head.align', l: '정렬', o: ALIGN3 },
       { t: 'switch', p: 'head.quoteMark', l: '장식 따옴표', sub: '첫 장 위에 큰 따옴표를 넣어요' },
       { t: 'color', p: 'head.accent', l: '장식 색', when: () => state.head.quoteMark },
     ] },
-    { sec: '출처 · 작품명', rows: [
+    { sec: '출처', note: '작품명과 제작자를 따로 꾸밀 수 있어요.', rows: [
+      { t: 'seg', p: 'head.creditLayout', l: '배치', o: [['inline', '한 줄로'], ['stack', '두 줄로']] },
+      { t: 'seg', p: 'head.creditAlign', l: '정렬', o: ALIGN3 },
+      { t: 'sub', l: '작품명' },
       { t: 'font', p: 'head.creditFont', c: 'head.creditFontCustom' },
       { t: 'slider', p: 'head.creditSize', l: '크기', min: 8, max: 28, step: 0.5, u: 'px', pt: true },
       { t: 'select', p: 'head.creditWeight', l: '굵기', o: WEIGHTS, num: true },
       { t: 'color', p: 'head.creditColor', l: '색' },
-    ] },
-    { sec: '출처 · 제작자', rows: [
+      { t: 'sub', l: '제작자' },
       { t: 'font', p: 'head.creatorFont', c: 'head.creatorFontCustom' },
       { t: 'slider', p: 'head.creatorSize', l: '크기', min: 8, max: 28, step: 0.5, u: 'px', pt: true },
       { t: 'select', p: 'head.creatorWeight', l: '굵기', o: WEIGHTS, num: true },
       { t: 'color', p: 'head.creatorColor', l: '색' },
-    ] },
-    { sec: '출처 배치', rows: [
-      { t: 'seg', p: 'head.creditLayout', l: '배치', o: [['inline', '한 줄로'], ['stack', '두 줄로']] },
-      { t: 'seg', p: 'head.creditAlign', l: '정렬', o: ALIGN3 },
     ] },
   ],
   canvas: [
@@ -2412,6 +2469,10 @@ function fieldEl(d) {
         h('input', { type: 'checkbox', class: 'switch', role: 'switch', checked: val, onchange: (e) => setPath(d.p, e.target.checked) }));
       break;
 
+    case 'sub':
+      el = h('div', { class: 'row row-sub' }, d.l);
+      break;
+
     case 'slider': {
       const show = (v) => `${+(+v).toFixed(3)}${d.u || ''}`;
       const pct = (v) => `${((v - d.min) / (d.max - d.min)) * 100}%`;
@@ -2468,7 +2529,7 @@ function fieldEl(d) {
         h('span', { class: 'fb-chev', html: icon('chevron') }));
       btn.firstChild.style.fontFamily = fontStack(val, getPath(d.c));
       btn.addEventListener('click', () => openFontPop(btn, d));
-      el = h('div', { class: 'row stack' }, labelEl('서체'), btn);
+      el = h('div', { class: 'row stack' }, labelEl(d.l || '서체'), btn);
       break;
     }
 
