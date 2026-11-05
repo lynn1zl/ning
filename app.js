@@ -2337,7 +2337,7 @@ const SCHEMA = {
       { t: 'slider', p: 'typo.ls', l: '자간', min: -0.1, max: 0.3, step: 0.005, u: 'em' },
       { t: 'measure' },
     ] },
-    { sec: '문단', note: '문단 간격과 들여쓰기를 함께 쓸 수 있어요. ‘이어지는 문단만’은 책처럼 글 첫 문단 · 장면 전환 · 말풍선 바로 다음 문단은 들여쓰지 않아요.', rows: [
+    { sec: '문단', note: '‘이어지는 문단만’은 글 첫 문단 · 장면 전환 · 말풍선 바로 다음 문단은 들여쓰지 않아요.', rows: [
       { t: 'seg', p: 'typo.align', l: '정렬', o: ALIGN4, block: true },
       { t: 'seg', p: 'typo.alignLast', l: '양쪽 정렬 마지막 줄', o: [['auto', '왼쪽'], ['center', '가운데'], ['justify', '양쪽']], block: true, show: () => state.typo.align === 'justify' },
       { t: 'slider', p: 'typo.gap', l: '문단 간격', sub: '0이면 문단 사이를 띄우지 않아요', min: 0, max: 40, step: 1, u: 'px' },
