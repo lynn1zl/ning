@@ -130,7 +130,7 @@ const DEFAULTS = {
   credit: '출처',
   creator: '제작자',
   parse: { auto: true, formats: ['dq', 'sq', 'corner', 'wcorner'], custom: [], mode: 'marked', inline: false, strip: true, nameless: 'none', blank: 'para1', blankV3: true, mergeTl: true, tlShow: 'both', autoChars: true },
-  typo: { font: 'Noto Serif KR', fontCustom: '', size: 15, lh: 1.75, ls: -0.01, weight: 400, color: '#2a2826', align: 'left', paraMode: 'gap', gap: 10, indent: 1, hl: '#ffe58a', hlStyle: 'under',
+  typo: { font: 'Noto Serif KR', fontCustom: '', size: 15, lh: 1.75, ls: -0.01, weight: 400, color: '#2a2826', align: 'left', gap: 10, indentOn: false, indent: 1, indentWhere: 'all', hl: '#ffe58a', hlStyle: 'under',
     wordBreak: 'auto', noOrphan: true, ws: 0, palt: false, kern: true, alignLast: 'auto', measure: 0, dropcap: false, dropLines: 2,
     // 괄호 안 글자: ( ) 안을 본문과 다르게 (크기는 둘레 글자에 대한 비율)
     paren: { on: false, fontOn: false, font: 'Gowun Batang', fontCustom: '', scale: 90, weight: 0, colorOn: false, color: '#8b95a1', italic: false } },
@@ -337,7 +337,7 @@ const TEMPLATES = [
   },
   {
     id: 'book', name: '단정한 페이지', sub: '미색 종이 · 글처럼 이어지는 대사', pv: { bg: '#fbfaf6', fg: '#2a2826', book: true },
-    set: { typo: { font: 'Gowun Batang', size: 13.5, lh: 1.8, ls: -0.01, align: 'justify', paraMode: 'indent', indent: 1, color: '#262422' }, head: { font: 'Gowun Batang', size: 16, align: 'center', color: '#262422', creditColor: '#8f8a80', creditAlign: 'center', creditSize: 11.5 }, bubble: { speech: 'plain', font: 'Gowun Batang', size: 13.5, lh: 1.8, avatar: false, showName: false, gap: 0 }, canvas: { bg: '#fbfaf6', ratio: '2:3', pad: 52, valign: 'flex-start', pageNum: true } },
+    set: { typo: { font: 'Gowun Batang', size: 13.5, lh: 1.8, ls: -0.01, align: 'justify', indentOn: true, indent: 1, gap: 0, color: '#262422' }, head: { font: 'Gowun Batang', size: 16, align: 'center', color: '#262422', creditColor: '#8f8a80', creditAlign: 'center', creditSize: 11.5 }, bubble: { speech: 'plain', font: 'Gowun Batang', size: 13.5, lh: 1.8, avatar: false, showName: false, gap: 0 }, canvas: { bg: '#fbfaf6', ratio: '2:3', pad: 52, valign: 'flex-start', pageNum: true } },
     parse: { strip: false }, chars: null, charSide: 'left',
   },
   {
@@ -624,6 +624,11 @@ function migrate(st, raw) {
   // 빈 줄 기본값을 '한 줄은 문단 나눔만'으로 (한 번만 옮김, 이후 사용자가 고른 값은 유지)
   if (raw && raw.parse && !raw.parse.blankV3) { st.parse.blank = 'para1'; st.parse.blankV3 = true; }
   if (!st.file) st.file = copyState(DEFAULTS.file);
+  // 이전 버전: 문단 구분 택1(간격/들여쓰기) → 들여쓰기 켜기 + 문단 간격 따로
+  if (st.typo && 'paraMode' in st.typo) {
+    if (st.typo.paraMode === 'indent') { st.typo.indentOn = true; st.typo.indentWhere = 'cont'; st.typo.gap = 0; }
+    delete st.typo.paraMode;
+  }
   // 코르크보드 배경은 없어짐
   if (st.bgRef === 'bg/cork.html') st.bgRef = '';
   delete st.cork;
@@ -1171,8 +1176,8 @@ function genCSS() {
   --text-measure: ${t.measure > 0 ? `calc(${t.measure} * var(--text-size))` : 'none'};
   --text-measure-mx: ${t.measure > 0 && t.align === 'center' ? 'auto' : '0'};
   --drop-lines: ${t.dropLines || 2};
-  --para-gap: ${t.paraMode === 'indent' ? '0px' : fit(t.gap)};
-  --indent: ${t.paraMode === 'indent' ? t.indent : 0}em;
+  --para-gap: ${fit(t.gap)};
+  --indent: ${t.indentOn ? t.indent : 0}em;
   --b-font: ${fontStack(b.font, b.fontCustom)};
   --b-size: ${fit(b.size)};
   --b-lh: ${b.lh};
@@ -1633,7 +1638,7 @@ function ratioHeight(W) {
 }
 
 function newPage(idx, W, H) {
-  const card = h('div', { class: 'card' + (H ? '' : ' auto-h') + (state.typo.paraMode === 'indent' ? ' para-indent' : '') });
+  const card = h('div', { class: 'card' + (H ? '' : ' auto-h') + (state.typo.indentOn ? ' para-indent' + (state.typo.indentWhere === 'cont' ? '' : ' indent-all') : '') });
   card.style.width = W + 'px';
   if (H) card.style.height = H + 'px';
   card.append(h('div', { class: 'card-overlay' }));
@@ -2332,12 +2337,13 @@ const SCHEMA = {
       { t: 'slider', p: 'typo.ls', l: '자간', min: -0.1, max: 0.3, step: 0.005, u: 'em' },
       { t: 'measure' },
     ] },
-    { sec: '문단', note: '문단은 간격과 들여쓰기 중 하나로만 구분하는 게 좋아요. 들여쓰기는 장면 전환이나 말풍선 다음 첫 문단에는 자동으로 빠져요.', rows: [
+    { sec: '문단', note: '문단 간격과 들여쓰기를 함께 쓸 수 있어요. ‘이어지는 문단만’은 책처럼 글 첫 문단 · 장면 전환 · 말풍선 바로 다음 문단은 들여쓰지 않아요.', rows: [
       { t: 'seg', p: 'typo.align', l: '정렬', o: ALIGN4, block: true },
       { t: 'seg', p: 'typo.alignLast', l: '양쪽 정렬 마지막 줄', o: [['auto', '왼쪽'], ['center', '가운데'], ['justify', '양쪽']], block: true, show: () => state.typo.align === 'justify' },
-      { t: 'seg', p: 'typo.paraMode', l: '문단 구분', o: [['gap', '문단 사이 간격'], ['indent', '첫 줄 들여쓰기']], block: true },
-      { t: 'slider', p: 'typo.gap', l: '문단 간격', min: 0, max: 40, step: 1, u: 'px', show: () => state.typo.paraMode !== 'indent' },
-      { t: 'slider', p: 'typo.indent', l: '들여쓰기', min: 0.5, max: 4, step: 0.5, u: 'em', show: () => state.typo.paraMode === 'indent' },
+      { t: 'slider', p: 'typo.gap', l: '문단 간격', sub: '0이면 문단 사이를 띄우지 않아요', min: 0, max: 40, step: 1, u: 'px' },
+      { t: 'switch', p: 'typo.indentOn', l: '첫 줄 들여쓰기' },
+      { t: 'slider', p: 'typo.indent', l: '들여쓰기 폭', min: 0.5, max: 4, step: 0.5, u: 'em', show: () => !!state.typo.indentOn },
+      { t: 'seg', p: 'typo.indentWhere', l: '들여쓸 문단', o: [['all', '모든 문단'], ['cont', '이어지는 문단만']], block: true, show: () => !!state.typo.indentOn },
       { t: 'slider', p: 'typo.measure', l: '최대 행 길이', sub: '0이면 제한 없음', min: 0, max: 60, step: 1, u: '자' },
       { t: 'switch', p: 'typo.dropcap', l: '드롭캡', sub: '첫 문단의 첫 글자를 여러 줄 높이로 크게' },
       { t: 'slider', p: 'typo.dropLines', l: '드롭캡 높이', min: 2, max: 4, step: 1, u: '줄', show: () => !!state.typo.dropcap },
@@ -3481,6 +3487,7 @@ function applyStyle(st) {
     if (!(k in data)) continue;
     state[k] = k === 'skin' || k === 'bgHtml' || k === 'bgRef' ? data[k] || '' : deepMerge(copyState(DEFAULTS[k] || {}), data[k]);
   }
+  if (data.typo && 'paraMode' in data.typo) migrate(state, null); // 예전 양식의 문단 구분 옮기기
   if (Array.isArray(data.chars)) state.chars = copyState(data.chars);
   commit(); rebuildAll(); save();
   toast(`‘${st.name || '프리셋'}’을(를) 적용했어요`, { label: '되돌리기', fn: undo });
@@ -3616,7 +3623,7 @@ function buildTemplates() {
 
 /* 템플릿은 색 · 배경 · 말풍선 모양 · 스킨만 바꾸고, 화면 비율 · 크기와 서체 · 글자 간격은 지금 설정을 유지 */
 const TEMPLATE_KEEP = {
-  typo: ['font', 'fontCustom', 'size', 'lh', 'ls', 'weight', 'align', 'paraMode', 'gap', 'indent', 'hlStyle'],
+  typo: ['font', 'fontCustom', 'size', 'lh', 'ls', 'weight', 'align', 'gap', 'indentOn', 'indent', 'indentWhere', 'hlStyle'],
   head: ['font', 'fontCustom', 'size', 'weight', 'align', 'creditFont', 'creditFontCustom', 'creditSize', 'creditWeight', 'creatorFont', 'creatorFontCustom', 'creatorSize', 'creatorWeight', 'creditAlign', 'creditLayout'],
   bubble: ['font', 'fontCustom', 'size', 'lh', 'ls', 'weight', 'avatar', 'avatarSize', 'avatarShape', 'showName', 'nameSize', 'maxw'],
   canvas: ['ratio', 'width', 'pad', 'fit', 'valign', 'paginate', 'pageNum', 'scale', 'bgImage', 'overlay', 'overlayColor'],
@@ -5017,7 +5024,8 @@ $('#file-import-json').addEventListener('change', async (e) => {
   $('#menu').hidden = true;
   if (!f) return;
   try {
-    state = deepMerge(copyState(DEFAULTS), JSON.parse(await f.text()));
+    const raw = JSON.parse(await f.text());
+    state = migrate(deepMerge(copyState(DEFAULTS), raw), raw);
     commit(); rebuildAll(); save();
     toast('설정을 불러왔어요', { label: '되돌리기', fn: undo });
   } catch (err) { toast('설정 파일을 읽지 못했어요'); }

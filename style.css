@@ -928,8 +928,9 @@ textarea.code {
   hanging-punctuation: first allow-end;
   font-kerning: normal;
 }
-/* 들여쓰기 모드: 앞 문단에 이어지는 문단만 들여씀 (장면 전환 · 말풍선 다음 · 페이지에서 이어진 문단은 제외) */
-.para-indent .narr.ind { text-indent: var(--indent); }
+/* 들여쓰기: '모든 문단'은 다음 장으로 이어진 조각만 빼고 전부,
+   '이어지는 문단만'은 앞 문단에 바로 이어지는 문단만 (글 첫 문단 · 장면 전환 · 말풍선 다음 · 이어진 조각 제외) */
+.para-indent .narr.ind, .para-indent.indent-all .narr:not(.cont):not(.placeholder) { text-indent: var(--indent); }
 .narr.placeholder { opacity: .35; text-align: center; text-indent: 0; }
 .card .nobr { white-space: nowrap; }
 .bubble .tl { font-size: .86em; opacity: .72; }
