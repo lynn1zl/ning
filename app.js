@@ -3305,20 +3305,38 @@ function buildFmtBar() {
    - {{머리글}} · {{내용}} 자리에 상자마다 입력한 글이 들어감
    ========================================================= */
 const BOX_PRESETS = {
-  cork: { name: '코르크판', head: 'MEMO', text: '오늘 할 일\n· 발췌하기\n· 산책하기', code: `<style>
-  .x-cork { padding: 1.3em; border-radius: .5em;
-    background: radial-gradient(circle, rgba(90,52,22,.35) .06em, transparent .1em) 0 0 / .45em .55em,
-      radial-gradient(circle, rgba(245,215,170,.3) .07em, transparent .12em) .2em .25em / .6em .7em, #c49a6c;
-    box-shadow: inset 0 0 0 .45em #a2774a, inset 0 0 0 .55em rgba(0,0,0,.15), 0 .35em .9em rgba(60,30,10,.18); }
-  .x-note { position: relative; padding: 1.3em 1.2em 1.1em; background: #fffbe8; color: #3a332c;
-    transform: rotate(-1deg); box-shadow: 0 .1em .15em rgba(40,22,8,.2), 0 .5em .9em -.3em rgba(40,22,8,.35); }
-  .x-pin { position: absolute; top: -.35em; left: 50%; width: .85em; height: .85em; margin-left: -.42em; border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, #fff8 0 .12em, transparent .3em), #c94a3e; box-shadow: .15em .25em .25em rgba(0,0,0,.35); }
-  .x-head { font-size: .78em; font-weight: 700; letter-spacing: .14em; color: #b0503f; margin-bottom: .5em; }
-  .x-head:empty { display: none; }
-  .x-body { white-space: pre-wrap; line-height: 1.7; }
+  status: { name: '게임 상태창', head: '랑해', text: '칭호: 연애 초보 견습생\n상태: 두근두근 ♡', code: `<style>
+  .x-st { max-width: 22em; margin: 0 auto; padding: .28em; border-radius: 1.1em;
+    background: linear-gradient(135deg, #ffd3e6, #dcd3ff 55%, #cdeeff); box-shadow: 0 .45em 1.1em rgba(150,110,200,.28); }
+  .x-in { padding: .9em 1em 1em; border-radius: .9em; background: rgba(255,255,255,.88); color: #4a3a5c; }
+  .x-top { display: flex; align-items: center; gap: .65em; margin-bottom: .75em; }
+  .x-av { display: grid; place-items: center; flex: none; width: 2.6em; height: 2.6em; border-radius: 50%; color: #ff6f9f;
+    background: radial-gradient(circle at 35% 30%, #fff, #ffd0e2); box-shadow: inset 0 0 0 .14em #fff, 0 0 0 .12em #f6a6c4; }
+  .x-name { font-weight: 800; font-size: 1.05em; color: #5b3a7a; }
+  .x-name:empty::before { content: 'PLAYER'; }
+  .x-lv { margin-left: auto; padding: .18em .65em; border-radius: 1em; font-size: .72em; font-weight: 800; color: #fff;
+    background: linear-gradient(180deg, #b892ff, #8f68e8); box-shadow: 0 .1em 0 #6d4cc4; }
+  .x-bar { display: flex; align-items: center; gap: .5em; margin: .32em 0; font-size: .74em; font-weight: 800; }
+  .x-bar b { width: 2.4em; letter-spacing: .04em; }
+  .x-bar i { position: relative; flex: 1; height: .75em; border-radius: 1em; background: #eee6f5; box-shadow: inset 0 .08em .12em rgba(0,0,0,.08); overflow: hidden; }
+  .x-bar i::after { content: ''; position: absolute; inset: 0 auto 0 0; width: var(--v); border-radius: 1em; background: var(--c); }
+  .x-bar span { width: 4.6em; text-align: right; color: #8a7a9c; font-variant-numeric: tabular-nums; }
+  .x-hp { --v: 82%; --c: linear-gradient(90deg, #ff8fb1, #ff5f8f); }
+  .x-mp { --v: 55%; --c: linear-gradient(90deg, #8fd0ff, #5b9dff); }
+  .x-ex { --v: 93%; --c: linear-gradient(90deg, #ffe48a, #ffc23d); }
+  .x-stat { display: grid; grid-template-columns: 1fr 1fr; gap: .3em .9em; margin: .75em 0 .2em; padding-top: .65em; border-top: .1em dashed #e3d8ef; font-size: .82em; }
+  .x-stat div { display: flex; justify-content: space-between; }
+  .x-stat em { font-style: normal; font-weight: 800; color: #ff6f9f; }
+  .x-txt { margin-top: .7em; padding: .6em .8em; border-radius: .6em; background: #f7f1ff; white-space: pre-wrap; line-height: 1.6; font-size: .9em; }
 </style>
-<div class="x-cork"><div class="x-note"><i class="x-pin"></i><div class="x-head">{{머리글}}</div><div class="x-body">{{내용}}</div></div></div>` },
+<div class="x-st"><div class="x-in">
+  <div class="x-top"><span class="x-av">♥</span><span class="x-name">{{머리글}}</span><span class="x-lv">Lv.27</span></div>
+  <div class="x-bar x-hp"><b>HP</b><i></i><span>123/150</span></div>
+  <div class="x-bar x-mp"><b>MP</b><i></i><span>55/100</span></div>
+  <div class="x-bar x-ex"><b>EXP</b><i></i><span>93%</span></div>
+  <div class="x-stat"><div>매력 <em>999</em></div><div>귀여움 <em>∞</em></div><div>체력 <em>12</em></div><div>행운 <em>77</em></div></div>
+  <div class="x-txt">{{내용}}</div>
+</div></div>` },
   pager: { name: '삐삐', head: '1004', text: '8282 보고 싶어\n486', code: `<style>
   .x-pager { max-width: 22em; margin: 0 auto; padding: 1em 1.1em 1.1em; border-radius: 1.4em;
     background: linear-gradient(160deg, #474d55, #2b2f35); box-shadow: inset 0 .1em 0 rgba(255,255,255,.12), 0 .4em 1em rgba(0,0,0,.25); }
@@ -3365,18 +3383,7 @@ const BOX_PRESETS = {
     background: repeating-linear-gradient(180deg, transparent 0 calc(1.75em - 1px), rgba(170,140,110,.35) calc(1.75em - 1px) 1.75em); }
 </style>
 <div class="x-letter"><div class="x-head">{{머리글}}</div><div class="x-body">{{내용}}</div></div>` },
-  game: { name: '게임 대화창', head: '랑해', text: '……그래서, 나랑 같이 갈 거야?', code: `<style>
-  .x-game { position: relative; margin-top: .9em; padding: 1.15em 1.3em 1.4em; color: #f4f6ff; border-radius: .5em;
-    background: linear-gradient(180deg, rgba(36,52,120,.96), rgba(16,22,64,.96));
-    box-shadow: inset 0 0 0 .18em #fff, inset 0 0 0 .32em #2b3c8f, 0 .4em 1em rgba(10,14,40,.35); }
-  .x-name { position: absolute; top: -.95em; left: 1em; padding: .25em .9em; font-weight: 700; font-size: .9em; color: #fff;
-    border-radius: .35em; background: linear-gradient(180deg, #4a63d8, #2a3aa0); box-shadow: inset 0 0 0 .14em #fff; }
-  .x-name:empty { display: none; }
-  .x-txt { white-space: pre-wrap; line-height: 1.7; text-shadow: 0 .08em 0 rgba(0,0,0,.4); }
-  .x-next { position: absolute; right: 1em; bottom: .55em; font-size: .7em; color: #ffe27a; }
-</style>
-<div class="x-game"><div class="x-name">{{머리글}}</div><div class="x-txt">{{내용}}</div><i class="x-next">▼</i></div>` },
-  quest: { name: '퀘스트 알림', head: '새로운 퀘스트', text: '랑해에게 연락하기\n보상: 경험치 +100', code: `<style>
+  quest: { name: '퀘스트 알림', head: '새로운 퀘스트', text: '친구 추가하기\n보상: 경험치 +100', code: `<style>
   .x-quest { max-width: 24em; margin: 0 auto; padding: .9em 1.2em 1em; text-align: center; color: #3b2a10; border-radius: .4em;
     background: linear-gradient(180deg, #fff6d8, #f3dfa6); border: .14em solid #b98a2e;
     box-shadow: inset 0 0 0 .22em #fff3cc, 0 .35em .9em rgba(80,50,0,.25); }
@@ -3387,20 +3394,6 @@ const BOX_PRESETS = {
   .x-txt { white-space: pre-wrap; line-height: 1.65; font-weight: 600; }
 </style>
 <div class="x-quest"><div class="x-head">{{머리글}}</div><div class="x-txt">{{내용}}</div></div>` },
-  window98: { name: '레트로 창', head: '알림', text: '읽지 않은 메시지가 1개 있습니다.', code: `<style>
-  .x-win { max-width: 24em; margin: 0 auto; background: #c3c3c3; color: #111;
-    box-shadow: inset .1em .1em 0 #fff, inset -.1em -.1em 0 #555, .25em .25em 0 rgba(0,0,0,.18); padding: .2em; }
-  .x-bar { display: flex; align-items: center; justify-content: space-between; padding: .25em .4em;
-    background: linear-gradient(90deg, #0a2a8a, #3a78d8); color: #fff; font-weight: 700; font-size: .82em; }
-  .x-x { width: 1.2em; height: 1.05em; background: #c3c3c3; color: #111; font-size: .85em; line-height: 1.05em; text-align: center;
-    box-shadow: inset .08em .08em 0 #fff, inset -.08em -.08em 0 #555; }
-  .x-in { display: flex; gap: .8em; align-items: flex-start; padding: 1em 1em .6em; }
-  .x-ic { flex: none; width: 1.8em; height: 1.8em; border-radius: 50%; background: #2f6be0; color: #fff; font-weight: 800; text-align: center; line-height: 1.8em; }
-  .x-txt { white-space: pre-wrap; line-height: 1.6; }
-  .x-ok { display: block; width: 5.5em; margin: .2em auto .7em; padding: .25em 0; text-align: center; font-size: .85em; background: #c3c3c3;
-    box-shadow: inset .08em .08em 0 #fff, inset -.08em -.08em 0 #555, 0 0 0 .08em #111; }
-</style>
-<div class="x-win"><div class="x-bar"><span>{{머리글}}</span><span class="x-x">×</span></div><div class="x-in"><span class="x-ic">i</span><div class="x-txt">{{내용}}</div></div><span class="x-ok">확인</span></div>` },
   receipt: { name: '영수증', head: '니니닝 상점', text: '아이스 아메리카노   4,500\n조각 케이크         6,800\n----------------------\n합계               11,300', code: `<style>
   .x-rc { max-width: 18em; margin: 0 auto; padding: 1.2em 1.2em 1.6em; color: #2a2a2a; background: #fdfdf8;
     font-family: 'Courier New', monospace; box-shadow: 0 .3em .8em rgba(0,0,0,.12);
