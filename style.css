@@ -905,7 +905,9 @@ textarea.code {
 .flow { flex: none; display: flex; flex-direction: column; }
 .flow > * { margin: 0; }
 .flow > * + * { margin-top: var(--para-gap); }
-.flow > .msg, .flow > .msg + * { margin-top: var(--msg-gap); }
+/* 말풍선끼리는 말풍선 사이 간격, 말풍선과 나레이션 사이는 문단 간격과 말풍선 간격 중 큰 값 */
+.flow > .msg + .msg { margin-top: var(--msg-gap); }
+.flow > .msg + :not(.msg), .flow > :not(.msg) + .msg { margin-top: max(var(--para-gap), var(--msg-gap)); }
 .flow > :first-child { margin-top: 0; }
 
 
@@ -1667,3 +1669,28 @@ img[src^="nnimg:"] { visibility: hidden; }
 
 /* 설정 묶음 안 작은 제목 (예: 출처 · 작품명 / 제작자) */
 .row.row-sub { padding-top: 14px; padding-bottom: 4px; font-size: 12.5px; font-weight: 700; color: var(--text-3); letter-spacing: .02em; min-height: 0; }
+
+/* HTML 상자 */
+.card .hbox { width: var(--box-w, 100%); font-size: var(--text-size); line-height: var(--text-lh); }
+.card .hbox.align-center { margin-left: auto; margin-right: auto; }
+.card .hbox.align-right { margin-left: auto; }
+.card .hbox.align-left { margin-right: auto; }
+.card .hbox .hb-root { position: relative; }
+.page-wrap .hbox { cursor: pointer; }
+.page-wrap .hbox:hover { outline: 1.5px dashed rgba(49, 130, 246, .55); outline-offset: 4px; border-radius: 4px; }
+.box-presets { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.box-preset { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 10px 12px; border: 1px solid var(--hair); border-radius: 12px; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.box-preset:hover { background: var(--fill); }
+.box-preset b { font-size: 13.5px; }
+.box-preset small { font-size: 11.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.box-pop .input { width: 100%; }
+.box-move { display: flex; gap: 6px; }
+.box-move .btn { flex: 1; }
+.box-code { margin-top: 12px; }
+.box-code summary { cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--text-3); }
+.code-input { font: 12px/1.5 ui-monospace, Menlo, monospace; width: 100%; resize: vertical; }
+.box-list { gap: 6px; }
+.box-item { display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 12px; border: 0; border-radius: 10px; background: var(--fill); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.box-item b { font-size: 13px; flex: none; }
+.box-item span { flex: 1; min-width: 0; font-size: 12.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.box-item em { font-style: normal; font-size: 12px; color: var(--accent); flex: none; }

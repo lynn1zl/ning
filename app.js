@@ -154,6 +154,7 @@ const DEFAULTS = {
   hompy: { frame: '#8fd0e6', bg: '#eceff3', today: '', total: '', room: '', say: '', talk: [] },
   // 다이어리 배경: 표지 색, 날짜(비우면 오늘), 날씨, 메모지 제목 · 내용, 키링 글자
   diary: { color: '#ff8a80', date: '', weather: 'sun', memoTitle: 'to do ♡', todo: '✓ 장보기\n✓ 발췌하기\n☐ 헬스장 등록', beads: 'LOVE', keyring: true },
+  boxes: {},    // 글 사이에 넣은 HTML 상자: id → { preset, code, head, text, w(%), align }
   images: {},   // 글자처럼 넣은 이미지: id → { src, w(%), align }
   stickers: [], // 자유 배치 이미지: { id, src, x, y, w(px), rot, layer: 'front'|'back', page, op }
   file: { prefix: true, date: true, pair: '', title: '', number: false },
@@ -1036,6 +1037,8 @@ function parseText() {
       }
     }
     if (/^(-{3,}|\*{3,}|_{3,}|—{2,})$/.test(line)) { out.push({ type: 'hr' }); continue; }
+    const bxm = line.match(/^!\[[^\]]*\]\(box:([\w-]+)\)$/);
+    if (bxm) { if (state.boxes && state.boxes[bxm[1]]) out.push({ type: 'box', id: bxm[1] }); continue; }
     const im = line.match(/^!\[([^\]]*)\]\(img:([\w-]+)\)$/);
     if (im) { if (state.images[im[2]]) out.push({ type: 'img', id: im[2], alt: im[1] }); continue; }
 
@@ -1567,6 +1570,7 @@ function renderBlock(b) {
   if (b.type === 'gap') { const g = h('div', { class: 'gap' }); g.style.setProperty('--gap-n', b.n || 1); return g; }
   if (b.type === 'hr') return h('hr', { class: 'divider' });
   if (b.type === 'img') return inlineFigure(b.id, b.alt);
+  if (b.type === 'box') return boxFigure(b.id);
 
   const B = state.bubble;
   const { ch, speaker, side, shape } = b;
@@ -2269,6 +2273,7 @@ const SCHEMA = {
       { t: 'text', p: 'scene.alive', l: '생존 인원', ph: '예) 31', show: () => state.scene.show !== false },
       { t: 'text', p: 'scene.total', l: '전체 인원', ph: '예) 31', show: () => state.scene.show !== false },
     ] },
+    { sec: 'HTML 상자', note: '글 속 ![](box:…) 줄을 옮기면 상자 위치도 바뀌어요. 미리보기에서 상자를 눌러도 고칠 수 있어요.', show: () => Object.keys(state.boxes || {}).length > 0, rows: [{ t: 'boxes' }] },
     { sec: '미니홈피', show: () => bgUsesHompy(), rows: [
       { t: 'color', p: 'hompy.frame', l: '프레임 색' },
       { t: 'color', p: 'hompy.bg', l: '배경 색' },
@@ -2307,7 +2312,7 @@ const SCHEMA = {
       { t: 'slider', p: 'bubble.radius', l: '모서리 둥글기', min: 0, max: 40, step: 1, u: 'px' },
       { t: 'slider', p: 'bubble.px', l: '안쪽 여백 · 좌우', min: 0, max: 40, step: 1, u: 'px' },
       { t: 'slider', p: 'bubble.py', l: '안쪽 여백 · 위아래', min: 0, max: 30, step: 1, u: 'px' },
-      { t: 'slider', p: 'bubble.gap', l: '말풍선 앞뒤 간격', min: 0, max: 48, step: 1, u: 'px' },
+      { t: 'slider', p: 'bubble.gap', l: '말풍선 사이 간격', sub: '말풍선과 나레이션 사이는 이 값과 문단 간격 중 큰 값', min: 0, max: 48, step: 1, u: 'px' },
     ] },
     { sec: '색상', note: '캐릭터 탭에서 ‘개별 색상’을 켠 캐릭터는 그 색이 우선 적용돼요.', rows: [
       { t: 'color', p: 'bubble.bg', l: '배경' },
@@ -2708,6 +2713,22 @@ function fieldEl(d) {
       break;
     }
 
+    case 'boxes': {
+      el = h('div', { class: 'row stack box-list' });
+      const ids = Object.keys(state.boxes || {}).filter((id) => state.text.includes(`(box:${id})`));
+      if (!ids.length) el.append(h('small', { class: 'muted' }, '아직 넣은 상자가 없어요'));
+      ids.forEach((id) => {
+        const bx = state.boxes[id];
+        const pr = BOX_PRESETS[bx.preset] || BOX_PRESETS.custom;
+        const btn = h('button', { type: 'button', class: 'box-item', onclick: () => {
+          const f = $(`#stage .hbox[data-box="${CSS.escape(id)}"]`);
+          if (f) { f.scrollIntoView({ block: 'center', behavior: 'smooth' }); setTimeout(() => openBoxPop(f, id), 250); } else openBoxPop(btn, id);
+        } }, h('b', {}, pr.name), h('span', {}, (bx.head || bx.text || '').split('\n')[0].slice(0, 30) || '(내용 없음)'), h('em', {}, '고치기'));
+        el.append(btn);
+      });
+      break;
+    }
+
     case 'filePreview': {
       el = h('div', { class: 'row file-preview' }, h('span', { class: 'fp-ico', html: icon('image') }), h('code', { id: 'file-preview' }));
       break;
@@ -3047,6 +3068,8 @@ $('#stage').addEventListener('click', (e) => {
   if (e.target.closest('.sticker') || e.target.closest('.rs-handle')) return;
   const fig = e.target.closest('.inline-img');
   if (fig) { selectImage('inline', fig.dataset.img); return; }
+  const hb = e.target.closest('.hbox');
+  if (hb) { openBoxPop(hb, hb.dataset.box); return; }
   const wb = e.target.closest('.narr.was-bubble');
   if (wb) {
     const key = wb.dataset.key;
@@ -3269,7 +3292,234 @@ function buildFmtBar() {
   const imgBtn = h('button', { type: 'button', class: 'ft ft-img', title: '이미지 넣기', 'aria-label': '이미지 넣기', onmousedown: keep, html: icon('image') + '<span>이미지</span>' });
   imgBtn.addEventListener('click', () => openImageInsertPop(imgBtn));
   bar.append(imgBtn);
+  const boxBtn = h('button', { type: 'button', class: 'ft ft-img', title: 'HTML 상자 넣기 (코르크판 · 삐삐 · 포스트잇 등)', 'aria-label': 'HTML 상자 넣기', onmousedown: keep, html: icon('frame') + '<span>상자</span>' });
+  boxBtn.addEventListener('click', () => openBoxInsertPop(boxBtn));
+  bar.append(boxBtn);
   bar.append(h('button', { type: 'button', class: 'ft ft-img', title: `찾아 바꾸기 (${modName}+F)`, 'aria-label': '찾아 바꾸기', onclick: () => openFind(), html: icon('search') + '<span>찾기</span>' }));
+}
+
+
+/* =========================================================
+   HTML 상자: 글 사이에 직접 만든 HTML(코르크판 · 삐삐 등)을 넣고, 그 안 글은 따로 씀
+   - 상자 CSS는 그 상자 안에서만 쓰이도록 선택자 앞에 상자 이름을 붙임
+   - {{머리글}} · {{내용}} 자리에 상자마다 입력한 글이 들어감
+   ========================================================= */
+const BOX_PRESETS = {
+  cork: { name: '코르크판', head: 'MEMO', text: '오늘 할 일\n· 발췌하기\n· 산책하기', code: `<style>
+  .x-cork { padding: 1.3em; border-radius: .5em;
+    background: radial-gradient(circle, rgba(90,52,22,.35) .06em, transparent .1em) 0 0 / .45em .55em,
+      radial-gradient(circle, rgba(245,215,170,.3) .07em, transparent .12em) .2em .25em / .6em .7em, #c49a6c;
+    box-shadow: inset 0 0 0 .45em #a2774a, inset 0 0 0 .55em rgba(0,0,0,.15), 0 .35em .9em rgba(60,30,10,.18); }
+  .x-note { position: relative; padding: 1.3em 1.2em 1.1em; background: #fffbe8; color: #3a332c;
+    transform: rotate(-1deg); box-shadow: 0 .1em .15em rgba(40,22,8,.2), 0 .5em .9em -.3em rgba(40,22,8,.35); }
+  .x-pin { position: absolute; top: -.35em; left: 50%; width: .85em; height: .85em; margin-left: -.42em; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #fff8 0 .12em, transparent .3em), #c94a3e; box-shadow: .15em .25em .25em rgba(0,0,0,.35); }
+  .x-head { font-size: .78em; font-weight: 700; letter-spacing: .14em; color: #b0503f; margin-bottom: .5em; }
+  .x-head:empty { display: none; }
+  .x-body { white-space: pre-wrap; line-height: 1.7; }
+</style>
+<div class="x-cork"><div class="x-note"><i class="x-pin"></i><div class="x-head">{{머리글}}</div><div class="x-body">{{내용}}</div></div></div>` },
+  pager: { name: '삐삐', head: '1004', text: '8282 보고 싶어\n486', code: `<style>
+  .x-pager { max-width: 22em; margin: 0 auto; padding: 1em 1.1em 1.1em; border-radius: 1.4em;
+    background: linear-gradient(160deg, #474d55, #2b2f35); box-shadow: inset 0 .1em 0 rgba(255,255,255,.12), 0 .4em 1em rgba(0,0,0,.25); }
+  .x-top { display: flex; justify-content: space-between; margin-bottom: .7em; font: 700 .68em/1 'Courier New', monospace; letter-spacing: .16em; color: #9aa4ad; }
+  .x-lcd { padding: .9em 1em; border-radius: .45em; color: #26321d;
+    background: repeating-linear-gradient(0deg, rgba(38,50,29,.05) 0 1px, transparent 1px 3px), linear-gradient(180deg, #c3d1ad, #aebd96);
+    box-shadow: inset 0 .15em .4em rgba(0,0,0,.35); }
+  .x-txt { font-family: 'Courier New', monospace; font-weight: 700; white-space: pre-wrap; line-height: 1.55; letter-spacing: .05em; }
+  .x-btns { display: flex; justify-content: center; gap: .8em; margin-top: .9em; }
+  .x-btns i { width: 2.2em; height: .65em; border-radius: 1em; background: #555c65; box-shadow: inset 0 .1em 0 rgba(255,255,255,.15); }
+</style>
+<div class="x-pager"><div class="x-top"><span>{{머리글}}</span><span>▮▮▮ 12:00</span></div><div class="x-lcd"><div class="x-txt">{{내용}}</div></div><div class="x-btns"><i></i><i></i><i></i></div></div>` },
+  sticky: { name: '포스트잇', head: '', text: '잊지 말기!\n오늘 저녁 7시', code: `<style>
+  .x-post { position: relative; max-width: 18em; margin: .6em auto 0; padding: 1.5em 1.3em 1.3em; color: #4a3d2c;
+    background: linear-gradient(170deg, rgba(255,255,255,.3), transparent 45%, rgba(0,0,0,.04)), #fff1a8;
+    transform: rotate(1.4deg); box-shadow: 0 .1em .15em rgba(0,0,0,.12), 0 .6em 1em -.4em rgba(0,0,0,.3); }
+  .x-tape { position: absolute; top: -.65em; left: 50%; width: 5.5em; height: 1.4em; transform: translateX(-50%) rotate(-3deg);
+    background: rgba(255,255,255,.55); box-shadow: 0 0 0 1px rgba(0,0,0,.04); }
+  .x-head { font-weight: 700; margin-bottom: .4em; }
+  .x-head:empty { display: none; }
+  .x-body { white-space: pre-wrap; line-height: 1.7; }
+</style>
+<div class="x-post"><i class="x-tape"></i><div class="x-head">{{머리글}}</div><div class="x-body">{{내용}}</div></div>` },
+  noti: { name: '문자 알림', head: '랑해', text: '지금 어디야? 데리러 갈게', code: `<style>
+  .x-noti { display: flex; gap: .75em; padding: .85em 1em; border-radius: 1.1em; color: #1c1c1e;
+    background: rgba(246,246,248,.96); box-shadow: 0 .1em .2em rgba(0,0,0,.06), 0 .5em 1.2em rgba(0,0,0,.12); }
+  .x-ico { position: relative; flex: none; width: 2.2em; height: 2.2em; border-radius: .6em; background: linear-gradient(#6ce27f, #2fbf4f); }
+  .x-ico::after { content: ''; position: absolute; left: .45em; top: .55em; width: 1.3em; height: 1em; border-radius: 50%; background: #fff; }
+  .x-main { flex: 1; min-width: 0; }
+  .x-meta { display: flex; justify-content: space-between; font-size: .75em; color: #8a8f98; margin-bottom: .2em; }
+  .x-from { font-weight: 700; font-size: .92em; }
+  .x-from:empty { display: none; }
+  .x-txt { white-space: pre-wrap; line-height: 1.5; font-size: .95em; }
+</style>
+<div class="x-noti"><i class="x-ico"></i><div class="x-main"><div class="x-meta"><span>메시지</span><span>지금</span></div><div class="x-from">{{머리글}}</div><div class="x-txt">{{내용}}</div></div></div>` },
+  letter: { name: '편지지', head: 'Dear.', text: '잘 지내고 있지?\n오늘은 네 생각이 많이 났어.', code: `<style>
+  .x-letter { padding: 1.4em 1.6em 1.5em; color: #4a3f36; border-radius: .3em;
+    background: #fbf6ec;
+    box-shadow: 0 .1em .2em rgba(0,0,0,.08), 0 .6em 1.2em -.4em rgba(0,0,0,.25); }
+  .x-head { font-weight: 700; margin-bottom: .55em; letter-spacing: .02em; }
+  .x-head:empty { display: none; }
+  /* 줄마다 밑줄: 글 줄 높이와 같은 간격으로 */
+  .x-body { white-space: pre-wrap; line-height: 1.75em;
+    background: repeating-linear-gradient(180deg, transparent 0 calc(1.75em - 1px), rgba(170,140,110,.35) calc(1.75em - 1px) 1.75em); }
+</style>
+<div class="x-letter"><div class="x-head">{{머리글}}</div><div class="x-body">{{내용}}</div></div>` },
+  custom: { name: '직접 만들기', head: '머리글', text: '여기에 내용을 써요', code: `<style>
+  /* 이 상자 안에서만 쓰이는 CSS예요. {{머리글}} · {{내용}} 자리에 입력한 글이 들어가요 */
+  .x-box { padding: 1em 1.2em; border-radius: .7em; background: #ffffff; border: 1px solid #e5e8eb; }
+  .x-box b { display: block; margin-bottom: .3em; }
+  .x-box p { margin: 0; white-space: pre-wrap; }
+</style>
+<div class="x-box"><b>{{머리글}}</b><p>{{내용}}</p></div>` },
+};
+const boxCssCache = new Map();
+const boxFontLinks = new Set();
+/** 상자 CSS의 선택자 앞에 상자 이름을 붙여 그 상자 안에서만 쓰이게 함 (:root · html · body는 상자 자신) */
+function scopeBoxCss(css, scope) {
+  const key = scope + '\u0000' + css;
+  if (boxCssCache.has(key)) return boxCssCache.get(key);
+  // 웹폰트 @import 는 페이지에 한 번만 붙임 (저장할 때 글꼴도 함께 들어가도록 crossorigin)
+  css = css.replace(/@import\s+(?:url\()?\s*['"]?([^'")\s;]+)['"]?\s*\)?[^;]*;/g, (m, href) => {
+    if (/^https:\/\//.test(href) && !boxFontLinks.has(href)) {
+      boxFontLinks.add(href);
+      document.head.insertBefore(h('link', { rel: 'stylesheet', href, crossorigin: 'anonymous' }), $('#gen-style'));
+    }
+    return '';
+  });
+  const d = document.implementation.createHTMLDocument('');
+  const st = d.createElement('style');
+  st.textContent = css;
+  d.head.append(st);
+  const pre = (sel) => sel.split(',').map((x) => {
+    x = x.trim();
+    if (/^(:root|html|body)$/i.test(x)) return scope;
+    return `${scope} ${x.replace(/^(:root|html|body)\b\s*/i, '')}`;
+  }).join(', ');
+  const walk = (rules) => [...rules].map((r) => {
+    if (r.type === CSSRule.STYLE_RULE) return `${pre(r.selectorText)}{${r.style.cssText}}`;
+    if (r.type === CSSRule.MEDIA_RULE) return `@media ${r.media.mediaText}{${walk(r.cssRules)}}`;
+    if (r.type === CSSRule.SUPPORTS_RULE) return `@supports ${r.conditionText}{${walk(r.cssRules)}}`;
+    if (r.type === CSSRule.IMPORT_RULE) return '';
+    return r.cssText; // @keyframes · @font-face
+  }).join('\n');
+  let out = '';
+  try { out = walk(st.sheet.cssRules); } catch (e) { out = ''; }
+  boxCssCache.set(key, out);
+  return out;
+}
+/** 상자 HTML: 위험한 태그 · 속성은 빼고, {{머리글}} · {{내용}} 자리를 채움 */
+function boxHtml(bx) {
+  const code = bx.code || '';
+  const css = [...code.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map((m) => m[1]).join('\n');
+  const body = code.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/\{\{\s*(머리글|head)\s*\}\}/gi, () => esc(bx.head || ''))
+    .replace(/\{\{\s*(내용|text)\s*\}\}/gi, () => fmt(bx.text || ''));
+  const doc = new DOMParser().parseFromString(`<body>${body}</body>`, 'text/html');
+  doc.querySelectorAll('script, iframe, object, embed, link, meta, base, form').forEach((el) => el.remove());
+  doc.querySelectorAll('*').forEach((el) => {
+    for (const a of [...el.attributes]) {
+      if (/^on/i.test(a.name) || /^\s*javascript:/i.test(a.value)) el.removeAttribute(a.name);
+    }
+  });
+  return { css, html: doc.body.innerHTML };
+}
+function boxFigure(id) {
+  const bx = state.boxes[id];
+  const scope = `.hb-${id.replace(/[^\w-]/g, '')}`;
+  const { css, html } = boxHtml(bx);
+  const fig = h('div', { class: `hbox align-${bx.align || 'center'}`, 'data-box': id, title: '눌러서 상자 글 · 크기 · 모양 고치기' });
+  fig.style.setProperty('--box-w', `${bx.w || 100}%`);
+  fig.innerHTML = `<style>${scopeBoxCss(css, scope)}</style><div class="hb-root ${scope.slice(1)}">${html}</div>`;
+  return fig;
+}
+function boxLineIndex(id) {
+  const lines = state.text.split('\n');
+  return [lines, lines.findIndex((l) => l.trim().includes(`(box:${id})`))];
+}
+// 상자 줄을 한 문단 위 · 아래로 (빈 줄은 건너뜀)
+function moveBox(id, dir) {
+  const [lines, i] = boxLineIndex(id);
+  if (i < 0) return;
+  let j = i + dir;
+  while (j >= 0 && j < lines.length && !lines[j].trim()) j += dir;
+  if (j < 0 || j >= lines.length) return;
+  const [line] = lines.splice(i, 1);
+  lines.splice(dir < 0 ? j : j, 0, line);
+  commit();
+  state.text = lines.join('\n'); src.value = state.text;
+  changed(); commit();
+}
+function removeBox(id) {
+  const [lines, i] = boxLineIndex(id);
+  if (i >= 0) lines.splice(i, 1);
+  state.text = lines.join('\n'); src.value = state.text;
+  const { [id]: _, ...rest } = state.boxes;
+  state.boxes = rest;
+}
+function openBoxInsertPop(anchor) {
+  const tiles = h('div', { class: 'box-presets' });
+  Object.entries(BOX_PRESETS).forEach(([k, pr]) => {
+    tiles.append(h('button', { type: 'button', class: 'box-preset', onclick: () => {
+      closePop();
+      const id = newId();
+      state.boxes = { ...(state.boxes || {}), [id]: { preset: k, code: pr.code, head: pr.head, text: pr.text, w: k === 'pager' || k === 'sticky' ? 70 : 100, align: 'center' } };
+      commit();
+      insertSnippet(`![](box:${id})\n`, '', true);
+      // 입력 반영을 기다리지 않고 바로 그려서 상자를 열어 줌
+      clearTimeout(srcTimer); state.text = src.value; changed(); renderQueued = false; render();
+      buildFields();
+      const f = $(`#stage .hbox[data-box="${id}"]`);
+      if (f) { f.scrollIntoView({ block: 'center' }); requestAnimationFrame(() => openBoxPop(f, id)); }
+    } }, h('b', {}, pr.name), h('small', {}, k === 'custom' ? 'HTML · CSS를 직접' : pr.text.split('\n')[0])));
+  });
+  openPop(h('div', {}, h('div', { class: 'pop-title' }, 'HTML 상자 넣기'),
+    h('p', { class: 'pop-note', style: 'margin:0 2px 10px' }, '커서가 있는 곳에 상자를 넣어요. 상자 안 글은 따로 써요.'), tiles), anchor);
+}
+function openBoxPop(anchor, id) {
+  const bx = state.boxes[id];
+  if (!bx) return;
+  const upd = (patch, rebuild) => {
+    state.boxes = { ...state.boxes, [id]: { ...state.boxes[id], ...patch } };
+    changed();
+    if (rebuild) setTimeout(() => { const f = $(`#stage .hbox[data-box="${CSS.escape(id)}"]`); if (f) openBoxPop(f, id); }, 60);
+  };
+  const usesHead = /\{\{\s*(머리글|head)\s*\}\}/i.test(bx.code);
+  const headIn = h('input', { type: 'text', class: 'input', value: bx.head || '', placeholder: '머리글 (비우면 숨김)', oninput: (e) => upd({ head: e.target.value }) });
+  const textIn = h('textarea', { class: 'input area-input', rows: 4, placeholder: '상자 안에 들어갈 글', oninput: (e) => upd({ text: e.target.value }) }, bx.text || '');
+  const out = h('output', {}, `${bx.w || 100}%`);
+  const sl = h('input', { type: 'range', class: 'slider', min: 20, max: 100, step: 1, value: bx.w || 100 });
+  sl.style.setProperty('--p', `${((bx.w || 100) - 20) / 80 * 100}%`);
+  sl.addEventListener('input', () => { out.textContent = `${sl.value}%`; sl.style.setProperty('--p', `${(sl.value - 20) / 80 * 100}%`); upd({ w: +sl.value }); });
+  const presetSel = h('select', { class: 'select', 'aria-label': '상자 모양' },
+    Object.entries(BOX_PRESETS).map(([k, pr]) => h('option', { value: k }, pr.name)));
+  presetSel.value = bx.preset in BOX_PRESETS ? bx.preset : 'custom';
+  presetSel.addEventListener('change', () => {
+    const k = presetSel.value;
+    const edited = BOX_PRESETS[bx.preset] && bx.code !== BOX_PRESETS[bx.preset].code;
+    if (edited && !confirm('고친 HTML 코드가 새 모양으로 바뀌어요. 바꿀까요?')) { presetSel.value = bx.preset; return; }
+    commit(); upd({ preset: k, code: BOX_PRESETS[k].code }, true); commit();
+  });
+  const codeIn = h('textarea', { class: 'input code-input', rows: 8, spellcheck: 'false' }, bx.code);
+  let codeT;
+  codeIn.addEventListener('input', () => { clearTimeout(codeT); codeT = setTimeout(() => upd({ code: codeIn.value, preset: 'custom' }), 350); });
+  const [, li] = boxLineIndex(id);
+  openPop(h('div', { class: 'box-pop' },
+    h('div', { class: 'pop-title' }, `HTML 상자 · ${(BOX_PRESETS[bx.preset] || BOX_PRESETS.custom).name}`),
+    usesHead ? h('div', { class: 'pop-label' }, '머리글') : null, usesHead ? headIn : null,
+    h('div', { class: 'pop-label' }, '내용'), textIn,
+    h('div', { class: 'pop-label row-top' }, '폭', out), sl,
+    h('div', { class: 'pop-label' }, '정렬'), segEl(ALIGN3, bx.align || 'center', (v) => upd({ align: v }), true),
+    h('div', { class: 'pop-label' }, '글 속 위치'),
+    h('div', { class: 'box-move' },
+      h('button', { type: 'button', class: 'btn btn-sm', disabled: li <= 0, onclick: () => { moveBox(id, -1); closePop(); } }, '한 문단 위로'),
+      h('button', { type: 'button', class: 'btn btn-sm', onclick: () => { moveBox(id, 1); closePop(); } }, '한 문단 아래로')),
+    h('div', { class: 'pop-label' }, '모양'), presetSel,
+    h('details', { class: 'box-code' }, h('summary', {}, 'HTML 코드 고치기'),
+      h('p', { class: 'pop-note' }, '{{머리글}} · {{내용}} 자리에 위 글이 들어가요. CSS는 이 상자 안에서만 쓰여요.'), codeIn),
+    h('div', { class: 'pop-foot' },
+      h('button', { type: 'button', class: 'link-btn danger', onclick: () => { commit(); removeBox(id); changed(); commit(); buildFields(); closePop(); toast('상자를 지웠어요', { label: '되돌리기', fn: undo }); } }, '삭제'),
+      h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: () => { closePop(); commit(); } }, '완료'))), anchor, () => commit(), { beside: anchor });
 }
 
 /* =========================================================
