@@ -1715,3 +1715,39 @@ img[src^="nnimg:"] { visibility: hidden; }
   white-space: nowrap; color: var(--anno, #e8506a); pointer-events: none; text-decoration: none;
 }
 .card .anno-n::after { content: ''; display: block; width: 1px; height: .45em; margin: .12em auto 0; background: currentColor; opacity: .7; }
+
+/* 옆 메모: 덩어리 바로 옆에 선으로 이어 단 메모 (또는 바로 아래) */
+.card .noted.note-side { display: grid; grid-template-columns: minmax(0, 1fr) var(--note-w, 30%); column-gap: 1.6em; align-items: start; }
+.card .noted > :first-child { margin: 0; min-width: 0; }
+.card .side-note {
+  position: relative; justify-self: start; max-width: 100%;
+  font-family: var(--text-font); font-size: calc(var(--text-size) * var(--note-scale, .82)); line-height: 1.5; font-weight: 500;
+  color: var(--note-color, #e8506a); white-space: pre-wrap; word-break: keep-all; overflow-wrap: anywhere; text-align: left; text-indent: 0;
+}
+.card .note-side .side-note { margin-top: .15em; }
+.card .note-bg .side-note {
+  padding: .4em .7em .45em; border-radius: .45em;
+  background: color-mix(in srgb, var(--note-color, #e8506a) 9%, #ffffff);
+  box-shadow: 0 .08em .2em rgba(0,0,0,.08), inset 0 0 0 1px color-mix(in srgb, var(--note-color, #e8506a) 22%, transparent);
+}
+/* 이음선 (옆): 메모 첫 줄 높이에서 왼쪽으로, 덩어리 끝까지 */
+.card .note-side.note-mark-dot .side-note::before, .card .note-side.note-mark-line .side-note::before {
+  content: ''; position: absolute; right: 100%; top: .95em; width: var(--lead, 1.4em); height: .5em; transform: translateY(-50%);
+  background: linear-gradient(currentColor, currentColor) center / 100% 1.3px no-repeat; opacity: .75;
+}
+.card .note-side.note-mark-dot .side-note::before {
+  background: radial-gradient(circle, currentColor .17em, transparent .2em) left center / .5em .5em no-repeat,
+    linear-gradient(currentColor, currentColor) center / 100% 1.3px no-repeat;
+}
+.card .note-side:not(.note-bg) .side-note::before { top: .75em; }
+/* 이음선 (아래): 덩어리에서 메모로 짧은 세로선 */
+.card .note-below .side-note { margin-top: .9em; margin-left: 1.2em; }
+.card .note-below.note-mark-dot .side-note::before, .card .note-below.note-mark-line .side-note::before {
+  content: ''; position: absolute; left: .9em; bottom: 100%; width: .5em; height: .75em; transform: translateX(-50%);
+  background: linear-gradient(currentColor, currentColor) center / 1.3px 100% no-repeat; opacity: .75;
+}
+.card .note-below.note-mark-dot .side-note::before {
+  background: radial-gradient(circle, currentColor .17em, transparent .2em) center top / .5em .5em no-repeat,
+    linear-gradient(currentColor, currentColor) center / 1.3px 100% no-repeat;
+}
+.card .noted .msg-right { justify-self: stretch; }

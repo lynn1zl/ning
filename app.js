@@ -133,6 +133,8 @@ const DEFAULTS = {
   parse: { auto: true, formats: ['dq', 'sq', 'corner', 'wcorner'], custom: [], mode: 'marked', inline: false, strip: true, nameless: 'none', blank: 'para1', blankV3: true, mergeTl: true, tlShow: 'both', autoChars: true },
   typo: { font: 'Noto Serif KR', fontCustom: '', size: 15, lh: 1.75, ls: -0.01, weight: 400, color: '#2a2826', align: 'left', gap: 10, indentOn: false, indent: 1, indentWhere: 'all', hl: '#ffe58a', hlStyle: 'under',
     wordBreak: 'auto', noOrphan: true, ws: 0, palt: false, kern: true, alignLast: 'auto', measure: 0, dropcap: false, dropLines: 2, annoColor: '#e8506a',
+    // 옆 메모: 문장 · 말풍선 · 이미지 · 상자 바로 옆(또는 아래)에 다는 작은 멘트
+    note: { pos: 'side', w: 30, scale: 82, color: '#e8506a', mark: 'dot', bg: true },
     // 괄호 안 글자: ( ) 안을 본문과 다르게 (크기는 둘레 글자에 대한 비율)
     paren: { on: false, fontOn: false, font: 'Gowun Batang', fontCustom: '', scale: 90, weight: 0, colorOn: false, color: '#8b95a1', italic: false } },
   head: { font: 'Noto Serif KR', fontCustom: '', size: 19, weight: 700, color: '#1d1c1a', align: 'left', creditFont: 'Noto Serif KR', creditFontCustom: '', creditSize: 11.5, creditWeight: 400, creditColor: '#8a857c', creatorFont: 'Noto Serif KR', creatorFontCustom: '', creatorSize: 11.5, creatorWeight: 700, creatorColor: '#6b665e', creditAlign: 'right', creditLayout: 'inline', quoteMark: false, accent: '#c8a46a' },
@@ -1042,6 +1044,15 @@ function parseText() {
   for (let li = 0; li < lines.length; li++) {
     const line = lines[li].trim();
     if (!line) { blanks++; continue; }
+    if (/^>>/.test(line)) {
+      const nt = line.replace(/^>>\s?/, '');
+      for (let k = out.length - 1; k >= 0; k--) {
+        if (out[k].type === 'gap') continue;
+        if (nt) out[k].note = out[k].note ? `${out[k].note}\n${nt}` : nt;
+        break;
+      }
+      continue;
+    }
     // 빈 줄 하나는 문단 경계일 뿐, 두 줄 이상은 장면 전환(여백)으로 본다
     const adjacent = blanks === 0;
     // 빈 줄 수만큼 여백 ('para1'이면 첫 빈 줄은 문단 나눔으로만 씀)
@@ -1184,6 +1195,9 @@ function genCSS() {
   --accent: ${hd.accent};
   --hl: ${t.hl};
   --anno: ${t.annoColor || '#e8506a'};
+  --note-w: ${(t.note && t.note.w) || 30}%;
+  --note-scale: ${((t.note && t.note.scale) || 80) / 100};
+  --note-color: ${(t.note && t.note.color) || '#8b95a1'};
   --hl-stop: ${{ full: '0%', under: '55%', thin: '78%' }[t.hlStyle] || '55%'};
   --text-font: ${fontStack(t.font, t.fontCustom)};
   --text-size: ${fit(t.size)};
@@ -2007,6 +2021,42 @@ function withDropcap(on, html) {
   if (!m) return html;
   return m[1] + `<span class="dc">${m[2]}${m[3]}</span>` + html.slice(m[0].length);
 }
+/* 옆 메모 이음선: 메모 왼쪽 끝에서 덩어리의 실제 오른쪽 끝(말풍선 · 이미지 · 가장 긴 글줄)까지 선을 그음 */
+function fitNoteLeads(root) {
+  const items = [...root.querySelectorAll('.noted.note-side')];
+  if (!items.length) return;
+  const sc = root.getBoundingClientRect().width / (root.offsetWidth || 1) || 1;
+  const reads = items.map((box) => {
+    const block = box.firstElementChild, note = box.querySelector('.side-note');
+    let tgt = block.querySelector('.bubble') || block.querySelector('.img-box') || block.querySelector('.hb-root > *') || null;
+    let right, top;
+    if (tgt) { const r = tgt.getBoundingClientRect(); right = r.right; top = r.top; }
+    else {
+      // 글 문단: 첫 줄의 실제 끝
+      const rg = document.createRange(); rg.selectNodeContents(block);
+      const rects = [...rg.getClientRects()].filter((x) => x.width > 0);
+      const first = rects.length ? rects.filter((x) => Math.abs(x.top - rects[0].top) < 2) : [];
+      right = first.length ? Math.max(...first.map((x) => x.right)) : block.getBoundingClientRect().right;
+      top = block.getBoundingClientRect().top;
+    }
+    const nr = note.getBoundingClientRect();
+    // 말풍선처럼 이름표 아래에서 시작하는 덩어리는 메모도 그 높이로 내림
+    const dy = Math.max(0, (top - block.getBoundingClientRect().top) / sc);
+    return { note, dy, lead: Math.max(6, (nr.left - right) / sc - 3) };
+  });
+  reads.forEach(({ note, dy, lead }) => {
+    note.style.setProperty('--lead', `${lead.toFixed(1)}px`);
+    note.style.marginTop = dy > 1 ? `${dy.toFixed(1)}px` : '';
+  });
+}
+/* 옆 메모 상자: [덩어리 | 메모] 또는 덩어리 아래에 메모 */
+function wrapNote(el, note) {
+  const N = state.typo.note || {};
+  const mark = N.mark === 'arrow' ? 'line' : (N.mark || 'dot');
+  const box = h('div', { class: `noted note-${N.pos === 'below' ? 'below' : 'side'} note-mark-${mark}${N.bg === false ? '' : ' note-bg'}` });
+  box.append(el, h('aside', { class: 'side-note', html: fmt(note) }));
+  return box;
+}
 let lastRenderMs = 0;
 function render() {
   const t0 = performance.now();
@@ -2053,11 +2103,11 @@ function render() {
   while (queue.length) {
     const b = takeNext();
     if (!b || (b.type === 'gap' && !page.flow.childElementCount)) continue;
-    const el = renderBlock(b);
+    const el = b.note ? wrapNote(renderBlock(b), b.note) : renderBlock(b);
     page.flow.append(el);
     if (!split || !overflows(page)) continue;
     const alone = page.flow.childElementCount === 1;
-    if (b.type === 'narr') {
+    if (b.type === 'narr' && !b.note) {
       const rest = splitParagraph(page, el, b, alone);
       if (rest) {
         queue.unshift({ type: 'narr', text: rest, cont: true });
@@ -2105,6 +2155,7 @@ function render() {
     pages.forEach((p) => cardObserver.observe(p.card));
   }
   pages.forEach((p) => fitTails(p.card));
+  pages.forEach((p) => fitNoteLeads(p.card));
   renderStickers(pages);
   htmlBgReady = applyHtmlBg(pages);
   rescale();
@@ -2389,7 +2440,6 @@ const SCHEMA = {
     { sec: '강조 · 괄호', rows: [
       { t: 'color', p: 'typo.hl', l: '형광펜 색', sub: '텍스트 편집창의 형광펜 버튼에서도 바꿀 수 있어요' },
       { t: 'seg', p: 'typo.hlStyle', l: '형광펜 모양', o: [['under', '밑줄형'], ['thin', '얇게'], ['full', '전체']] },
-      { t: 'color', p: 'typo.annoColor', l: '교정 메모 색', sub: '텍스트 편집창 ‘메모’로 단 작은 메모와 밑줄 색' },
       { t: 'switch', p: 'typo.paren.on', l: '괄호 안 글자 따로 꾸미기', sub: '( ) 안의 글자를 본문 · 말풍선과 다르게', rebuild: true },
       { t: 'slider', p: 'typo.paren.scale', l: '괄호 글자 크기', sub: '둘레 글자에 대한 비율', min: 50, max: 130, step: 1, u: '%', show: () => state.typo.paren.on },
       { t: 'select', p: 'typo.paren.weight', l: '괄호 글자 굵기', o: [[0, '둘레와 같게'], ...WEIGHTS], num: true, show: () => state.typo.paren.on },
@@ -2398,6 +2448,14 @@ const SCHEMA = {
       { t: 'color', p: 'typo.paren.color', l: '괄호 글자 색', show: () => state.typo.paren.on && state.typo.paren.colorOn },
       { t: 'switch', p: 'typo.paren.fontOn', l: '다른 서체', show: () => state.typo.paren.on },
       { t: 'font', p: 'typo.paren.font', c: 'typo.paren.fontCustom', l: '괄호 글자 서체', show: () => state.typo.paren.on && state.typo.paren.fontOn },
+    ] },
+    { sec: '옆 메모', note: '텍스트 편집창의 ‘메모’나, 문장 바로 아랫줄에 >> 멘트 를 쓰면 달려요.', rows: [
+      { t: 'seg', p: 'typo.note.pos', l: '위치', o: [['side', '오른쪽 옆'], ['below', '바로 아래']], block: true },
+      { t: 'slider', p: 'typo.note.w', l: '메모 칸 너비', min: 15, max: 50, step: 1, u: '%', show: () => state.typo.note.pos !== 'below' },
+      { t: 'slider', p: 'typo.note.scale', l: '글자 크기', sub: '본문 글자에 대한 비율', min: 50, max: 110, step: 1, u: '%' },
+      { t: 'color', p: 'typo.note.color', l: '색' },
+      { t: 'seg', p: 'typo.note.mark', l: '이음선', o: [['dot', '점과 선'], ['line', '선만'], ['none', '없음']], block: true },
+      { t: 'switch', p: 'typo.note.bg', l: '메모지 배경', sub: '메모 뒤에 옅은 색 메모지를 깔아요' },
     ] },
     { sec: '말풍선 글자', rows: [
       { t: 'font', p: 'bubble.font', c: 'bubble.fontCustom' },
@@ -3321,8 +3379,8 @@ function buildFmtBar() {
   const tcMore = h('button', { type: 'button', class: 'ft ft-more', title: '글자색 고르기', 'aria-label': '글자색 고르기', onmousedown: keep, html: icon('chevdown') });
   tcMore.addEventListener('click', () => openTextColorPop(tcMore));
   bar.append(h('span', { class: 'ft-group' }, tcMain, tcMore));
-  const annoBtn = h('button', { type: 'button', class: 'ft ft-img', title: '교정 메모 달기 (고른 글자 위에 작은 메모)', 'aria-label': '교정 메모', onmousedown: keep, html: icon('pen') + '<span>메모</span>' });
-  annoBtn.addEventListener('click', () => openAnnoPop(annoBtn));
+  const annoBtn = h('button', { type: 'button', class: 'ft ft-img', title: '옆 메모 (커서가 있는 문장 · 말풍선 · 이미지 옆에 멘트)', 'aria-label': '옆 메모', onmousedown: keep, html: icon('pen') + '<span>메모</span>' });
+  annoBtn.addEventListener('click', () => openNotePop(annoBtn));
   bar.append(annoBtn);
   bar.append(h('span', { class: 'ft-sep' }));
   bar.append(h('button', { type: 'button', class: 'ft ft-text', title: '이름 없는 대사', onmousedown: keep, onclick: () => insertSnippet('"', '"') }, '“대사”'));
@@ -3851,6 +3909,48 @@ function openAnnoPop(anchor) {
     h('div', { class: 'pop-foot' },
       hit ? h('button', { type: 'button', class: 'link-btn danger', onclick: () => { inp.value = ''; apply(); } }, '메모 지우기') : h('span'),
       h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: apply }, hit ? '바꾸기' : '달기'))), anchor);
+  inp.focus(); inp.select();
+}
+
+function noteTarget() {
+  const v = src.value;
+  const lines = v.split('\n');
+  // 커서가 있는 줄 (메모 줄 위에 있으면 그 위 덩어리)
+  let idx = v.slice(0, src.selectionStart).split('\n').length - 1;
+  while (idx > 0 && (/^>>/.test(lines[idx].trim()) || !lines[idx].trim())) idx--;
+  // 말풍선 아랫줄 번역 ( ) · 이미 있는 메모 줄 뒤에 붙임
+  let end = idx;
+  while (end + 1 < lines.length && /^\s*[(（].*[)）]\s*$/.test(lines[end + 1]) && lines[end + 1].trim()) end++;
+  const noteIdx = [];
+  let k = end + 1;
+  while (k < lines.length && /^>>/.test(lines[k].trim())) { noteIdx.push(k); k++; }
+  return { lines, idx, end, noteIdx };
+}
+function openNotePop(anchor) {
+  const t = noteTarget();
+  if (!t.lines[t.idx] || !t.lines[t.idx].trim()) { toast('메모를 달 문장 · 말풍선 · 이미지 줄에 커서를 두어 주세요'); src.focus(); return; }
+  const cur = t.noteIdx.map((i) => t.lines[i].trim().replace(/^>>\s?/, '')).join('\n');
+  const inp = h('textarea', { class: 'input area-input', rows: 3, placeholder: '예) 여기서 표정 진짜 웃겼음', value: cur }, cur);
+  const target = t.lines[t.idx].trim();
+  const apply = () => {
+    const txt = inp.value.split('\n').map((l) => l.trim()).filter(Boolean);
+    closePop();
+    const lines = src.value.split('\n');
+    const at = t.noteIdx.length ? t.noteIdx[0] : t.end + 1;
+    lines.splice(at, t.noteIdx.length, ...txt.map((l) => `>> ${l}`));
+    commit();
+    src.value = lines.join('\n'); state.text = src.value;
+    changed(); commit();
+    toast(txt.length ? '옆 메모를 달았어요' : '옆 메모를 지웠어요', { label: '되돌리기', fn: undo });
+  };
+  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); apply(); } });
+  openPop(h('div', {},
+    h('div', { class: 'pop-title' }, `‘${target.replace(/^!\[[^\]]*\]\((img|box):[^)]+\)$/, (m, k) => (k === 'img' ? '이미지' : 'HTML 상자')).slice(0, 18)}${target.length > 18 ? '…' : ''}’ 옆 메모`),
+    h('p', { class: 'pop-note', style: 'margin:0 2px 10px' }, '문장 · 말풍선 · 이미지 바로 옆에 각주처럼 작은 멘트를 달아요. Shift+Enter로 줄을 나눠요.'),
+    inp,
+    h('div', { class: 'pop-foot' },
+      cur ? h('button', { type: 'button', class: 'link-btn danger', onclick: () => { inp.value = ''; apply(); } }, '메모 지우기') : h('span'),
+      h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: apply }, cur ? '바꾸기' : '달기'))), anchor);
   inp.focus(); inp.select();
 }
 
@@ -5035,7 +5135,7 @@ async function makeImages(indices, onProgress) {
 }
 async function makeImagesOf(cards, fontCSS, onProgress) {
   for (const card of cards) {
-    card.querySelectorAll('.narr, .bubble, .card-title, .credit').forEach((el) => {
+    card.querySelectorAll('.narr, .bubble, .card-title, .credit, .side-note').forEach((el) => {
       if (el.querySelector('.wrap-float, .bimg-box, .tok-img')) return; // 이미지가 들어간 문단은 브라우저 배치 그대로
       try { freezeLines(el, currentScale); } catch (e) { /* 원래 상태로 둠 */ }
     });
