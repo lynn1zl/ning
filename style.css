@@ -1701,3 +1701,8 @@ img[src^="nnimg:"] { visibility: hidden; }
 .bf span { font-size: 11.5px; color: var(--text-3); }
 .bf .input { padding: 7px 10px; font-size: 13.5px; }
 .box-preset { justify-content: center; min-height: 44px; }
+
+/* 서식 막대: 글자색 */
+.ft-tc { flex-direction: column; gap: 1px; padding: 0 7px; }
+.ft-tc .tc-a { font-size: 14px; font-weight: 700; line-height: 1; }
+.ft-tc .tc-bar { display: block; width: 14px; height: 3px; border-radius: 2px; }

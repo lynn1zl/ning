@@ -478,8 +478,11 @@ function deepMerge(base, extra) {
 }
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+// 글자색: [[#e8506a|글자]] (안쪽 서식은 그대로)
+const TC_RE = /\[\[(#[0-9a-fA-F]{3,8})\|([\s\S]+?)\]\]/g;
 function fmt(s) {
   return esc(s)
+    .replace(TC_RE, '<span class="tc" style="color:$1">$2</span>')
     .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
     .replace(/__(.+?)__/g, '<u>$1</u>')
     .replace(/~~(.+?)~~/g, '<s>$1</s>')
@@ -494,7 +497,7 @@ function fmtNoOrphan(text, justify) {
   const m = justify ? text.match(/^([\s\S]*?\s)(\S{1,8})\s*$/) : text.match(/^([\s\S]*?)(\S+\s+\S{1,8})\s*$/);
   if (!m || m[1].length < 12) return fmt(text);
   const odd = (str, mk) => (str.split(mk).length - 1) % 2 === 1;
-  if (['**', '__', '~~', '==', '*'].some((mk) => m[2].includes(mk) || odd(m[1], mk))) return fmt(text.replace(/\s+(\S{1,8})\s*$/, '\u00a0$1'));
+  if (['**', '__', '~~', '==', '*'].some((mk) => m[2].includes(mk) || odd(m[1], mk)) || /\[\[|\]\]/.test(m[2]) || (m[1].split('[[').length !== m[1].split(']]').length)) return fmt(text.replace(/\s+(\S{1,8})\s*$/, '\u00a0$1'));
   return fmt(m[1]) + '<span class="nobr">' + fmt(m[2]) + '</span>';
 }
 
@@ -886,6 +889,12 @@ function dialogueRules() {
 }
 
 function matchFormat(s, rules) {
+  // 줄 전체가 글자색 표시 [[#색|…]] 인 경우는 [ ] 대사 형식으로 보지 않음
+  if (/^\[\[#[0-9a-fA-F]{3,8}\|[\s\S]*\]\]$/.test(s)) {
+    const inner = s.replace(/^\[\[#[0-9a-fA-F]{3,8}\|([\s\S]*)\]\]$/, '$1');
+    const wi = wrapped(inner, rules.pairs);
+    return wi ? { inner: s.replace(inner, wi.inner) } : null;
+  }
   const w = wrapped(s, rules.pairs);
   if (w) return w;
   for (const p of rules.prefixes) {
@@ -916,8 +925,16 @@ const findChar = (name) => {
 };
 const charById = (id) => state.chars.find((c) => c.id === id) || null;
 
-function splitSpeaker(line) {
-  let m = line.match(/^\[([^\]]{1,24})\]\s*(.+)$/);
+function splitSpeaker(line0) {
+  // 글자색 표시 [[#색|…]] 안의 | 는 '이름 | 대사' 구분 기호로 보지 않음
+  const line = line0.replace(/\[\[#[0-9a-fA-F]{3,8}\|/g, (x) => x.replace('|', '\u0001'));
+  const r = splitSpeakerRaw(line);
+  if (!r) return null;
+  const back = (t) => t.replace(/\u0001/g, '|');
+  return { ...r, name: back(r.name), rest: back(r.rest) };
+}
+function splitSpeakerRaw(line) {
+  let m = line.startsWith('[[') ? null : line.match(/^\[([^\]]{1,24})\]\s*(.+)$/);
   if (m) return { name: m[1].trim(), rest: m[2].trim(), strong: true };
   // 이름 | 대사  (채팅 로그에서 흔한 형식)
   m = line.match(/^([^\s|｜ㅣ│"“「『(（'‘\[][^|｜ㅣ│"“「『]{0,29}?)\s*[|｜ㅣ│]\s*(.+)$/);
@@ -1688,6 +1705,10 @@ function newPage(idx, W, H) {
    - 앞쪽에 2줄 미만만 남으면(외톨이 줄) 문단 전체를 넘김
    - 뒤쪽에 1줄만 넘어가면(과부 줄) 한 줄을 더 넘김 */
 function balanceMarks(a, rest) {
+  // 글자색 구간이 열린 채 잘리면 앞 조각은 닫고 뒤 조각은 같은 색으로 다시 엶
+  const opens = [...a.matchAll(/\[\[(#[0-9a-fA-F]{3,8})\|/g)];
+  const closes = (a.match(/\]\]/g) || []).length;
+  if (opens.length > closes) { const c = opens[opens.length - 1][1]; a += ']]'; rest = `[[${c}|` + rest; }
   for (const m of ['**', '__', '~~', '==']) {
     if ((a.split(m).length - 1) % 2) { a += m; rest = m + rest; }
   }
@@ -3286,6 +3307,14 @@ function buildFmtBar() {
   const hlMore = h('button', { type: 'button', class: 'ft ft-more', title: '형광펜 색 · 모양', 'aria-label': '형광펜 색 바꾸기', onmousedown: keep, html: icon('chevdown') });
   hlMore.addEventListener('click', () => openHighlightPop(hlMore));
   bar.append(h('span', { class: 'ft-group' }, hlMain, hlMore));
+  // 글자색: 누르면 고른 부분에 칠하기, 옆 화살표로 색 고르기 · 지우기
+  const tcSw = h('span', { class: 'tc-bar' });
+  tcSw.style.background = state.typo.tc || '#e8506a';
+  const tcMain = h('button', { type: 'button', class: 'ft ft-tc', title: '글자색 (고른 부분)', 'aria-label': '글자색', onmousedown: keep, onclick: () => applyTextColor(state.typo.tc || '#e8506a') },
+    h('span', { class: 'tc-a' }, 'A'), tcSw);
+  const tcMore = h('button', { type: 'button', class: 'ft ft-more', title: '글자색 고르기', 'aria-label': '글자색 고르기', onmousedown: keep, html: icon('chevdown') });
+  tcMore.addEventListener('click', () => openTextColorPop(tcMore));
+  bar.append(h('span', { class: 'ft-group' }, tcMain, tcMore));
   bar.append(h('span', { class: 'ft-sep' }));
   bar.append(h('button', { type: 'button', class: 'ft ft-text', title: '이름 없는 대사', onmousedown: keep, onclick: () => insertSnippet('"', '"') }, '“대사”'));
   bar.append(h('button', { type: 'button', class: 'ft ft-text', title: '구분선 넣기', onmousedown: keep, onclick: () => insertSnippet('---\n', '', true) }, '구분선'));
@@ -3748,6 +3777,61 @@ document.addEventListener('keydown', (e) => {
     openFind();
   }
 });
+
+const TC_COLORS = ['#e8506a', '#f76707', '#e0a100', '#2f9e44', '#0c8599', '#1c7ed6', '#7048e8', '#c2255c', '#868e96', '#191f28'];
+/** 고른 부분을 [[#색|…]]으로 감쌈. 이미 색이 있으면 색만 바꾸고, c가 null이면 색을 지움 */
+function applyTextColor(c) {
+  const s = src.selectionStart, e = src.selectionEnd, v = src.value;
+  const sel = v.slice(s, e);
+  // 고른 부분이 색 구간 그대로이거나, 커서가 색 구간 안에 있으면 그 구간을 바꿈
+  const re = /\[\[(#[0-9a-fA-F]{3,8})\|([\s\S]+?)\]\]/g;
+  let m, hit = null;
+  while ((m = re.exec(v))) {
+    const a = m.index, b = m.index + m[0].length;
+    if (s >= a && e <= b && (sel === m[0] || sel === m[2] || s === e || (s >= a + m[1].length + 3 && e <= b - 2))) { hit = { a, b, col: m[1], inner: m[2] }; break; }
+  }
+  if (hit) {
+    const out = c ? `[[${c}|${hit.inner}]]` : hit.inner;
+    replaceRange(hit.a, hit.b, out);
+    const st = c ? hit.a + c.length + 3 : hit.a;
+    src.setSelectionRange(st, st + hit.inner.length);
+    return;
+  }
+  if (!c) {
+    // 고른 부분 안의 색 구간을 모두 지움
+    if (sel && re.test(sel)) { const clean = sel.replace(/\[\[#[0-9a-fA-F]{3,8}\|([\s\S]+?)\]\]/g, '$1'); replaceRange(s, e, clean); src.setSelectionRange(s, s + clean.length); }
+    return;
+  }
+  if (!sel) { toast('색을 칠할 글자를 먼저 골라 주세요'); src.focus(); return; }
+  if (sel.includes('\n')) { toast('글자색은 한 줄 안에서만 칠할 수 있어요'); return; }
+  replaceRange(s, e, `[[${c}|${sel}]]`);
+  src.setSelectionRange(s + c.length + 3, s + c.length + 3 + sel.length);
+}
+function openTextColorPop(anchor) {
+  const grid = h('div', { class: 'palette hl' });
+  const mark = () => $$('button', grid).forEach((b) => b.classList.toggle('on', b.dataset.c === state.typo.tc));
+  const pick = (c, applyNow = true) => {
+    state.typo.tc = c; save(); mark();
+    const sw = $('#fmt-bar .tc-bar'); if (sw) sw.style.background = c;
+    if (applyNow) applyTextColor(c);
+  };
+  TC_COLORS.forEach((c) => {
+    const b = h('button', { type: 'button', 'data-c': c, 'aria-label': c, onmousedown: (e) => e.preventDefault() });
+    b.style.background = c;
+    b.addEventListener('click', () => pick(c));
+    grid.append(b);
+  });
+  mark();
+  const native = h('input', { type: 'color', value: /^#[0-9a-f]{6}$/i.test(state.typo.tc || '') ? state.typo.tc : '#e8506a', 'aria-label': '직접 고르기' });
+  native.addEventListener('change', () => pick(native.value));
+  openPop(h('div', {},
+    h('div', { class: 'pop-title' }, '글자색'),
+    h('p', { class: 'pop-note', style: 'margin:0 2px 10px' }, '입력창에서 고른 글자에 색을 칠해요. 서체 탭의 기본 글자 색과 따로 쓸 수 있어요.'),
+    h('div', { class: 'hl-row' }, grid, h('label', { class: 'native-color sm', title: '직접 고르기' }, native)),
+    h('div', { class: 'pop-foot' },
+      h('button', { type: 'button', class: 'link-btn muted', onmousedown: (e) => e.preventDefault(), onclick: () => applyTextColor(null) }, '색 지우기'),
+      h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: closePop }, '완료'))), anchor);
+}
 
 function openHighlightPop(anchor) {
   const grid = h('div', { class: 'palette hl' });
