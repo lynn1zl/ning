@@ -2181,7 +2181,41 @@ function layoutMemos(card) {
     const ln = rs.filter((x) => Math.abs(x.t - lastTop) < 2);
     return { l: Math.min(...ln.map((x) => x.l)), r: Math.max(...ln.map((x) => x.r)), t: lastTop, b: Math.max(...ln.map((x) => x.b)) };
   };
-  const placeOne = (n, tg, skip) => {
+  const flowR = R(flow.getBoundingClientRect());
+  const marginSpots = (tg) => {
+    const cx = (tg.l + tg.r) / 2;
+    const right = { x: flowR.r + 8, w: W0 - flowR.r - 14, side: 'r' };
+    const left = { x: 6, w: flowR.l - 14, side: 'l' };
+    return (cx > (flowR.l + flowR.r) / 2 ? [right, left] : [left, right]).filter((m) => m.w >= 22);
+  };
+  const lineGapY = (tg, el) => {
+    const lhPx = el ? parseFloat(getComputedStyle(el).lineHeight) || 0 : 0;
+    return tg.b + Math.max(1.5, (lhPx - (tg.b - tg.t)) / 2);
+  };
+  const placeMargin = (n, tg, lineEl) => {
+    const nat = n.offsetWidth; // 한 줄로 썼을 때 폭
+    for (const m of marginSpots(tg)) {
+      const w = Math.min(nat + 1, m.w);
+      n.classList.add('memo-margin');
+      n.style.width = `${w}px`;
+      const hh = n.offsetHeight;
+      const x = m.side === 'r' ? m.x : m.x + (m.w - w);
+      const y0 = lineGapY(tg, lineEl);
+      let t = y0 - hh / 2, a = { l: x, t, r: x + w, b: t + hh }, guard = 0;
+      while (!free(a) && guard++ < 60) { t += 3; a = { l: x, t, r: x + w, b: t + hh }; }
+      if (guard >= 60) { n.classList.remove('memo-margin'); n.style.width = ''; continue; }
+      put(n, a);
+      // 글자 끝 → 줄 사이 틈으로 → 여백 가장자리 → 메모
+      // 글자 아래 가운데 → 줄 사이 틈 → 여백 가장자리 → 메모 (글자 위를 지나가지 않게)
+      const sx = (tg.l + tg.r) / 2;
+      const ex = m.side === 'r' ? a.l - 3 : a.r + 3;
+      lines.push({ pts: [[sx, tg.b + 1], [sx, y0], [ex - (m.side === 'r' ? 5 : -5), y0], [ex, (a.t + a.b) / 2]] });
+      return true;
+    }
+    return false;
+  };
+  const placeOne = (n, tg, skip, lineEl) => {
+    if (withLine && placeMargin(n, tg, lineEl)) return;
     const w = n.offsetWidth, hh = n.offsetHeight;
     // 선 없음: 바로 붙일 수 있는 자리만 · 선 있음: 둘레에서 가장 가까운 빈 곳까지 (선으로 이음)
     const f = nearestFree(w, hh, tg, skip, withLine ? Math.max(120, hh * 8) : 0);
@@ -2200,7 +2234,7 @@ function layoutMemos(card) {
     const tg = rs[rs.length - 1];
     const n = make(an.querySelector('.anno-n').innerHTML, 'word', memoFs(an));
     n.dataset.src = an.dataset.src;
-    placeOne(n, tg, an.closest('.bubble'));
+    placeOne(n, tg, an.closest('.bubble'), an.closest('.narr, .bubble'));
   }
   for (const el of blocks) {
     const tgEl = el.querySelector('.bubble') || el.querySelector('.img-box') || el.querySelector('.hb-root > *');
@@ -2209,7 +2243,7 @@ function layoutMemos(card) {
     else { const rs = textRectsOf(el); if (!rs.length) continue; tg = lineTarget(rs); }
     const n = make(fmt(el.dataset.memo), 'block', memoFs(el.querySelector('.bubble') || el));
     n.dataset.note = el.dataset.memo.split('\n')[0];
-    placeOne(n, tg, null);
+    placeOne(n, tg, null, el.classList.contains('narr') ? el : el.querySelector('.bubble'));
   }
 
   if (lines.length) {
@@ -2217,9 +2251,11 @@ function layoutMemos(card) {
     svg.setAttribute('class', 'memo-lines');
     svg.setAttribute('width', W0); svg.setAttribute('height', H0); svg.setAttribute('viewBox', `0 0 ${W0} ${H0}`);
     const col = N.color || '#222222';
-    for (const L of lines) {
+    for (const L0 of lines) {
+      const pts = L0.pts || [[L0.x1, L0.y1], [L0.x2, L0.y2]];
+      const L = { x1: pts[0][0], y1: pts[0][1], x2: pts[1][0], y2: pts[1][1] };
       const path = document.createElementNS(svg.namespaceURI, 'path');
-      path.setAttribute('d', `M${L.x1.toFixed(1)},${L.y1.toFixed(1)} L${L.x2.toFixed(1)},${L.y2.toFixed(1)}`);
+      path.setAttribute('d', 'M' + pts.map((q) => `${q[0].toFixed(1)},${q[1].toFixed(1)}`).join(' L'));
       path.setAttribute('fill', 'none'); path.setAttribute('stroke', col); path.setAttribute('stroke-width', '1');
       path.setAttribute('stroke-dasharray', '3 3'); path.setAttribute('opacity', '.6');
       svg.append(path);
@@ -2649,7 +2685,8 @@ const SCHEMA = {
     { sec: '메모', note: '텍스트 편집창의 ‘메모’로 달아요. 글자를 고르면 그 단어 · 구에, 안 고르면 문장 · 말풍선 · 이미지에 달려요. 메모는 글을 가리지 않는 빈 곳에 알아서 붙고, 미리보기에서 누르면 바로 고칠 수 있어요.', rows: [
       { t: 'slider', p: 'typo.note.scale', l: '글자 크기', sub: '본문 글자에 대한 비율', min: 50, max: 110, step: 1, u: '%' },
       { t: 'color', p: 'typo.note.color', l: '색' },
-      { t: 'seg', p: 'typo.note.mark', l: '이음선', sub: '선 없음: 늘 글자 바로 옆에 · 선을 쓰면 둘레가 꽉 찼을 때 가까운 빈 곳(여백 등)에 두고 선으로 이어요', o: [['none', '선 없음'], ['line', '선만'], ['dot', '원'], ['arrow', '화살표']], block: true },
+      { t: 'switch', p: 'typo.note.selBar', l: '글자를 고르면 메모 버튼 띄우기', sub: '입력창에서 드래그하면 근처에 작은 메모 버튼이 떠요' },
+      { t: 'seg', p: 'typo.note.mark', l: '이음선', sub: '선 없음: 글자 바로 옆에 · 선을 쓰면 카드 바깥 여백에 두고 줄 사이 틈으로 선을 이어요 (여백이 넓을수록 보기 좋아요)', o: [['none', '선 없음'], ['line', '선만'], ['dot', '원'], ['arrow', '화살표']], block: true },
     ] },
     { sec: '말풍선 글자', rows: [
       { t: 'font', p: 'bubble.font', c: 'bubble.fontCustom' },
@@ -4165,6 +4202,28 @@ function openLineMemo(anchor) {
       h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: apply }, cur ? '바꾸기' : '달기'))), anchor, null, { beside: anchor.closest && anchor.closest('#stage') ? anchor : null });
   inp.focus(); inp.select();
 }
+/* 입력창에서 글자를 고르면 그 근처에 작은 '메모' 버튼 */
+const selBar = h('div', { class: 'sel-bar', hidden: true, role: 'toolbar', 'aria-label': '고른 글자' });
+selBar.append(h('button', { type: 'button', onmousedown: (e) => e.preventDefault(), onclick: () => { selBar.hidden = true; openMemoPop(selBar); }, html: icon('pen') + '<span>메모</span>' }));
+document.body.append(selBar);
+function showSelBar(x, y, touch) {
+  if (state.typo.note && state.typo.note.selBar === false) { selBar.hidden = true; return; }
+  const s0 = src.selectionStart, e0 = src.selectionEnd;
+  const sel = src.value.slice(s0, e0);
+  if (!sel.trim() || sel.includes('\n')) { selBar.hidden = true; return; }
+  selBar.hidden = false;
+  const bw = selBar.offsetWidth, bh = selBar.offsetHeight;
+  const top = touch ? y + 26 : y - bh - 12; // 휴대폰은 기본 복사 메뉴와 겹치지 않게 아래로
+  selBar.style.left = `${Math.max(8, Math.min(x - bw / 2, innerWidth - bw - 8))}px`;
+  selBar.style.top = `${Math.max(8, Math.min(top, innerHeight - bh - 8))}px`;
+}
+src.addEventListener('mouseup', (e) => setTimeout(() => showSelBar(e.clientX, e.clientY, false), 0));
+src.addEventListener('touchend', (e) => { const t = e.changedTouches[0]; setTimeout(() => showSelBar(t.clientX, t.clientY, true), 250); });
+src.addEventListener('input', () => { selBar.hidden = true; });
+src.addEventListener('scroll', () => { selBar.hidden = true; }, { passive: true });
+document.addEventListener('selectionchange', () => { if (!selBar.hidden && document.activeElement === src && src.selectionStart === src.selectionEnd) selBar.hidden = true; });
+document.addEventListener('pointerdown', (e) => { if (!selBar.hidden && !selBar.contains(e.target) && e.target !== src) selBar.hidden = true; });
+
 /* 미리보기에서 메모를 누르면 입력창의 그 자리를 찾아 바로 고치기 */
 function editMemoFromPreview(el) {
   const v = src.value;
