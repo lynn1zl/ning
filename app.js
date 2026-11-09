@@ -3305,7 +3305,19 @@ function buildFmtBar() {
    - {{머리글}} · {{내용}} 자리에 상자마다 입력한 글이 들어감
    ========================================================= */
 const BOX_PRESETS = {
-  status: { name: '게임 상태창', head: '랑해', text: '칭호: 연애 초보 견습생\n상태: 두근두근 ♡', code: `<style>
+  status: { name: '상태창', head: '클로드', text: '칭호: 캘리포니아 상원의원\n상태: 짜증',
+    // 상자 편집 창에 나오는 입력 칸: [키, 이름, 기본값] (한 줄에 둘씩)
+    fields: [
+      [['lv', '레벨', '39']],
+      [['hp', 'HP', '123'], ['hpMax', 'HP 최대', '150']],
+      [['mp', 'MP', '55'], ['mpMax', 'MP 최대', '100']],
+      [['exp', 'EXP (%)', '93']],
+      [['s1', '능력치 1', '매력'], ['v1', '값', '999']],
+      [['s2', '능력치 2', '귀여움'], ['v2', '값', '∞']],
+      [['s3', '능력치 3', '체력'], ['v3', '값', '12']],
+      [['s4', '능력치 4', '행운'], ['v4', '값', '77']],
+    ],
+    code: `<style>
   .x-st { max-width: 22em; margin: 0 auto; padding: .28em; border-radius: 1.1em;
     background: linear-gradient(135deg, #ffd3e6, #dcd3ff 55%, #cdeeff); box-shadow: 0 .45em 1.1em rgba(150,110,200,.28); }
   .x-in { padding: .9em 1em 1em; border-radius: .9em; background: rgba(255,255,255,.88); color: #4a3a5c; }
@@ -3321,20 +3333,20 @@ const BOX_PRESETS = {
   .x-bar i { position: relative; flex: 1; height: .75em; border-radius: 1em; background: #eee6f5; box-shadow: inset 0 .08em .12em rgba(0,0,0,.08); overflow: hidden; }
   .x-bar i::after { content: ''; position: absolute; inset: 0 auto 0 0; width: var(--v); border-radius: 1em; background: var(--c); }
   .x-bar span { width: 4.6em; text-align: right; color: #8a7a9c; font-variant-numeric: tabular-nums; }
-  .x-hp { --v: 82%; --c: linear-gradient(90deg, #ff8fb1, #ff5f8f); }
-  .x-mp { --v: 55%; --c: linear-gradient(90deg, #8fd0ff, #5b9dff); }
-  .x-ex { --v: 93%; --c: linear-gradient(90deg, #ffe48a, #ffc23d); }
+  .x-hp { --c: linear-gradient(90deg, #ff8fb1, #ff5f8f); }
+  .x-mp { --c: linear-gradient(90deg, #8fd0ff, #5b9dff); }
+  .x-ex { --c: linear-gradient(90deg, #ffe48a, #ffc23d); }
   .x-stat { display: grid; grid-template-columns: 1fr 1fr; gap: .3em .9em; margin: .75em 0 .2em; padding-top: .65em; border-top: .1em dashed #e3d8ef; font-size: .82em; }
   .x-stat div { display: flex; justify-content: space-between; }
   .x-stat em { font-style: normal; font-weight: 800; color: #ff6f9f; }
   .x-txt { margin-top: .7em; padding: .6em .8em; border-radius: .6em; background: #f7f1ff; white-space: pre-wrap; line-height: 1.6; font-size: .9em; }
 </style>
 <div class="x-st"><div class="x-in">
-  <div class="x-top"><span class="x-av">♥</span><span class="x-name">{{머리글}}</span><span class="x-lv">Lv.27</span></div>
-  <div class="x-bar x-hp"><b>HP</b><i></i><span>123/150</span></div>
-  <div class="x-bar x-mp"><b>MP</b><i></i><span>55/100</span></div>
-  <div class="x-bar x-ex"><b>EXP</b><i></i><span>93%</span></div>
-  <div class="x-stat"><div>매력 <em>999</em></div><div>귀여움 <em>∞</em></div><div>체력 <em>12</em></div><div>행운 <em>77</em></div></div>
+  <div class="x-top"><span class="x-av">♥</span><span class="x-name">{{머리글}}</span><span class="x-lv">Lv.{{lv}}</span></div>
+  <div class="x-bar x-hp" style="--v: {{%hp/hpMax}}"><b>HP</b><i></i><span>{{hp}}/{{hpMax}}</span></div>
+  <div class="x-bar x-mp" style="--v: {{%mp/mpMax}}"><b>MP</b><i></i><span>{{mp}}/{{mpMax}}</span></div>
+  <div class="x-bar x-ex" style="--v: {{%exp/100}}"><b>EXP</b><i></i><span>{{exp}}%</span></div>
+  <div class="x-stat"><div>{{s1}} <em>{{v1}}</em></div><div>{{s2}} <em>{{v2}}</em></div><div>{{s3}} <em>{{v3}}</em></div><div>{{s4}} <em>{{v4}}</em></div></div>
   <div class="x-txt">{{내용}}</div>
 </div></div>` },
   pager: { name: '삐삐', head: '1004', text: '8282 보고 싶어\n486', code: `<style>
@@ -3461,9 +3473,22 @@ function scopeBoxCss(css, scope) {
 function boxHtml(bx) {
   const code = bx.code || '';
   const css = [...code.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map((m) => m[1]).join('\n');
+  const val = (k) => {
+    const f = boxFields(bx).find(([key]) => key === k);
+    let v = bx.vals && k in bx.vals ? bx.vals[k] : f ? f[2] : null;
+    if (v == null) return null;
+    if (k === 'lv') v = String(v).replace(/^\s*lv\.?\s*/i, ''); // 'Lv.39'처럼 써도 Lv가 두 번 나오지 않게
+    return String(v);
+  };
+  const num = (k) => (/^\d+(\.\d+)?$/.test(k) ? +k : parseFloat(val(k)));
   const body = code.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
     .replace(/\{\{\s*(머리글|head)\s*\}\}/gi, () => esc(bx.head || ''))
-    .replace(/\{\{\s*(내용|text)\s*\}\}/gi, () => fmt(bx.text || ''));
+    .replace(/\{\{\s*(내용|text)\s*\}\}/gi, () => fmt(bx.text || ''))
+    .replace(/\{\{\s*%\s*([\w.]+)\s*\/\s*([\w.]+)\s*\}\}/g, (m, a, b) => {
+      const x = num(a), y = num(b);
+      return `${y > 0 && x >= 0 ? Math.max(0, Math.min(100, (x / y) * 100)).toFixed(1) : 0}%`;
+    })
+    .replace(/\{\{\s*(\w+)\s*\}\}/g, (m, k) => { const v = val(k); return v == null ? m : esc(v); });
   const doc = new DOMParser().parseFromString(`<body>${body}</body>`, 'text/html');
   doc.querySelectorAll('script, iframe, object, embed, link, meta, base, form').forEach((el) => el.remove());
   doc.querySelectorAll('*').forEach((el) => {
@@ -3472,6 +3497,11 @@ function boxHtml(bx) {
     }
   });
   return { css, html: doc.body.innerHTML };
+}
+// 상자의 추가 입력 칸 목록 [키, 이름, 기본값] (넣을 때 모양에서 복사해 두므로 코드를 고쳐도 유지)
+function boxFields(bx) {
+  const rows = bx.fields || (BOX_PRESETS[bx.preset] || {}).fields || [];
+  return rows.flat();
 }
 function boxFigure(id) {
   const bx = state.boxes[id];
@@ -3512,7 +3542,7 @@ function openBoxInsertPop(anchor) {
     tiles.append(h('button', { type: 'button', class: 'box-preset', onclick: () => {
       closePop();
       const id = newId();
-      state.boxes = { ...(state.boxes || {}), [id]: { preset: k, code: pr.code, head: pr.head, text: pr.text, w: k === 'pager' || k === 'sticky' ? 70 : 100, align: 'center' } };
+      state.boxes = { ...(state.boxes || {}), [id]: { preset: k, code: pr.code, head: pr.head, text: pr.text, w: k === 'pager' || k === 'sticky' ? 70 : 100, align: 'center', fields: pr.fields ? copyState(pr.fields) : undefined, vals: pr.fields ? Object.fromEntries(pr.fields.flat().map(([fk, , dv]) => [fk, dv])) : undefined } };
       commit();
       insertSnippet(`![](box:${id})\n`, '', true);
       // 입력 반영을 기다리지 않고 바로 그려서 상자를 열어 줌
@@ -3520,7 +3550,7 @@ function openBoxInsertPop(anchor) {
       buildFields();
       const f = $(`#stage .hbox[data-box="${id}"]`);
       if (f) { f.scrollIntoView({ block: 'center' }); requestAnimationFrame(() => openBoxPop(f, id)); }
-    } }, h('b', {}, pr.name), h('small', {}, k === 'custom' ? 'HTML · CSS를 직접' : pr.text.split('\n')[0])));
+    } }, h('b', {}, pr.name)));
   });
   openPop(h('div', {}, h('div', { class: 'pop-title' }, 'HTML 상자 넣기'),
     h('p', { class: 'pop-note', style: 'margin:0 2px 10px' }, '커서가 있는 곳에 상자를 넣어요. 상자 안 글은 따로 써요.'), tiles), anchor);
@@ -3547,16 +3577,24 @@ function openBoxPop(anchor, id) {
     const k = presetSel.value;
     const edited = BOX_PRESETS[bx.preset] && bx.code !== BOX_PRESETS[bx.preset].code;
     if (edited && !confirm('고친 HTML 코드가 새 모양으로 바뀌어요. 바꿀까요?')) { presetSel.value = bx.preset; return; }
-    commit(); upd({ preset: k, code: BOX_PRESETS[k].code }, true); commit();
+    const np = BOX_PRESETS[k];
+    commit(); upd({ preset: k, code: np.code, fields: np.fields ? copyState(np.fields) : undefined, vals: np.fields ? { ...Object.fromEntries(np.fields.flat().map(([fk, , dv]) => [fk, dv])), ...(state.boxes[id].vals || {}) } : state.boxes[id].vals }, true); commit();
   });
   const codeIn = h('textarea', { class: 'input code-input', rows: 8, spellcheck: 'false' }, bx.code);
   let codeT;
   codeIn.addEventListener('input', () => { clearTimeout(codeT); codeT = setTimeout(() => upd({ code: codeIn.value, preset: 'custom' }), 350); });
   const [, li] = boxLineIndex(id);
+  const fieldRows = bx.fields || (BOX_PRESETS[bx.preset] || {}).fields || [];
+  const fieldsEl = fieldRows.length ? h('div', { class: 'box-fields' }, fieldRows.map((row) => h('div', { class: 'bf-row' }, row.map(([fk, fl, dv]) => {
+    const cur = bx.vals && fk in bx.vals ? bx.vals[fk] : dv;
+    return h('label', { class: 'bf' }, h('span', {}, fl),
+      h('input', { type: 'text', class: 'input', value: cur, placeholder: dv, oninput: (e) => upd({ vals: { ...(state.boxes[id].vals || {}), [fk]: e.target.value } }) }));
+  })))) : null;
   openPop(h('div', { class: 'box-pop' },
     h('div', { class: 'pop-title' }, `HTML 상자 · ${(BOX_PRESETS[bx.preset] || BOX_PRESETS.custom).name}`),
     usesHead ? h('div', { class: 'pop-label' }, '머리글') : null, usesHead ? headIn : null,
     h('div', { class: 'pop-label' }, '내용'), textIn,
+    fieldsEl ? h('div', { class: 'pop-label' }, '수치') : null, fieldsEl,
     h('div', { class: 'pop-label row-top' }, '폭', out), sl,
     h('div', { class: 'pop-label' }, '정렬'), segEl(ALIGN3, bx.align || 'center', (v) => upd({ align: v }), true),
     h('div', { class: 'pop-label' }, '글 속 위치'),
