@@ -134,7 +134,7 @@ const DEFAULTS = {
   typo: { font: 'Noto Serif KR', fontCustom: '', size: 15, lh: 1.75, ls: -0.01, weight: 400, color: '#2a2826', align: 'left', gap: 10, indentOn: false, indent: 1, indentWhere: 'all', hl: '#ffe58a', hlStyle: 'under',
     wordBreak: 'auto', noOrphan: true, ws: 0, palt: false, kern: true, alignLast: 'auto', measure: 0, dropcap: false, dropLines: 2, annoColor: '#e8506a',
     // 옆 메모: 문장 · 말풍선 · 이미지 · 상자 바로 옆(또는 아래)에 다는 작은 멘트
-    note: { pos: 'side', w: 30, scale: 82, color: '#e8506a', mark: 'dot', bg: true },
+    note: { pos: 'side', w: 30, scale: 82, color: '#e8506a', mark: 'dot' },
     // 괄호 안 글자: ( ) 안을 본문과 다르게 (크기는 둘레 글자에 대한 비율)
     paren: { on: false, fontOn: false, font: 'Gowun Batang', fontCustom: '', scale: 90, weight: 0, colorOn: false, color: '#8b95a1', italic: false } },
   head: { font: 'Noto Serif KR', fontCustom: '', size: 19, weight: 700, color: '#1d1c1a', align: 'left', creditFont: 'Noto Serif KR', creditFontCustom: '', creditSize: 11.5, creditWeight: 400, creditColor: '#8a857c', creatorFont: 'Noto Serif KR', creatorFontCustom: '', creatorSize: 11.5, creatorWeight: 700, creatorColor: '#6b665e', creditAlign: 'right', creditLayout: 'inline', quoteMark: false, accent: '#c8a46a' },
@@ -2021,39 +2021,46 @@ function withDropcap(on, html) {
   if (!m) return html;
   return m[1] + `<span class="dc">${m[2]}${m[3]}</span>` + html.slice(m[0].length);
 }
-/* 옆 메모 이음선: 메모 왼쪽 끝에서 덩어리의 실제 오른쪽 끝(말풍선 · 이미지 · 가장 긴 글줄)까지 선을 그음 */
+/* 옆 메모 이음선: 메모를 내용의 실제 끝(글줄 끝 · 말풍선 · 이미지) 가까이로 당겨 붙이고, 그 사이를 짧은 선으로 이음.
+   메모 높이에 걸치는 글줄은 피해서 겹치지 않게 함 */
 function fitNoteLeads(root) {
   const items = [...root.querySelectorAll('.noted.note-side')];
   if (!items.length) return;
   const sc = root.getBoundingClientRect().width / (root.offsetWidth || 1) || 1;
   const reads = items.map((box) => {
     const block = box.firstElementChild, note = box.querySelector('.side-note');
-    let tgt = block.querySelector('.bubble') || block.querySelector('.img-box') || block.querySelector('.hb-root > *') || null;
-    let right, top;
-    if (tgt) { const r = tgt.getBoundingClientRect(); right = r.right; top = r.top; }
+    const br = block.getBoundingClientRect();
+    const tgt = block.querySelector('.bubble') || block.querySelector('.img-box') || block.querySelector('.hb-root > *') || null;
+    let rects;
+    if (tgt) rects = [tgt.getBoundingClientRect()];
     else {
-      // 글 문단: 첫 줄의 실제 끝
       const rg = document.createRange(); rg.selectNodeContents(block);
-      const rects = [...rg.getClientRects()].filter((x) => x.width > 0);
-      const first = rects.length ? rects.filter((x) => Math.abs(x.top - rects[0].top) < 2) : [];
-      right = first.length ? Math.max(...first.map((x) => x.right)) : block.getBoundingClientRect().right;
-      top = block.getBoundingClientRect().top;
+      rects = [...rg.getClientRects()].filter((x) => x.width > 0);
+      if (!rects.length) rects = [br];
     }
+    const top = Math.min(...rects.map((x) => x.top));
     const nr = note.getBoundingClientRect();
-    // 말풍선처럼 이름표 아래에서 시작하는 덩어리는 메모도 그 높이로 내림
-    const dy = Math.max(0, (top - block.getBoundingClientRect().top) / sc);
-    return { note, dy, lead: Math.max(6, (nr.left - right) / sc - 3) };
+    const dy = Math.max(0, top - br.top); // 말풍선은 이름표 아래 높이에 맞춤
+    const nTop = br.top + dy, nBot = nTop + nr.height;
+    const over = rects.filter((x) => x.bottom > nTop + 1 && x.top < nBot - 1);
+    const right = Math.max(...(over.length ? over : [rects[0]]).map((x) => x.right));
+    const fs = parseFloat(getComputedStyle(note).fontSize) || 12;
+    const want = right + fs * 1.9 * sc; // 내용 끝에서 이만큼만 떨어지게
+    const shift = Math.max(0, nr.left - want);
+    // 선 끝(원 · 화살표)이 글자에 붙지 않게 내용 끝에서 살짝 띄움
+    return { note, dy: dy / sc, shift: shift / sc, lead: Math.max(fs * 0.8, (nr.left - shift - right) / sc - fs * 0.35) };
   });
-  reads.forEach(({ note, dy, lead }) => {
+  reads.forEach(({ note, dy, shift, lead }) => {
     note.style.setProperty('--lead', `${lead.toFixed(1)}px`);
     note.style.marginTop = dy > 1 ? `${dy.toFixed(1)}px` : '';
+    note.style.marginLeft = shift > 1 ? `${(-shift).toFixed(1)}px` : '';
   });
 }
 /* 옆 메모 상자: [덩어리 | 메모] 또는 덩어리 아래에 메모 */
 function wrapNote(el, note) {
   const N = state.typo.note || {};
-  const mark = N.mark === 'arrow' ? 'line' : (N.mark || 'dot');
-  const box = h('div', { class: `noted note-${N.pos === 'below' ? 'below' : 'side'} note-mark-${mark}${N.bg === false ? '' : ' note-bg'}` });
+  const mark = ['dot', 'arrow', 'line', 'none'].includes(N.mark) ? N.mark : 'dot';
+  const box = h('div', { class: `noted note-${N.pos === 'below' ? 'below' : 'side'} note-mark-${mark}` });
   box.append(el, h('aside', { class: 'side-note', html: fmt(note) }));
   return box;
 }
@@ -2454,8 +2461,7 @@ const SCHEMA = {
       { t: 'slider', p: 'typo.note.w', l: '메모 칸 너비', min: 15, max: 50, step: 1, u: '%', show: () => state.typo.note.pos !== 'below' },
       { t: 'slider', p: 'typo.note.scale', l: '글자 크기', sub: '본문 글자에 대한 비율', min: 50, max: 110, step: 1, u: '%' },
       { t: 'color', p: 'typo.note.color', l: '색' },
-      { t: 'seg', p: 'typo.note.mark', l: '이음선', o: [['dot', '점과 선'], ['line', '선만'], ['none', '없음']], block: true },
-      { t: 'switch', p: 'typo.note.bg', l: '메모지 배경', sub: '메모 뒤에 옅은 색 메모지를 깔아요' },
+      { t: 'seg', p: 'typo.note.mark', l: '선 끝 모양', o: [['dot', '원'], ['arrow', '화살표'], ['line', '선만'], ['none', '선 없음']], block: true },
     ] },
     { sec: '말풍선 글자', rows: [
       { t: 'font', p: 'bubble.font', c: 'bubble.fontCustom' },
