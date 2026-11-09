@@ -3342,7 +3342,7 @@ const BOX_PRESETS = {
   .x-body { white-space: pre-wrap; line-height: 1.7; }
 </style>
 <div class="x-post"><i class="x-tape"></i><div class="x-head">{{머리글}}</div><div class="x-body">{{내용}}</div></div>` },
-  noti: { name: '문자 알림', head: '랑해', text: '지금 어디야? 데리러 갈게', code: `<style>
+  noti: { name: '문자 알림', head: '랑해', text: '지금 어디냐고', code: `<style>
   .x-noti { display: flex; gap: .75em; padding: .85em 1em; border-radius: 1.1em; color: #1c1c1e;
     background: rgba(246,246,248,.96); box-shadow: 0 .1em .2em rgba(0,0,0,.06), 0 .5em 1.2em rgba(0,0,0,.12); }
   .x-ico { position: relative; flex: none; width: 2.2em; height: 2.2em; border-radius: .6em; background: linear-gradient(#6ce27f, #2fbf4f); }
@@ -3365,6 +3365,62 @@ const BOX_PRESETS = {
     background: repeating-linear-gradient(180deg, transparent 0 calc(1.75em - 1px), rgba(170,140,110,.35) calc(1.75em - 1px) 1.75em); }
 </style>
 <div class="x-letter"><div class="x-head">{{머리글}}</div><div class="x-body">{{내용}}</div></div>` },
+  game: { name: '게임 대화창', head: '랑해', text: '……그래서, 나랑 같이 갈 거야?', code: `<style>
+  .x-game { position: relative; margin-top: .9em; padding: 1.15em 1.3em 1.4em; color: #f4f6ff; border-radius: .5em;
+    background: linear-gradient(180deg, rgba(36,52,120,.96), rgba(16,22,64,.96));
+    box-shadow: inset 0 0 0 .18em #fff, inset 0 0 0 .32em #2b3c8f, 0 .4em 1em rgba(10,14,40,.35); }
+  .x-name { position: absolute; top: -.95em; left: 1em; padding: .25em .9em; font-weight: 700; font-size: .9em; color: #fff;
+    border-radius: .35em; background: linear-gradient(180deg, #4a63d8, #2a3aa0); box-shadow: inset 0 0 0 .14em #fff; }
+  .x-name:empty { display: none; }
+  .x-txt { white-space: pre-wrap; line-height: 1.7; text-shadow: 0 .08em 0 rgba(0,0,0,.4); }
+  .x-next { position: absolute; right: 1em; bottom: .55em; font-size: .7em; color: #ffe27a; }
+</style>
+<div class="x-game"><div class="x-name">{{머리글}}</div><div class="x-txt">{{내용}}</div><i class="x-next">▼</i></div>` },
+  quest: { name: '퀘스트 알림', head: '새로운 퀘스트', text: '랑해에게 연락하기\n보상: 경험치 +100', code: `<style>
+  .x-quest { max-width: 24em; margin: 0 auto; padding: .9em 1.2em 1em; text-align: center; color: #3b2a10; border-radius: .4em;
+    background: linear-gradient(180deg, #fff6d8, #f3dfa6); border: .14em solid #b98a2e;
+    box-shadow: inset 0 0 0 .22em #fff3cc, 0 .35em .9em rgba(80,50,0,.25); }
+  .x-head { display: inline-block; margin-bottom: .55em; padding: .2em 1em; font-size: .78em; font-weight: 800; letter-spacing: .12em;
+    color: #fff; background: #b98a2e; border-radius: 1em; }
+  .x-head:empty { display: none; }
+  .x-head::before { content: '! '; }
+  .x-txt { white-space: pre-wrap; line-height: 1.65; font-weight: 600; }
+</style>
+<div class="x-quest"><div class="x-head">{{머리글}}</div><div class="x-txt">{{내용}}</div></div>` },
+  window98: { name: '레트로 창', head: '알림', text: '읽지 않은 메시지가 1개 있습니다.', code: `<style>
+  .x-win { max-width: 24em; margin: 0 auto; background: #c3c3c3; color: #111;
+    box-shadow: inset .1em .1em 0 #fff, inset -.1em -.1em 0 #555, .25em .25em 0 rgba(0,0,0,.18); padding: .2em; }
+  .x-bar { display: flex; align-items: center; justify-content: space-between; padding: .25em .4em;
+    background: linear-gradient(90deg, #0a2a8a, #3a78d8); color: #fff; font-weight: 700; font-size: .82em; }
+  .x-x { width: 1.2em; height: 1.05em; background: #c3c3c3; color: #111; font-size: .85em; line-height: 1.05em; text-align: center;
+    box-shadow: inset .08em .08em 0 #fff, inset -.08em -.08em 0 #555; }
+  .x-in { display: flex; gap: .8em; align-items: flex-start; padding: 1em 1em .6em; }
+  .x-ic { flex: none; width: 1.8em; height: 1.8em; border-radius: 50%; background: #2f6be0; color: #fff; font-weight: 800; text-align: center; line-height: 1.8em; }
+  .x-txt { white-space: pre-wrap; line-height: 1.6; }
+  .x-ok { display: block; width: 5.5em; margin: .2em auto .7em; padding: .25em 0; text-align: center; font-size: .85em; background: #c3c3c3;
+    box-shadow: inset .08em .08em 0 #fff, inset -.08em -.08em 0 #555, 0 0 0 .08em #111; }
+</style>
+<div class="x-win"><div class="x-bar"><span>{{머리글}}</span><span class="x-x">×</span></div><div class="x-in"><span class="x-ic">i</span><div class="x-txt">{{내용}}</div></div><span class="x-ok">확인</span></div>` },
+  receipt: { name: '영수증', head: '니니닝 상점', text: '아이스 아메리카노   4,500\n조각 케이크         6,800\n----------------------\n합계               11,300', code: `<style>
+  .x-rc { max-width: 18em; margin: 0 auto; padding: 1.2em 1.2em 1.6em; color: #2a2a2a; background: #fdfdf8;
+    font-family: 'Courier New', monospace; box-shadow: 0 .3em .8em rgba(0,0,0,.12);
+    -webkit-mask: radial-gradient(circle at 50% 100%, transparent .35em, #000 .37em) 0 100% / .9em .7em repeat-x, linear-gradient(#000 0 0) 0 0 / 100% calc(100% - .6em) no-repeat;
+    mask: radial-gradient(circle at 50% 100%, transparent .35em, #000 .37em) 0 100% / .9em .7em repeat-x, linear-gradient(#000 0 0) 0 0 / 100% calc(100% - .6em) no-repeat; }
+  .x-head { text-align: center; font-weight: 700; letter-spacing: .15em; padding-bottom: .6em; margin-bottom: .6em; border-bottom: .1em dashed #999; }
+  .x-head:empty { display: none; }
+  .x-txt { white-space: pre-wrap; font-size: .88em; line-height: 1.6; }
+  .x-foot { margin-top: .8em; text-align: center; font-size: .72em; letter-spacing: .2em; color: #777; }
+</style>
+<div class="x-rc"><div class="x-head">{{머리글}}</div><div class="x-txt">{{내용}}</div><div class="x-foot">THANK YOU</div></div>` },
+  chalk: { name: '칠판', head: '오늘의 한마디', text: '포기하지 말자!', code: `<style>
+  .x-board { padding: 1.3em 1.4em 1.5em; color: #f2f4ef; text-align: center; border-radius: .3em;
+    background: radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.07), transparent 60%), #2f4a3a;
+    box-shadow: inset 0 0 0 .55em #8a6440, inset 0 0 0 .65em rgba(0,0,0,.2), 0 .4em 1em rgba(0,0,0,.2); }
+  .x-head { font-size: .8em; letter-spacing: .1em; opacity: .75; margin-bottom: .5em; }
+  .x-head:empty { display: none; }
+  .x-txt { white-space: pre-wrap; line-height: 1.6; font-size: 1.15em; text-shadow: 0 0 .06em rgba(255,255,255,.6); }
+</style>
+<div class="x-board"><div class="x-head">{{머리글}}</div><div class="x-txt">{{내용}}</div></div>` },
   custom: { name: '직접 만들기', head: '머리글', text: '여기에 내용을 써요', code: `<style>
   /* 이 상자 안에서만 쓰이는 CSS예요. {{머리글}} · {{내용}} 자리에 입력한 글이 들어가요 */
   .x-box { padding: 1em 1.2em; border-radius: .7em; background: #ffffff; border: 1px solid #e5e8eb; }
