@@ -1761,34 +1761,21 @@ img[src^="nnimg:"] { visibility: hidden; }
 }
 .page-wrap .side-note, .page-wrap .anno-n { cursor: pointer; }
 
-/* 단어 · 구 메모: 본문과 다른 층 — 글 흐름 · 줄 간격을 바꾸지 않고, 글자를 가리지 않음 */
-.card .narr { --lh-here: var(--text-lh); }
-.card .bubble { --lh-here: var(--b-lh); }
-.card .anno { position: relative; display: inline; text-indent: 0; --nfs: calc(.8em * var(--note-scale, .82)); }
+/* 메모: 본문 위에 따로 얹는 층 (배치는 layoutMemos) */
+.card .anno { display: inline; }
+.card .anno-n { display: none; }
 .card .anno-ul > .anno-t { text-decoration: underline; text-decoration-color: var(--note-color, #222); text-decoration-style: var(--ul-style, solid);
   text-decoration-thickness: .07em; text-underline-offset: .22em; text-decoration-skip-ink: none; }
-.card .anno-n {
-  position: absolute; z-index: 1; font-weight: 600; font-style: normal; letter-spacing: 0; text-indent: 0; text-decoration: none;
-  color: var(--note-color, #222); white-space: nowrap; line-height: 1;
+.card > .memo-layer { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+.card .memo-lines { position: absolute; left: 0; top: 0; overflow: visible; }
+.card .memo-note {
+  position: absolute; max-width: 14em; font-family: var(--text-font); font-weight: 600; line-height: 1.3; letter-spacing: 0;
+  color: var(--note-color, #222); white-space: pre-wrap; word-break: keep-all; overflow-wrap: anywhere; text-align: left; pointer-events: auto;
 }
-/* 위 · 아래: 줄 사이 빈 틈에만 (글씨 크기도 그 틈에 맞춰 작아짐) */
-.card .anno-above > .anno-n, .card .anno-below > .anno-n {
-  left: 50%; transform: translateX(-50%);
-  font-size: clamp(.5em, calc((var(--lh-here, 1.6) - 1.12) * 1em), var(--nfs));
-}
-.card .anno-above > .anno-n { bottom: calc(100% - .04em); }
-.card .anno-below > .anno-n { top: calc(100% - .02em); }
-/* 옆: 문단 오른쪽 메모 칸 + 줄 아래 틈으로 이은 선 */
-.card .narr.anno-gutter { position: relative; padding-right: var(--note-w, 30%); }
-.card .anno-side { position: static; }
-.card .anno-side > .anno-n {
-  font-size: var(--nfs); line-height: 1.35; white-space: normal; word-break: keep-all;
-  width: calc(var(--note-w, 30%) - 1em); max-width: 12em; transform: translateY(-50%);
-}
-.card .anno-side:not(.m-none) > .anno-n::before { content: ''; position: absolute; right: calc(100% + .25em); top: 50%; width: calc(var(--lead, 1em) - .25em); height: 1.1px; margin-top: -.55px;
-  background: repeating-linear-gradient(90deg, currentColor 0 .3em, transparent .3em .55em); opacity: .55; } /* 점선이라 밑줄로 보이지 않게 */
-.card .anno-side.m-dot > .anno-n::after { content: ''; position: absolute; right: calc(100% + var(--lead, 1em) - .2em); top: 50%; width: .38em; height: .38em; margin-top: -.19em; border-radius: 50%; background: currentColor; }
-.card .anno-side.m-arrow > .anno-n::after { content: ''; position: absolute; right: calc(100% + var(--lead, 1em) - .45em); top: 50%; margin-top: -.25em; border-right: .45em solid currentColor; border-top: .25em solid transparent; border-bottom: .25em solid transparent; }
+.card .memo-word { white-space: nowrap; max-width: none; }
+.card .memo-tight { font-size: .55em !important; line-height: 1; }
+.card .narr.memo-gutter { padding-right: var(--note-w, 28%); }
+.page-wrap .memo-note { cursor: pointer; }
 
 /* 메모 창 */
 .memo-pop .input { width: 100%; }

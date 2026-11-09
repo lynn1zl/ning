@@ -134,7 +134,7 @@ const DEFAULTS = {
   typo: { font: 'Noto Serif KR', fontCustom: '', size: 15, lh: 1.75, ls: -0.01, weight: 400, color: '#2a2826', align: 'left', gap: 10, indentOn: false, indent: 1, indentWhere: 'all', hl: '#ffe58a', hlStyle: 'under',
     wordBreak: 'auto', noOrphan: true, ws: 0, palt: false, kern: true, alignLast: 'auto', measure: 0, dropcap: false, dropLines: 2, annoColor: '#e8506a',
     // 옆 메모: 문장 · 말풍선 · 이미지 · 상자 바로 옆(또는 아래)에 다는 작은 멘트
-    note: { pos: 'side', ipos: 'above', w: 30, scale: 82, color: '#222222', mark: 'dot', ul: true },
+    note: { w: 28, scale: 82, color: '#222222', mark: 'none', ul: true },
     ulStyle: 'solid', ulColorOn: false, ulColor: '#e8506a',
     // 괄호 안 글자: ( ) 안을 본문과 다르게 (크기는 둘레 글자에 대한 비율)
     paren: { on: false, fontOn: false, font: 'Gowun Batang', fontCustom: '', scale: 90, weight: 0, colorOn: false, color: '#8b95a1', italic: false } },
@@ -492,8 +492,7 @@ const POS_MARK = { above: '^', below: '_', side: '>' };
 const attrRaw = (t) => t.replace(/["\[\]*_~=|]/g, (c) => `&#${c.charCodeAt(0)};`);
 function annoHtml(m, p, u, note, inner) {
   const N = state.typo.note || {};
-  const pos = MEMO_POS[p] || N.ipos || 'above';
-  return `<span class="anno anno-${pos} m-${N.mark || 'dot'}${u ? ' anno-ul' : ''}" data-src="${attrRaw(m)}"><span class="anno-t">${inner}</span><span class="anno-n">${note}</span></span>`;
+  return `<span class="anno${u ? ' anno-ul' : ''}" data-src="${attrRaw(m)}"><span class="anno-t">${inner}</span><span class="anno-n">${note}</span></span>`;
 }
 function fmt(s) {
   return esc(s)
@@ -646,6 +645,11 @@ function migrate(st, raw) {
   if (!st.file) st.file = copyState(DEFAULTS.file);
   // 메모 기본 색을 검정으로 (예전 기본값 빨강을 그대로 쓰던 경우만)
   if (st.typo && st.typo.note && st.typo.note.color === '#e8506a') st.typo.note.color = '#222222';
+  // 메모 위치 설정이 없어짐 (자동 배치) · 선 없음이 기본
+  if (st.typo && st.typo.note && ('pos' in st.typo.note || 'ipos' in st.typo.note)) {
+    if (st.typo.note.mark === 'dot') st.typo.note.mark = 'none';
+    delete st.typo.note.pos; delete st.typo.note.ipos;
+  }
   // 이전 버전: 문단 구분 택1(간격/들여쓰기) → 들여쓰기 켜기 + 문단 간격 따로
   if (st.typo && 'paraMode' in st.typo) {
     if (st.typo.paraMode === 'indent') { st.typo.indentOn = true; st.typo.indentWhere = 'cont'; st.typo.gap = 0; }
@@ -1617,7 +1621,6 @@ function renderBlock(b) {
     if (dropcapPending && !b.cont) { drop = ' dropcap'; dropcapPending = false; }
     const p = h('p', { class: 'narr' + drop + (b.ind && !b.cont ? ' ind' : '') + (b.cont ? ' cont' : '') + (b.key ? ' was-bubble' : ''), 'data-key': b.key || false, html: wrapParens(withDropcap(drop, state.typo.noOrphan === false ? fmt(b.text) : fmtNoOrphan(b.text, state.typo.align === 'justify' || state.typo.wordBreak === 'char'))) });
     if (b.floatImg && state.images[b.floatImg.id]) { p._float = inlineFigure(b.floatImg.id, b.floatImg.alt); p.prepend(p._float); }
-    if (p.querySelector('.anno-side')) p.classList.add('anno-gutter');
     return p;
   }
   if (b.type === 'gap') { const g = h('div', { class: 'gap' }); g.style.setProperty('--gap-n', b.n || 1); return g; }
@@ -1675,7 +1678,6 @@ function renderBlock(b) {
     for (const t of b.tl) inner += '\n<span class="tl">' + tlHtml(t, false) + '</span>';
   }
   const bub = h('div', { class: 'bubble', html: wrapParens(inner) });
-  bub.querySelectorAll('.anno-side').forEach((x) => x.classList.replace('anno-side', 'anno-above'));
   const ov = state.overrides[b.key] || {};
   if (ov.img) {
     const box = h('span', { class: 'bimg-box', 'data-key': b.key }, h('img', { src: ov.img, alt: '', draggable: 'false' }), h('span', { class: 'stk-ui rs-handle', title: '끌어서 크기 조절' }));
@@ -2098,6 +2100,175 @@ function fitAnnoSide(root) {
     }
   }
 }
+/* =========================================================
+   메모 자동 배치: 본문 위에 따로 얹는 층(.memo-layer)에 둠
+   - 메모를 단 글자 · 덩어리 주변에서 글자 · 그림과 겹치지 않는 빈 곳(오른쪽 → 위 → 아래 → 왼쪽)을 찾아 바로 붙임
+   - 빈 곳이 없으면: 선을 쓰는 설정이면 여백(문단 오른쪽 메모 칸 · 말풍선 옆)으로 빼고 선으로 이음,
+     선 없음이면 줄 사이 틈에 작게 붙임
+   ========================================================= */
+function layoutMemos(card, pass = 0) {
+  let layer = card.querySelector(':scope > .memo-layer');
+  const words = [...card.querySelectorAll('.anno')];
+  const blocks = [...card.querySelectorAll('[data-memo]')];
+  if (!words.length && !blocks.length) { if (layer) layer.remove(); return; }
+  if (!layer) { layer = h('div', { class: 'memo-layer' }); card.append(layer); }
+  layer.innerHTML = '';
+  const N = state.typo.note || {};
+  const withLine = N.mark && N.mark !== 'none';
+  const cr = card.getBoundingClientRect();
+  const sc = cr.width / (card.offsetWidth || 1) || 1;
+  const R = (r) => ({ l: (r.left - cr.left) / sc, t: (r.top - cr.top) / sc, r: (r.right - cr.left) / sc, b: (r.bottom - cr.top) / sc });
+  const flow = card.querySelector('.flow');
+  const fr = R(flow.getBoundingClientRect());
+  const W0 = card.offsetWidth, H0 = card.offsetHeight;
+  // 피해야 할 것: 글자 줄 조각 · 그림 · 상자 · 말풍선 · 프로필 · 이름
+  const rg = document.createRange();
+  const textRectsOf = (root) => {
+    const out = [];
+    const tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: (n) => (n.parentElement.closest('.anno-n, .memo-layer, style') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT) });
+    let n;
+    while ((n = tw.nextNode())) { if (!n.data.trim()) continue; rg.selectNodeContents(n); for (const x of rg.getClientRects()) if (x.width > 0 && x.height > 0) out.push(R(x)); }
+    return out;
+  };
+  const obstacles = textRectsOf(flow);
+  for (const el of flow.querySelectorAll('img, .hb-root > *, .bubble, .avatar, .name, hr, .card-title')) obstacles.push({ ...R(el.getBoundingClientRect()), el });
+  for (const el of card.querySelectorAll(':scope > .card-title, :scope > .card-footer, :scope > .sticker')) obstacles.push(R(el.getBoundingClientRect()));
+  const placed = [];
+  const hits = (a, skipEl) => obstacles.some((o) => o.el !== skipEl && a.l < o.r + 2 && a.r > o.l - 2 && a.t < o.b + 1 && a.b > o.t - 1)
+    || placed.some((o) => a.l < o.r + 3 && a.r > o.l - 3 && a.t < o.b + 2 && a.b > o.t - 2);
+  const inside = (a) => a.l >= 4 && a.t >= 2 && a.r <= W0 - 4 && a.b <= H0 - 2;
+  const needGutter = new Set(), needSpace = new Map();
+  const svgLines = [];
+  const make = (html, src, kind, fs) => {
+    const n = h('div', { class: `memo-note memo-${kind}`, html, 'data-src': src || false });
+    n.style.fontSize = `${fs}px`;
+    layer.append(n);
+    return n;
+  };
+  const put = (n, x, y) => { n.style.left = `${x.toFixed(1)}px`; n.style.top = `${y.toFixed(1)}px`; placed.push({ l: x, t: y, r: x + n.offsetWidth, b: y + n.offsetHeight }); };
+  // 한 메모 배치: tg = 메모가 가리키는 자리(카드 좌표), box = 그 글자가 든 덩어리, skip = 겹침 검사에서 뺄 말풍선
+  const place = (n, tg, box, skip, isNarr) => {
+    const w = n.offsetWidth, hh = n.offsetHeight, g = 4;
+    const cx = (tg.l + tg.r) / 2;
+    const clampX = (x) => Math.max(fr.l, Math.min(x, W0 - 6 - w));
+    const cands = [
+      { l: tg.r + g + 2, t: (tg.t + tg.b) / 2 - hh / 2 },          // 오른쪽
+      { l: clampX(cx - w / 2), t: tg.t - hh - g + 1 },              // 위
+      { l: clampX(cx - w / 2), t: tg.b + g - 1 },                   // 아래
+      { l: tg.l - g - 2 - w, t: (tg.t + tg.b) / 2 - hh / 2 },      // 왼쪽
+      { l: clampX(tg.l), t: tg.t - hh - g + 1 },                    // 위 (왼쪽 맞춤)
+      { l: clampX(tg.l), t: tg.b + g - 1 },                         // 아래 (왼쪽 맞춤)
+    ];
+    for (const c of cands) {
+      const a = { l: c.l, t: c.t, r: c.l + w, b: c.t + hh };
+      if (inside(a) && !hits(a, skip)) { put(n, a.l, a.t); return true; }
+    }
+    return false;
+  };
+  const marginPlace = (n, tg, x0, lineEl) => {
+    const w = n.offsetWidth, hh = n.offsetHeight;
+    // 선은 그 줄과 다음 줄 사이 틈의 가운데로 (밑줄처럼 보이지 않게)
+    const lhPx = lineEl ? parseFloat(getComputedStyle(lineEl).lineHeight) || 0 : 0;
+    const gap = Math.max(0, lhPx - (tg.b - tg.t));
+    const y0 = tg.b + Math.max(1.5, gap / 2);
+    let y = y0 - hh / 2;
+    let a = { l: x0, t: y, r: x0 + w, b: y + hh };
+    let guard = 0;
+    while (hits(a) && guard++ < 40) { y += 3; a = { l: x0, t: y, r: x0 + w, b: y + hh }; }
+    put(n, x0, y);
+    svgLines.push({ x1: tg.r + 1, y1: y0, x2: x0 - 3, y2: y + hh / 2 });
+  };
+  const memoFs = (el) => (parseFloat(getComputedStyle(el).fontSize) || 15) * 0.8 * ((N.scale || 82) / 100);
+
+  // 단어 · 구 메모
+  for (const an of words) {
+    const t = an.querySelector('.anno-t');
+    const rs = [...t.getClientRects()].filter((x) => x.width > 0);
+    if (!rs.length) continue;
+    const tg = R(rs[rs.length - 1]);
+    const bub = an.closest('.bubble');
+    const para = an.closest('.narr');
+    const n = make(an.querySelector('.anno-n').innerHTML, an.dataset.src, 'word', memoFs(an));
+    if (place(n, tg, null, bub)) continue;
+    if (withLine && para) {
+      if (!para.classList.contains('memo-gutter')) { needGutter.add(para); n.remove(); continue; }
+      const pr = R(para.getBoundingClientRect());
+      const padR = parseFloat(getComputedStyle(para).paddingRight) / 1 || 0;
+      marginPlace(n, tg, pr.r - padR + 10, para);
+      continue;
+    }
+    if (withLine && bub) {
+      const br = R(bub.getBoundingClientRect());
+      if (fr.r - br.r - 10 >= n.offsetWidth) { marginPlace(n, tg, br.r + 10, bub); continue; }
+    }
+    // 마지막: 줄 사이 틈에 작게 (글자 위)
+    n.classList.add('memo-tight');
+    const lh = (tg.b - tg.t);
+    const w = n.offsetWidth, hh = n.offsetHeight;
+    put(n, Math.max(fr.l, Math.min((tg.l + tg.r) / 2 - w / 2, W0 - 6 - w)), tg.t - hh + lh * 0.06);
+  }
+
+  // 문장 · 말풍선 · 이미지 · 상자 메모
+  for (const el of blocks) {
+    let tgEl = el.querySelector('.bubble') || el.querySelector('.img-box') || el.querySelector('.hb-root > *');
+    let tg;
+    if (tgEl) tg = R(tgEl.getBoundingClientRect());
+    else {
+      const rs = textRectsOf(el);
+      if (!rs.length) continue;
+      const lastTop = Math.max(...rs.map((x) => x.t));
+      const line = rs.filter((x) => Math.abs(x.t - lastTop) < 2);
+      tg = { l: Math.min(...line.map((x) => x.l)), r: Math.max(...line.map((x) => x.r)), t: lastTop, b: Math.max(...line.map((x) => x.b)) };
+    }
+    const n = make(fmt(el.dataset.memo), null, 'block', memoFs(el.classList.contains('msg') ? el.querySelector('.bubble') || el : el));
+    n.dataset.note = el.dataset.memo.split('\n')[0];
+    if (place(n, tg, null, null)) continue;
+    const isNarr = el.classList.contains('narr');
+    if (withLine && isNarr) {
+      if (!el.classList.contains('memo-gutter')) { needGutter.add(el); n.remove(); continue; }
+      const pr = R(el.getBoundingClientRect());
+      marginPlace(n, tg, pr.r - (parseFloat(getComputedStyle(el).paddingRight) || 0) + 10, el);
+      continue;
+    }
+    // 둘레가 꽉 차 있으면 덩어리 아래에 자리를 만들어 바로 붙임 (글은 끊지 않음)
+    const need = n.offsetHeight + 6;
+    if ((parseFloat(el.style.marginBottom) || 0) < need - 1) { needSpace.set(el, need); n.remove(); continue; }
+    put(n, Math.max(fr.l, Math.min(tg.l, W0 - 6 - n.offsetWidth)), tg.b + 4);
+  }
+
+  // 메모 칸 · 아래 자리를 만들어야 하면 한 번 더 배치
+  if ((needGutter.size || needSpace.size) && pass < 2) {
+    needGutter.forEach((p) => p.classList.add('memo-gutter'));
+    needSpace.forEach((v, el) => { el.style.marginBottom = `${v}px`; });
+    return layoutMemos(card, pass + 1);
+  }
+  // 이음선 (선을 쓰는 설정에서 여백으로 뺀 메모만)
+  if (svgLines.length) {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'memo-lines');
+    svg.setAttribute('width', W0); svg.setAttribute('height', H0); svg.setAttribute('viewBox', `0 0 ${W0} ${H0}`);
+    const col = N.color || '#222222';
+    for (const L of svgLines) {
+      const mx = L.x2 - 6;
+      const path = document.createElementNS(svg.namespaceURI, 'path');
+      path.setAttribute('d', `M${L.x1},${L.y1} H${mx} L${L.x2},${L.y2}`);
+      path.setAttribute('fill', 'none'); path.setAttribute('stroke', col); path.setAttribute('stroke-width', '1');
+      path.setAttribute('stroke-dasharray', '3 3'); path.setAttribute('opacity', '.6');
+      svg.append(path);
+      if (N.mark === 'dot') {
+        const c = document.createElementNS(svg.namespaceURI, 'circle');
+        c.setAttribute('cx', L.x1 + 1.5); c.setAttribute('cy', L.y1); c.setAttribute('r', '2.2'); c.setAttribute('fill', col);
+        svg.append(c);
+      } else if (N.mark === 'arrow') {
+        const a = document.createElementNS(svg.namespaceURI, 'path');
+        a.setAttribute('d', `M${L.x1},${L.y1} l6,-3.2 v6.4 z`); a.setAttribute('fill', col);
+        svg.append(a);
+      }
+    }
+    layer.prepend(svg);
+  }
+}
+
 /* 문장 메모 상자: [덩어리 | 메모] · 메모 위에 덩어리 · 덩어리 아래 메모 */
 function wrapNote(el, note, posOverride) {
   const N = state.typo.note || {};
@@ -2154,11 +2325,12 @@ function render() {
   while (queue.length) {
     const b = takeNext();
     if (!b || (b.type === 'gap' && !page.flow.childElementCount)) continue;
-    const el = b.note ? wrapNote(renderBlock(b), b.note, b.notePos) : renderBlock(b);
+    const el = renderBlock(b);
+    if (b.note) el.dataset.memo = b.note;
     page.flow.append(el);
     if (!split || !overflows(page)) continue;
     const alone = page.flow.childElementCount === 1;
-    if (b.type === 'narr' && !b.note) {
+    if (b.type === 'narr') {
       const rest = splitParagraph(page, el, b, alone);
       if (rest) {
         queue.unshift({ type: 'narr', text: rest, cont: true });
@@ -2206,8 +2378,7 @@ function render() {
     pages.forEach((p) => cardObserver.observe(p.card));
   }
   pages.forEach((p) => fitTails(p.card));
-  pages.forEach((p) => fitNoteLeads(p.card));
-  pages.forEach((p) => fitAnnoSide(p.card));
+  pages.forEach((p) => layoutMemos(p.card));
   renderStickers(pages);
   htmlBgReady = applyHtmlBg(pages);
   rescale();
@@ -2504,13 +2675,11 @@ const SCHEMA = {
       { t: 'switch', p: 'typo.paren.fontOn', l: '다른 서체', show: () => state.typo.paren.on },
       { t: 'font', p: 'typo.paren.font', c: 'typo.paren.fontCustom', l: '괄호 글자 서체', show: () => state.typo.paren.on && state.typo.paren.fontOn },
     ] },
-    { sec: '메모', note: '텍스트 편집창의 ‘메모’로 달아요. 글자를 고르면 그 단어 · 구에, 안 고르면 문장 · 말풍선 · 이미지에 달려요. 미리보기에서 메모를 누르면 바로 고칠 수 있어요.', rows: [
-      { t: 'seg', p: 'typo.note.pos', l: '문장 메모 기본 위치', o: [['side', '옆'], ['above', '위'], ['below', '아래']], block: true },
-      { t: 'seg', p: 'typo.note.ipos', l: '단어 메모 기본 위치', o: [['above', '위'], ['below', '아래'], ['side', '옆']], block: true },
-      { t: 'slider', p: 'typo.note.w', l: '옆 메모 칸 너비', min: 15, max: 50, step: 1, u: '%', show: () => state.typo.note.pos === 'side' },
+    { sec: '메모', note: '텍스트 편집창의 ‘메모’로 달아요. 글자를 고르면 그 단어 · 구에, 안 고르면 문장 · 말풍선 · 이미지에 달려요. 메모는 글을 가리지 않는 빈 곳에 알아서 붙고, 미리보기에서 누르면 바로 고칠 수 있어요.', rows: [
+      { t: 'slider', p: 'typo.note.w', l: '여백 메모 칸 너비', sub: '둘레에 빈 곳이 없어 여백으로 뺄 때', min: 15, max: 45, step: 1, u: '%', show: () => state.typo.note.mark !== 'none' },
       { t: 'slider', p: 'typo.note.scale', l: '글자 크기', sub: '본문 글자에 대한 비율', min: 50, max: 110, step: 1, u: '%' },
       { t: 'color', p: 'typo.note.color', l: '색' },
-      { t: 'seg', p: 'typo.note.mark', l: '선 끝 모양', o: [['dot', '원'], ['arrow', '화살표'], ['line', '선만'], ['none', '선 없음']], block: true },
+      { t: 'seg', p: 'typo.note.mark', l: '이음선', sub: '선 없음: 늘 글자 바로 옆에 · 선을 쓰면 둘레가 꽉 찼을 때 여백으로 빼고 선으로 이어요', o: [['none', '선 없음'], ['line', '선만'], ['dot', '원'], ['arrow', '화살표']], block: true },
     ] },
     { sec: '말풍선 글자', rows: [
       { t: 'font', p: 'bubble.font', c: 'bubble.fontCustom' },
@@ -3208,7 +3377,7 @@ $('#stage').addEventListener('click', (e) => {
   if (e.target.closest('.sticker') || e.target.closest('.rs-handle')) return;
   const fig = e.target.closest('.inline-img');
   if (fig) { selectImage('inline', fig.dataset.img); return; }
-  const memo = e.target.closest('.anno, .side-note');
+  const memo = e.target.closest('.memo-note, .anno');
   if (memo) { editMemoFromPreview(memo); return; }
   const hb = e.target.closest('.hbox');
   if (hb) { openBoxPop(hb, hb.dataset.box); return; }
@@ -3975,7 +4144,6 @@ function openMemoPop(anchor) {
 }
 function openWordMemo(anchor, hit, s0, e0, sel) {
   const N = state.typo.note;
-  let pos = (hit && hit.pos) || N.ipos || 'above';
   let ul = hit ? hit.ul : N.ul !== false;
   const inp = h('input', { type: 'text', class: 'input', value: hit ? hit.note : '', placeholder: '예) 여기서 웃음 터짐', maxlength: 60 });
   const ulSw = h('input', { type: 'checkbox', class: 'switch', role: 'switch', checked: ul, onchange: (e) => { ul = e.target.checked; } });
@@ -3983,7 +4151,7 @@ function openWordMemo(anchor, hit, s0, e0, sel) {
     const note = inp.value.replace(/[|\]\n]/g, ' ').trim();
     closePop();
     const inner = hit ? hit.inner : sel;
-    const mark = (pos === (N.ipos || 'above') ? '' : POS_MARK[pos]) + (ul ? '~' : '');
+    const mark = ul ? '~' : '';
     const out = note ? `[[@${mark}${note}|${inner}]]` : inner;
     // 다음에도 같은 설정으로
     state.typo.note.ul = ul;
@@ -3993,7 +4161,6 @@ function openWordMemo(anchor, hit, s0, e0, sel) {
   openPop(h('div', { class: 'memo-pop' },
     h('div', { class: 'pop-title' }, `${memoLabel(hit ? hit.inner : sel)}에 메모`),
     inp,
-    h('div', { class: 'pop-label' }, '메모 위치'), memoPosSeg(pos, (v) => { pos = v; }),
     h('label', { class: 'row memo-ul' }, labelEl('밑줄 긋기', '메모를 단 글자에 밑줄을 그어요'), ulSw),
     h('div', { class: 'pop-foot' },
       hit ? h('button', { type: 'button', class: 'link-btn danger', onclick: () => { inp.value = ''; apply(); } }, '메모 지우기') : h('span', { class: 'memo-tip' }, '글자를 안 고르면 문장 전체에 달려요'),
@@ -4005,17 +4172,14 @@ function openLineMemo(anchor) {
   const t = noteTarget();
   if (!t.lines[t.idx] || !t.lines[t.idx].trim()) { toast('메모를 달 문장 · 말풍선 · 이미지 줄에 커서를 두거나, 글자를 골라 주세요'); src.focus(); return; }
   const curLines = t.noteIdx.map((i) => t.lines[i].trim());
-  const curPos = curLines.length ? MEMO_POS[(curLines[0].match(/^>>([\^_>]?)/) || [])[1]] : null;
-  let pos = curPos || N.pos || 'side';
   const cur = curLines.map((l) => l.replace(/^>>[\^_>]?\s?/, '')).join('\n');
   const inp = h('textarea', { class: 'input area-input', rows: 3, placeholder: '예) 여기서 표정 진짜 웃겼음' }, cur);
   const apply = () => {
     const txt = inp.value.split('\n').map((l) => l.trim()).filter(Boolean);
     closePop();
-    const pm = pos === (N.pos || 'side') ? '' : POS_MARK[pos];
     const lines = src.value.split('\n');
     const at = t.noteIdx.length ? t.noteIdx[0] : t.end + 1;
-    lines.splice(at, t.noteIdx.length, ...txt.map((l) => `>>${pm} ${l}`));
+    lines.splice(at, t.noteIdx.length, ...txt.map((l) => `>> ${l}`));
     commit();
     src.value = lines.join('\n'); state.text = src.value;
     changed(); commit();
@@ -4025,7 +4189,7 @@ function openLineMemo(anchor) {
   openPop(h('div', { class: 'memo-pop' },
     h('div', { class: 'pop-title' }, `${memoLabel(t.lines[t.idx].trim())}에 메모`),
     inp,
-    h('div', { class: 'pop-label' }, '메모 위치'), memoPosSeg(pos, (v) => { pos = v; }),
+    h('p', { class: 'memo-tip', style: 'margin:8px 2px 0' }, '메모는 글을 가리지 않는 빈 곳에 알아서 붙어요.'),
     h('div', { class: 'pop-foot' },
       cur ? h('button', { type: 'button', class: 'link-btn danger', onclick: () => { inp.value = ''; apply(); } }, '메모 지우기') : h('span', { class: 'memo-tip' }, '단어에만 달려면 글자를 골라요 · Shift+Enter 줄바꿈'),
       h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: apply }, cur ? '바꾸기' : '달기'))), anchor, null, { beside: anchor.closest && anchor.closest('#stage') ? anchor : null });
@@ -4034,7 +4198,7 @@ function openLineMemo(anchor) {
 /* 미리보기에서 메모를 누르면 입력창의 그 자리를 찾아 바로 고치기 */
 function editMemoFromPreview(el) {
   const v = src.value;
-  if (el.classList.contains('anno')) {
+  if (el.dataset.src) {
     const raw = el.dataset.src || '';
     const i = v.indexOf(raw);
     if (i < 0) return;
@@ -5234,7 +5398,7 @@ async function makeImages(indices, onProgress) {
 }
 async function makeImagesOf(cards, fontCSS, onProgress) {
   for (const card of cards) {
-    card.querySelectorAll('.narr, .bubble, .card-title, .credit, .side-note').forEach((el) => {
+    card.querySelectorAll('.narr, .bubble, .card-title, .credit').forEach((el) => {
       if (el.querySelector('.wrap-float, .bimg-box, .tok-img')) return; // 이미지가 들어간 문단은 브라우저 배치 그대로
       try { freezeLines(el, currentScale); } catch (e) { /* 원래 상태로 둠 */ }
     });
