@@ -2106,8 +2106,10 @@ function fitAnnoSide(root) {
    - 빈 곳이 없으면: 선을 쓰는 설정이면 여백(문단 오른쪽 메모 칸 · 말풍선 옆)으로 빼고 선으로 이음,
      선 없음이면 줄 사이 틈에 작게 붙임
    ========================================================= */
-function layoutMemos(card, pass = 0) {
+function layoutMemos(card) {
   let layer = card.querySelector(':scope > .memo-layer');
+  // 예전 방식이 남긴 여백 칸 · 아래 자리는 없앰 (메모는 본문 배치를 절대 바꾸지 않음)
+  card.querySelectorAll('.memo-gutter').forEach((x) => x.classList.remove('memo-gutter'));
   const words = [...card.querySelectorAll('.anno')];
   const blocks = [...card.querySelectorAll('[data-memo]')];
   if (!words.length && !blocks.length) { if (layer) layer.remove(); return; }
@@ -2119,9 +2121,8 @@ function layoutMemos(card, pass = 0) {
   const sc = cr.width / (card.offsetWidth || 1) || 1;
   const R = (r) => ({ l: (r.left - cr.left) / sc, t: (r.top - cr.top) / sc, r: (r.right - cr.left) / sc, b: (r.bottom - cr.top) / sc });
   const flow = card.querySelector('.flow');
-  const fr = R(flow.getBoundingClientRect());
   const W0 = card.offsetWidth, H0 = card.offsetHeight;
-  // 피해야 할 것: 글자 줄 조각 · 그림 · 상자 · 말풍선 · 프로필 · 이름
+  // 피해야 할 것: 글자 줄 조각 · 그림 · 상자 · 말풍선 · 프로필 · 이름 · 제목 · 출처
   const rg = document.createRange();
   const textRectsOf = (root) => {
     const out = [];
@@ -2131,137 +2132,107 @@ function layoutMemos(card, pass = 0) {
     return out;
   };
   const obstacles = textRectsOf(flow);
-  for (const el of flow.querySelectorAll('img, .hb-root > *, .bubble, .avatar, .name, hr, .card-title')) obstacles.push({ ...R(el.getBoundingClientRect()), el });
-  for (const el of card.querySelectorAll(':scope > .card-title, :scope > .card-footer, :scope > .sticker')) obstacles.push(R(el.getBoundingClientRect()));
+  for (const el of flow.querySelectorAll('img, .hb-root > *, .bubble, .avatar, .name, hr')) obstacles.push({ ...R(el.getBoundingClientRect()), el });
+  for (const el of card.querySelectorAll(':scope > .card-title, :scope > .card-footer, :scope > .sticker, :scope > .quote-mark')) obstacles.push(R(el.getBoundingClientRect()));
   const placed = [];
-  const hits = (a, skipEl) => obstacles.some((o) => o.el !== skipEl && a.l < o.r + 2 && a.r > o.l - 2 && a.t < o.b + 1 && a.b > o.t - 1)
-    || placed.some((o) => a.l < o.r + 3 && a.r > o.l - 3 && a.t < o.b + 2 && a.b > o.t - 2);
-  const inside = (a) => a.l >= 4 && a.t >= 2 && a.r <= W0 - 4 && a.b <= H0 - 2;
-  const needGutter = new Set(), needSpace = new Map();
-  const svgLines = [];
-  const make = (html, src, kind, fs) => {
-    const n = h('div', { class: `memo-note memo-${kind}`, html, 'data-src': src || false });
+  const free = (a, skipEl) => a.l >= 4 && a.t >= 2 && a.r <= W0 - 4 && a.b <= H0 - 2
+    && !obstacles.some((o) => o.el !== skipEl && a.l < o.r + 2 && a.r > o.l - 2 && a.t < o.b + 1 && a.b > o.t - 1)
+    && !placed.some((o) => a.l < o.r + 3 && a.r > o.l - 3 && a.t < o.b + 2 && a.b > o.t - 2);
+  const lines = [];
+  const make = (html, kind, fs) => {
+    const n = h('div', { class: `memo-note memo-${kind}`, html });
     n.style.fontSize = `${fs}px`;
     layer.append(n);
     return n;
   };
-  const put = (n, x, y) => { n.style.left = `${x.toFixed(1)}px`; n.style.top = `${y.toFixed(1)}px`; placed.push({ l: x, t: y, r: x + n.offsetWidth, b: y + n.offsetHeight }); };
-  // 한 메모 배치: tg = 메모가 가리키는 자리(카드 좌표), box = 그 글자가 든 덩어리, skip = 겹침 검사에서 뺄 말풍선
-  const place = (n, tg, box, skip, isNarr) => {
-    const w = n.offsetWidth, hh = n.offsetHeight, g = 4;
-    const cx = (tg.l + tg.r) / 2;
-    const clampX = (x) => Math.max(fr.l, Math.min(x, W0 - 6 - w));
-    const cands = [
-      { l: tg.r + g + 2, t: (tg.t + tg.b) / 2 - hh / 2 },          // 오른쪽
-      { l: clampX(cx - w / 2), t: tg.t - hh - g + 1 },              // 위
-      { l: clampX(cx - w / 2), t: tg.b + g - 1 },                   // 아래
-      { l: tg.l - g - 2 - w, t: (tg.t + tg.b) / 2 - hh / 2 },      // 왼쪽
-      { l: clampX(tg.l), t: tg.t - hh - g + 1 },                    // 위 (왼쪽 맞춤)
-      { l: clampX(tg.l), t: tg.b + g - 1 },                         // 아래 (왼쪽 맞춤)
+  const put = (n, a) => { n.style.left = `${a.l.toFixed(1)}px`; n.style.top = `${a.t.toFixed(1)}px`; placed.push(a); };
+  // 가장 가까운 빈 자리 찾기: 붙여 둘 자리(바로 옆 · 위 · 아래) 먼저, 그다음 둘레를 넓혀 가며
+  const nearestFree = (w, hh, tg, skip, maxDist) => {
+    const g = 4, cx = (tg.l + tg.r) / 2, cy = (tg.t + tg.b) / 2;
+    const adj = [
+      { l: tg.r + g + 2, t: cy - hh / 2 }, { l: cx - w / 2, t: tg.t - hh - g + 1 }, { l: cx - w / 2, t: tg.b + g - 1 },
+      { l: tg.l - g - 2 - w, t: cy - hh / 2 }, { l: tg.l, t: tg.t - hh - g + 1 }, { l: tg.l, t: tg.b + g - 1 },
+      { l: tg.r - w, t: tg.t - hh - g + 1 }, { l: tg.r - w, t: tg.b + g - 1 },
     ];
-    for (const c of cands) {
-      const a = { l: c.l, t: c.t, r: c.l + w, b: c.t + hh };
-      if (inside(a) && !hits(a, skip)) { put(n, a.l, a.t); return true; }
+    for (const c of adj) { const a = { l: c.l, t: c.t, r: c.l + w, b: c.t + hh }; if (free(a, skip)) return { a, d: 0 }; }
+    if (!maxDist) return null;
+    const cands = [];
+    for (let dy = -maxDist; dy <= maxDist; dy += 4) {
+      for (let x = 4; x <= W0 - 4 - w; x += 6) {
+        const t = cy - hh / 2 + dy;
+        const nx = Math.max(x - tg.r, tg.l - (x + w), 0), ny = Math.max(t - tg.b, tg.t - (t + hh), 0);
+        const d = Math.hypot(nx, ny * 1.4);
+        if (d <= maxDist) cands.push({ l: x, t, d });
+      }
     }
-    return false;
+    cands.sort((p1, p2) => p1.d - p2.d);
+    for (const c of cands) { const a = { l: c.l, t: c.t, r: c.l + w, b: c.t + hh }; if (free(a, skip)) return { a, d: c.d }; }
+    return null;
   };
-  const marginPlace = (n, tg, x0, lineEl) => {
-    const w = n.offsetWidth, hh = n.offsetHeight;
-    // 선은 그 줄과 다음 줄 사이 틈의 가운데로 (밑줄처럼 보이지 않게)
-    const lhPx = lineEl ? parseFloat(getComputedStyle(lineEl).lineHeight) || 0 : 0;
-    const gap = Math.max(0, lhPx - (tg.b - tg.t));
-    const y0 = tg.b + Math.max(1.5, gap / 2);
-    let y = y0 - hh / 2;
-    let a = { l: x0, t: y, r: x0 + w, b: y + hh };
-    let guard = 0;
-    while (hits(a) && guard++ < 40) { y += 3; a = { l: x0, t: y, r: x0 + w, b: y + hh }; }
-    put(n, x0, y);
-    svgLines.push({ x1: tg.r + 1, y1: y0, x2: x0 - 3, y2: y + hh / 2 });
+  const link = (tg, a) => {
+    // 메모 쪽 가까운 점과 글자 쪽 가까운 점을 이음
+    const tx = Math.max(tg.l, Math.min((a.l + a.r) / 2, tg.r)), ty = a.b < tg.t ? tg.t : a.t > tg.b ? tg.b : (tg.t + tg.b) / 2;
+    const ax = a.r < tg.l ? a.r + 2 : a.l > tg.r ? a.l - 2 : (a.l + a.r) / 2, ay = a.b < tg.t ? a.b + 1 : a.t > tg.b ? a.t - 1 : (a.t + a.b) / 2;
+    lines.push({ x1: tx, y1: ty, x2: ax, y2: ay });
   };
   const memoFs = (el) => (parseFloat(getComputedStyle(el).fontSize) || 15) * 0.8 * ((N.scale || 82) / 100);
-
-  // 단어 · 구 메모
-  for (const an of words) {
-    const t = an.querySelector('.anno-t');
-    const rs = [...t.getClientRects()].filter((x) => x.width > 0);
-    if (!rs.length) continue;
-    const tg = R(rs[rs.length - 1]);
-    const bub = an.closest('.bubble');
-    const para = an.closest('.narr');
-    const n = make(an.querySelector('.anno-n').innerHTML, an.dataset.src, 'word', memoFs(an));
-    if (place(n, tg, null, bub)) continue;
-    if (withLine && para) {
-      if (!para.classList.contains('memo-gutter')) { needGutter.add(para); n.remove(); continue; }
-      const pr = R(para.getBoundingClientRect());
-      const padR = parseFloat(getComputedStyle(para).paddingRight) / 1 || 0;
-      marginPlace(n, tg, pr.r - padR + 10, para);
-      continue;
-    }
-    if (withLine && bub) {
-      const br = R(bub.getBoundingClientRect());
-      if (fr.r - br.r - 10 >= n.offsetWidth) { marginPlace(n, tg, br.r + 10, bub); continue; }
-    }
-    // 마지막: 줄 사이 틈에 작게 (글자 위)
-    n.classList.add('memo-tight');
-    const lh = (tg.b - tg.t);
+  const lineTarget = (rs) => {
+    const lastTop = Math.max(...rs.map((x) => x.t));
+    const ln = rs.filter((x) => Math.abs(x.t - lastTop) < 2);
+    return { l: Math.min(...ln.map((x) => x.l)), r: Math.max(...ln.map((x) => x.r)), t: lastTop, b: Math.max(...ln.map((x) => x.b)) };
+  };
+  const placeOne = (n, tg, skip) => {
     const w = n.offsetWidth, hh = n.offsetHeight;
-    put(n, Math.max(fr.l, Math.min((tg.l + tg.r) / 2 - w / 2, W0 - 6 - w)), tg.t - hh + lh * 0.06);
-  }
+    // 선 없음: 바로 붙일 수 있는 자리만 · 선 있음: 둘레에서 가장 가까운 빈 곳까지 (선으로 이음)
+    const f = nearestFree(w, hh, tg, skip, withLine ? Math.max(120, hh * 8) : 0);
+    if (f) { put(n, f.a); if (f.d > 6 && withLine) link(tg, f.a); return; }
+    // 빈 곳이 없으면 줄 사이 틈에 작게 (본문은 그대로)
+    n.classList.add('memo-tight');
+    const w2 = n.offsetWidth, h2 = n.offsetHeight;
+    const a = { l: Math.max(4, Math.min((tg.l + tg.r) / 2 - w2 / 2, W0 - 4 - w2)), t: tg.t - h2 + (tg.b - tg.t) * 0.06 };
+    a.r = a.l + w2; a.b = a.t + h2;
+    put(n, a);
+  };
 
-  // 문장 · 말풍선 · 이미지 · 상자 메모
+  for (const an of words) {
+    const rs = [...an.querySelector('.anno-t').getClientRects()].filter((x) => x.width > 0).map(R);
+    if (!rs.length) continue;
+    const tg = rs[rs.length - 1];
+    const n = make(an.querySelector('.anno-n').innerHTML, 'word', memoFs(an));
+    n.dataset.src = an.dataset.src;
+    placeOne(n, tg, an.closest('.bubble'));
+  }
   for (const el of blocks) {
-    let tgEl = el.querySelector('.bubble') || el.querySelector('.img-box') || el.querySelector('.hb-root > *');
+    const tgEl = el.querySelector('.bubble') || el.querySelector('.img-box') || el.querySelector('.hb-root > *');
     let tg;
     if (tgEl) tg = R(tgEl.getBoundingClientRect());
-    else {
-      const rs = textRectsOf(el);
-      if (!rs.length) continue;
-      const lastTop = Math.max(...rs.map((x) => x.t));
-      const line = rs.filter((x) => Math.abs(x.t - lastTop) < 2);
-      tg = { l: Math.min(...line.map((x) => x.l)), r: Math.max(...line.map((x) => x.r)), t: lastTop, b: Math.max(...line.map((x) => x.b)) };
-    }
-    const n = make(fmt(el.dataset.memo), null, 'block', memoFs(el.classList.contains('msg') ? el.querySelector('.bubble') || el : el));
+    else { const rs = textRectsOf(el); if (!rs.length) continue; tg = lineTarget(rs); }
+    const n = make(fmt(el.dataset.memo), 'block', memoFs(el.querySelector('.bubble') || el));
     n.dataset.note = el.dataset.memo.split('\n')[0];
-    if (place(n, tg, null, null)) continue;
-    const isNarr = el.classList.contains('narr');
-    if (withLine && isNarr) {
-      if (!el.classList.contains('memo-gutter')) { needGutter.add(el); n.remove(); continue; }
-      const pr = R(el.getBoundingClientRect());
-      marginPlace(n, tg, pr.r - (parseFloat(getComputedStyle(el).paddingRight) || 0) + 10, el);
-      continue;
-    }
-    // 둘레가 꽉 차 있으면 덩어리 아래에 자리를 만들어 바로 붙임 (글은 끊지 않음)
-    const need = n.offsetHeight + 6;
-    if ((parseFloat(el.style.marginBottom) || 0) < need - 1) { needSpace.set(el, need); n.remove(); continue; }
-    put(n, Math.max(fr.l, Math.min(tg.l, W0 - 6 - n.offsetWidth)), tg.b + 4);
+    placeOne(n, tg, null);
   }
 
-  // 메모 칸 · 아래 자리를 만들어야 하면 한 번 더 배치
-  if ((needGutter.size || needSpace.size) && pass < 2) {
-    needGutter.forEach((p) => p.classList.add('memo-gutter'));
-    needSpace.forEach((v, el) => { el.style.marginBottom = `${v}px`; });
-    return layoutMemos(card, pass + 1);
-  }
-  // 이음선 (선을 쓰는 설정에서 여백으로 뺀 메모만)
-  if (svgLines.length) {
+  if (lines.length) {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('class', 'memo-lines');
     svg.setAttribute('width', W0); svg.setAttribute('height', H0); svg.setAttribute('viewBox', `0 0 ${W0} ${H0}`);
     const col = N.color || '#222222';
-    for (const L of svgLines) {
-      const mx = L.x2 - 6;
+    for (const L of lines) {
       const path = document.createElementNS(svg.namespaceURI, 'path');
-      path.setAttribute('d', `M${L.x1},${L.y1} H${mx} L${L.x2},${L.y2}`);
+      path.setAttribute('d', `M${L.x1.toFixed(1)},${L.y1.toFixed(1)} L${L.x2.toFixed(1)},${L.y2.toFixed(1)}`);
       path.setAttribute('fill', 'none'); path.setAttribute('stroke', col); path.setAttribute('stroke-width', '1');
       path.setAttribute('stroke-dasharray', '3 3'); path.setAttribute('opacity', '.6');
       svg.append(path);
       if (N.mark === 'dot') {
         const c = document.createElementNS(svg.namespaceURI, 'circle');
-        c.setAttribute('cx', L.x1 + 1.5); c.setAttribute('cy', L.y1); c.setAttribute('r', '2.2'); c.setAttribute('fill', col);
+        c.setAttribute('cx', L.x1); c.setAttribute('cy', L.y1); c.setAttribute('r', '2.2'); c.setAttribute('fill', col);
         svg.append(c);
       } else if (N.mark === 'arrow') {
+        const ang = Math.atan2(L.y2 - L.y1, L.x2 - L.x1);
+        const p1 = [L.x1 + Math.cos(ang - 0.45) * 7, L.y1 + Math.sin(ang - 0.45) * 7];
+        const p2 = [L.x1 + Math.cos(ang + 0.45) * 7, L.y1 + Math.sin(ang + 0.45) * 7];
         const a = document.createElementNS(svg.namespaceURI, 'path');
-        a.setAttribute('d', `M${L.x1},${L.y1} l6,-3.2 v6.4 z`); a.setAttribute('fill', col);
+        a.setAttribute('d', `M${L.x1},${L.y1} L${p1.join(',')} L${p2.join(',')} Z`); a.setAttribute('fill', col);
         svg.append(a);
       }
     }
@@ -2676,10 +2647,9 @@ const SCHEMA = {
       { t: 'font', p: 'typo.paren.font', c: 'typo.paren.fontCustom', l: '괄호 글자 서체', show: () => state.typo.paren.on && state.typo.paren.fontOn },
     ] },
     { sec: '메모', note: '텍스트 편집창의 ‘메모’로 달아요. 글자를 고르면 그 단어 · 구에, 안 고르면 문장 · 말풍선 · 이미지에 달려요. 메모는 글을 가리지 않는 빈 곳에 알아서 붙고, 미리보기에서 누르면 바로 고칠 수 있어요.', rows: [
-      { t: 'slider', p: 'typo.note.w', l: '여백 메모 칸 너비', sub: '둘레에 빈 곳이 없어 여백으로 뺄 때', min: 15, max: 45, step: 1, u: '%', show: () => state.typo.note.mark !== 'none' },
       { t: 'slider', p: 'typo.note.scale', l: '글자 크기', sub: '본문 글자에 대한 비율', min: 50, max: 110, step: 1, u: '%' },
       { t: 'color', p: 'typo.note.color', l: '색' },
-      { t: 'seg', p: 'typo.note.mark', l: '이음선', sub: '선 없음: 늘 글자 바로 옆에 · 선을 쓰면 둘레가 꽉 찼을 때 여백으로 빼고 선으로 이어요', o: [['none', '선 없음'], ['line', '선만'], ['dot', '원'], ['arrow', '화살표']], block: true },
+      { t: 'seg', p: 'typo.note.mark', l: '이음선', sub: '선 없음: 늘 글자 바로 옆에 · 선을 쓰면 둘레가 꽉 찼을 때 가까운 빈 곳(여백 등)에 두고 선으로 이어요', o: [['none', '선 없음'], ['line', '선만'], ['dot', '원'], ['arrow', '화살표']], block: true },
     ] },
     { sec: '말풍선 글자', rows: [
       { t: 'font', p: 'bubble.font', c: 'bubble.fontCustom' },
