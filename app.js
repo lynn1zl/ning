@@ -645,6 +645,8 @@ function migrate(st, raw) {
   if (!st.file) st.file = copyState(DEFAULTS.file);
   // 메모 기본 색을 검정으로 (예전 기본값 빨강을 그대로 쓰던 경우만)
   if (st.typo && st.typo.note && st.typo.note.color === '#e8506a') st.typo.note.color = '#222222';
+  // 이음선은 선 없음 · 실선 · 점선만 (예전 선만 · 원 · 화살표는 점선으로)
+  if (st.typo && st.typo.note && ['line', 'dot', 'arrow'].includes(st.typo.note.mark)) st.typo.note.mark = 'dashed';
   // 메모 위치 설정이 없어짐 (자동 배치) · 선 없음이 기본
   if (st.typo && st.typo.note && ('pos' in st.typo.note || 'ipos' in st.typo.note)) {
     if (st.typo.note.mark === 'dot') st.typo.note.mark = 'none';
@@ -2257,7 +2259,9 @@ function layoutMemos(card) {
       const path = document.createElementNS(svg.namespaceURI, 'path');
       path.setAttribute('d', 'M' + pts.map((q) => `${q[0].toFixed(1)},${q[1].toFixed(1)}`).join(' L'));
       path.setAttribute('fill', 'none'); path.setAttribute('stroke', col); path.setAttribute('stroke-width', '1');
-      path.setAttribute('stroke-dasharray', '3 3'); path.setAttribute('opacity', '.6');
+      // 실선 · 점선
+      if (N.mark !== 'solid') path.setAttribute('stroke-dasharray', '3 3');
+      path.setAttribute('opacity', N.mark === 'solid' ? '.7' : '.6');
       svg.append(path);
       if (N.mark === 'dot') {
         const c = document.createElementNS(svg.namespaceURI, 'circle');
@@ -4224,7 +4228,7 @@ function memoStyleControls() {
     h('div', { class: 'pop-label row-top' }, '메모 글자 크기', out), sl,
     h('div', { class: 'pop-label' }, '메모 색'), dots,
     h('div', { class: 'pop-label' }, '이음선'),
-    segEl([['none', '선 없음'], ['line', '선만'], ['dot', '원'], ['arrow', '화살표']], N.mark || 'none', (v) => { N.mark = v; changed(); }, true),
+    segEl([['none', '선 없음'], ['solid', '실선'], ['dashed', '점선']], ['none', 'solid', 'dashed'].includes(N.mark) ? N.mark : 'dashed', (v) => { N.mark = v; changed(); }, true),
     h('p', { class: 'memo-tip', style: 'margin:6px 2px 0' }, '선 없음: 글자 바로 옆에 · 선을 쓰면 카드 바깥 여백에 두고 선으로 이어요. 모양은 모든 메모에 함께 적용돼요.'));
   return h('details', { class: 'memo-style-box', open: true }, h('summary', {}, '메모 모양'), wrap);
 }
