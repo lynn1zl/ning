@@ -1707,15 +1707,6 @@ img[src^="nnimg:"] { visibility: hidden; }
 .ft-tc .tc-a { font-size: 14px; font-weight: 700; line-height: 1; }
 .ft-tc .tc-bar { display: block; width: 14px; height: 3px; border-radius: 2px; }
 
-/* 교정 메모: 고른 글자에 밑줄, 그 위에 작은 손글씨 같은 메모 */
-.card .anno { position: relative; text-decoration: underline; text-decoration-color: var(--anno, #e8506a); text-decoration-thickness: .08em; text-underline-offset: .2em; text-decoration-skip-ink: none; }
-.card .anno-n {
-  position: absolute; left: 50%; bottom: 78%; transform: translateX(-50%) rotate(-2deg);
-  font-size: .56em; line-height: 1; font-weight: 700; font-style: normal; letter-spacing: 0; text-indent: 0;
-  white-space: nowrap; color: var(--anno, #e8506a); pointer-events: none; text-decoration: none;
-}
-.card .anno-n::after { content: ''; display: block; width: 1px; height: .45em; margin: .12em auto 0; background: currentColor; opacity: .7; }
-
 /* 옆 메모: 내용 바로 옆에 선으로 이어 단 메모 (또는 바로 아래) */
 .card .noted.note-side { display: grid; grid-template-columns: minmax(0, 1fr) var(--note-w, 30%); column-gap: 1.6em; align-items: start; }
 .card .noted > :first-child { margin: 0; min-width: 0; }
@@ -1751,3 +1742,55 @@ img[src^="nnimg:"] { visibility: hidden; }
   border-bottom: .45em solid currentColor; border-left: .26em solid transparent; border-right: .26em solid transparent;
 }
 .card .noted .msg-right { justify-self: stretch; }
+
+/* 밑줄 (U 버튼) */
+.card u { text-decoration-line: underline; text-decoration-style: var(--ul-style, solid); text-decoration-color: var(--ul-color, currentColor);
+  text-decoration-thickness: .07em; text-underline-offset: .22em; text-decoration-skip-ink: none; }
+
+/* 문장 메모: 위 · 아래 */
+.card .note-above .side-note { margin: 0 0 .95em 1em; }
+.card .note-above:not(.note-mark-none) .side-note::before {
+  content: ''; position: absolute; left: .5em; top: calc(100% + .15em); width: 1.3px; height: .65em; background: currentColor; opacity: .8;
+}
+.card .note-above.note-mark-dot .side-note::after {
+  content: ''; position: absolute; left: calc(.5em - .17em); top: calc(100% + .7em); width: .38em; height: .38em; border-radius: 50%; background: currentColor;
+}
+.card .note-above.note-mark-arrow .side-note::after {
+  content: ''; position: absolute; left: calc(.5em - .25em); top: calc(100% + .7em); width: 0; height: 0;
+  border-top: .45em solid currentColor; border-left: .26em solid transparent; border-right: .26em solid transparent;
+}
+.page-wrap .side-note, .page-wrap .anno-n { cursor: pointer; }
+
+/* 단어 · 구 메모 */
+.card .anno { position: relative; display: inline-block; text-indent: 0; --nfs: calc(.8em * var(--note-scale, .82)); }
+.card .anno-ul > .anno-t { text-decoration: underline; text-decoration-color: var(--note-color, #222); text-decoration-style: var(--ul-style, solid);
+  text-decoration-thickness: .07em; text-underline-offset: .22em; text-decoration-skip-ink: none; }
+.card .anno-n {
+  position: absolute; left: 50%; transform: translateX(-50%); z-index: 1;
+  font-size: var(--nfs); line-height: 1.15; font-weight: 600; font-style: normal; letter-spacing: 0; text-indent: 0;
+  color: var(--note-color, #222); white-space: nowrap; text-decoration: none;
+}
+/* 위 */
+.card .anno-above { padding-top: calc(var(--nfs) * 1.15 + .55em); }
+.card .anno-above > .anno-n { top: 0; }
+.card .anno-above:not(.m-none)::before { content: ''; position: absolute; left: 50%; top: calc(var(--nfs) * 1.15 + .1em); width: 1.2px; height: .38em; margin-left: -.6px; background: var(--note-color, #222); opacity: .8; }
+.card .anno-above.m-dot::after { content: ''; position: absolute; left: 50%; top: calc(var(--nfs) * 1.15 + .42em); width: .3em; height: .3em; margin-left: -.15em; border-radius: 50%; background: var(--note-color, #222); }
+.card .anno-above.m-arrow::after { content: ''; position: absolute; left: 50%; top: calc(var(--nfs) * 1.15 + .42em); margin-left: -.2em; border-top: .32em solid var(--note-color, #222); border-left: .2em solid transparent; border-right: .2em solid transparent; }
+/* 아래 */
+.card .anno-below { padding-bottom: calc(var(--nfs) * 1.15 + .55em); }
+.card .anno-below > .anno-n { bottom: 0; }
+.card .anno-below:not(.m-none)::before { content: ''; position: absolute; left: 50%; bottom: calc(var(--nfs) * 1.15 + .1em); width: 1.2px; height: .38em; margin-left: -.6px; background: var(--note-color, #222); opacity: .8; }
+.card .anno-below.m-dot::after { content: ''; position: absolute; left: 50%; bottom: calc(var(--nfs) * 1.15 + .42em); width: .3em; height: .3em; margin-left: -.15em; border-radius: 50%; background: var(--note-color, #222); }
+.card .anno-below.m-arrow::after { content: ''; position: absolute; left: 50%; bottom: calc(var(--nfs) * 1.15 + .42em); margin-left: -.2em; border-bottom: .32em solid var(--note-color, #222); border-left: .2em solid transparent; border-right: .2em solid transparent; }
+/* 옆: 글자 바로 뒤에 짧은 선과 함께 */
+.card .anno-side { display: inline; }
+.card .anno-side > .anno-n { position: relative; left: auto; transform: none; display: inline-block; margin-left: .2em; padding-left: 1.5em; vertical-align: .08em; }
+.card .anno-side.m-none > .anno-n { padding-left: .2em; }
+.card .anno-side:not(.m-none) > .anno-n::before { content: ''; position: absolute; left: .15em; top: 50%; width: 1.1em; height: 1.2px; background: currentColor; opacity: .8; }
+.card .anno-side.m-dot > .anno-n::after { content: ''; position: absolute; left: 0; top: 50%; width: .42em; height: .42em; margin-top: -.21em; border-radius: 50%; background: currentColor; }
+.card .anno-side.m-arrow > .anno-n::after { content: ''; position: absolute; left: 0; top: 50%; margin-top: -.3em; border-right: .5em solid currentColor; border-top: .3em solid transparent; border-bottom: .3em solid transparent; }
+
+/* 메모 창 */
+.memo-pop .input { width: 100%; }
+.memo-pop .memo-ul { padding: 12px 2px 0; }
+.memo-tip { font-size: 12px; color: var(--text-3); }
