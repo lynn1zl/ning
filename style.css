@@ -1706,3 +1706,12 @@ img[src^="nnimg:"] { visibility: hidden; }
 .ft-tc { flex-direction: column; gap: 1px; padding: 0 7px; }
 .ft-tc .tc-a { font-size: 14px; font-weight: 700; line-height: 1; }
 .ft-tc .tc-bar { display: block; width: 14px; height: 3px; border-radius: 2px; }
+
+/* 교정 메모: 고른 글자에 밑줄, 그 위에 작은 손글씨 같은 메모 */
+.card .anno { position: relative; text-decoration: underline; text-decoration-color: var(--anno, #e8506a); text-decoration-thickness: .08em; text-underline-offset: .2em; text-decoration-skip-ink: none; }
+.card .anno-n {
+  position: absolute; left: 50%; bottom: 78%; transform: translateX(-50%) rotate(-2deg);
+  font-size: .56em; line-height: 1; font-weight: 700; font-style: normal; letter-spacing: 0; text-indent: 0;
+  white-space: nowrap; color: var(--anno, #e8506a); pointer-events: none; text-decoration: none;
+}
+.card .anno-n::after { content: ''; display: block; width: 1px; height: .45em; margin: .12em auto 0; background: currentColor; opacity: .7; }

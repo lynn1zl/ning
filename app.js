@@ -19,6 +19,7 @@ const ICONS = {
   copy: '<rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V6.5A2.5 2.5 0 0 1 7.5 4H15"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   minus: '<path d="M5 12h14"/>',
+  pen: '<path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/>',
   search: '<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.3-4.3"/>',
   rotate: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
   shadow: '<rect x="3.5" y="3.5" width="12" height="12" rx="2"/><path d="M19.5 8v9.5a2 2 0 0 1-2 2H8" stroke-opacity=".45"/>',
@@ -131,7 +132,7 @@ const DEFAULTS = {
   creator: '제작자',
   parse: { auto: true, formats: ['dq', 'sq', 'corner', 'wcorner'], custom: [], mode: 'marked', inline: false, strip: true, nameless: 'none', blank: 'para1', blankV3: true, mergeTl: true, tlShow: 'both', autoChars: true },
   typo: { font: 'Noto Serif KR', fontCustom: '', size: 15, lh: 1.75, ls: -0.01, weight: 400, color: '#2a2826', align: 'left', gap: 10, indentOn: false, indent: 1, indentWhere: 'all', hl: '#ffe58a', hlStyle: 'under',
-    wordBreak: 'auto', noOrphan: true, ws: 0, palt: false, kern: true, alignLast: 'auto', measure: 0, dropcap: false, dropLines: 2,
+    wordBreak: 'auto', noOrphan: true, ws: 0, palt: false, kern: true, alignLast: 'auto', measure: 0, dropcap: false, dropLines: 2, annoColor: '#e8506a',
     // 괄호 안 글자: ( ) 안을 본문과 다르게 (크기는 둘레 글자에 대한 비율)
     paren: { on: false, fontOn: false, font: 'Gowun Batang', fontCustom: '', scale: 90, weight: 0, colorOn: false, color: '#8b95a1', italic: false } },
   head: { font: 'Noto Serif KR', fontCustom: '', size: 19, weight: 700, color: '#1d1c1a', align: 'left', creditFont: 'Noto Serif KR', creditFontCustom: '', creditSize: 11.5, creditWeight: 400, creditColor: '#8a857c', creatorFont: 'Noto Serif KR', creatorFontCustom: '', creatorSize: 11.5, creatorWeight: 700, creatorColor: '#6b665e', creditAlign: 'right', creditLayout: 'inline', quoteMark: false, accent: '#c8a46a' },
@@ -480,8 +481,11 @@ function deepMerge(base, extra) {
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 // 글자색: [[#e8506a|글자]] (안쪽 서식은 그대로)
 const TC_RE = /\[\[(#[0-9a-fA-F]{3,8})\|([\s\S]+?)\]\]/g;
+// 교정 메모: [[@메모|글자]] (안쪽 글자에 글자색이 있어도 됨)
+const ANNO_RE = /\[\[@([^|\]\n]+)\|((?:\[\[#[0-9a-fA-F]{3,8}\|[\s\S]+?\]\]|[\s\S])+?)\]\]/g;
 function fmt(s) {
   return esc(s)
+    .replace(ANNO_RE, '<span class="anno">$2<span class="anno-n" aria-hidden="true">$1</span></span>')
     .replace(TC_RE, '<span class="tc" style="color:$1">$2</span>')
     .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
     .replace(/__(.+?)__/g, '<u>$1</u>')
@@ -927,7 +931,7 @@ const charById = (id) => state.chars.find((c) => c.id === id) || null;
 
 function splitSpeaker(line0) {
   // 글자색 표시 [[#색|…]] 안의 | 는 '이름 | 대사' 구분 기호로 보지 않음
-  const line = line0.replace(/\[\[#[0-9a-fA-F]{3,8}\|/g, (x) => x.replace('|', '\u0001'));
+  const line = line0.replace(/\[\[(?:#[0-9a-fA-F]{3,8}|@[^|\]\n]+)\|/g, (x) => x.replace('|', '\u0001'));
   const r = splitSpeakerRaw(line);
   if (!r) return null;
   const back = (t) => t.replace(/\u0001/g, '|');
@@ -1179,6 +1183,7 @@ function genCSS() {
   --valign: ${c.valign};
   --accent: ${hd.accent};
   --hl: ${t.hl};
+  --anno: ${t.annoColor || '#e8506a'};
   --hl-stop: ${{ full: '0%', under: '55%', thin: '78%' }[t.hlStyle] || '55%'};
   --text-font: ${fontStack(t.font, t.fontCustom)};
   --text-size: ${fit(t.size)};
@@ -1706,7 +1711,7 @@ function newPage(idx, W, H) {
    - 뒤쪽에 1줄만 넘어가면(과부 줄) 한 줄을 더 넘김 */
 function balanceMarks(a, rest) {
   // 글자색 구간이 열린 채 잘리면 앞 조각은 닫고 뒤 조각은 같은 색으로 다시 엶
-  const opens = [...a.matchAll(/\[\[(#[0-9a-fA-F]{3,8})\|/g)];
+  const opens = [...a.matchAll(/\[\[(#[0-9a-fA-F]{3,8}|@[^|\]\n]+)\|/g)];
   const closes = (a.match(/\]\]/g) || []).length;
   if (opens.length > closes) { const c = opens[opens.length - 1][1]; a += ']]'; rest = `[[${c}|` + rest; }
   for (const m of ['**', '__', '~~', '==']) {
@@ -2384,6 +2389,7 @@ const SCHEMA = {
     { sec: '강조 · 괄호', rows: [
       { t: 'color', p: 'typo.hl', l: '형광펜 색', sub: '텍스트 편집창의 형광펜 버튼에서도 바꿀 수 있어요' },
       { t: 'seg', p: 'typo.hlStyle', l: '형광펜 모양', o: [['under', '밑줄형'], ['thin', '얇게'], ['full', '전체']] },
+      { t: 'color', p: 'typo.annoColor', l: '교정 메모 색', sub: '텍스트 편집창 ‘메모’로 단 작은 메모와 밑줄 색' },
       { t: 'switch', p: 'typo.paren.on', l: '괄호 안 글자 따로 꾸미기', sub: '( ) 안의 글자를 본문 · 말풍선과 다르게', rebuild: true },
       { t: 'slider', p: 'typo.paren.scale', l: '괄호 글자 크기', sub: '둘레 글자에 대한 비율', min: 50, max: 130, step: 1, u: '%', show: () => state.typo.paren.on },
       { t: 'select', p: 'typo.paren.weight', l: '괄호 글자 굵기', o: [[0, '둘레와 같게'], ...WEIGHTS], num: true, show: () => state.typo.paren.on },
@@ -3315,6 +3321,9 @@ function buildFmtBar() {
   const tcMore = h('button', { type: 'button', class: 'ft ft-more', title: '글자색 고르기', 'aria-label': '글자색 고르기', onmousedown: keep, html: icon('chevdown') });
   tcMore.addEventListener('click', () => openTextColorPop(tcMore));
   bar.append(h('span', { class: 'ft-group' }, tcMain, tcMore));
+  const annoBtn = h('button', { type: 'button', class: 'ft ft-img', title: '교정 메모 달기 (고른 글자 위에 작은 메모)', 'aria-label': '교정 메모', onmousedown: keep, html: icon('pen') + '<span>메모</span>' });
+  annoBtn.addEventListener('click', () => openAnnoPop(annoBtn));
+  bar.append(annoBtn);
   bar.append(h('span', { class: 'ft-sep' }));
   bar.append(h('button', { type: 'button', class: 'ft ft-text', title: '이름 없는 대사', onmousedown: keep, onclick: () => insertSnippet('"', '"') }, '“대사”'));
   bar.append(h('button', { type: 'button', class: 'ft ft-text', title: '구분선 넣기', onmousedown: keep, onclick: () => insertSnippet('---\n', '', true) }, '구분선'));
@@ -3807,6 +3816,44 @@ function applyTextColor(c) {
   replaceRange(s, e, `[[${c}|${sel}]]`);
   src.setSelectionRange(s + c.length + 3, s + c.length + 3 + sel.length);
 }
+/* 교정 메모: 고른 글자를 [[@메모|글자]]로. 커서가 메모 안에 있으면 고치거나 지움 */
+function findAnno(s0, e0) {
+  const v = src.value;
+  const re = new RegExp(ANNO_RE.source, 'g');
+  let m;
+  while ((m = re.exec(v))) {
+    const a = m.index, b = a + m[0].length;
+    if (s0 >= a && e0 <= b) return { a, b, note: m[1], inner: m[2] };
+  }
+  return null;
+}
+function openAnnoPop(anchor) {
+  const s0 = src.selectionStart, e0 = src.selectionEnd;
+  const hit = findAnno(s0, e0);
+  const sel = src.value.slice(s0, e0);
+  if (!hit && !sel) { toast('메모를 달 글자를 먼저 골라 주세요'); src.focus(); return; }
+  if (!hit && sel.includes('\n')) { toast('메모는 한 줄 안의 글자에만 달 수 있어요'); return; }
+  const inp = h('input', { type: 'text', class: 'input', value: hit ? hit.note : '', placeholder: '예) 띄어쓰기!, 오타, 여기서 울컥', maxlength: 40 });
+  const apply = () => {
+    const note = inp.value.replace(/[|\]\n]/g, ' ').trim();
+    closePop();
+    if (hit) {
+      replaceRange(hit.a, hit.b, note ? `[[@${note}|${hit.inner}]]` : hit.inner);
+    } else if (note) {
+      replaceRange(s0, e0, `[[@${note}|${sel}]]`);
+    }
+  };
+  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); apply(); } });
+  openPop(h('div', {},
+    h('div', { class: 'pop-title' }, hit ? '교정 메모 고치기' : `‘${(sel || '').slice(0, 14)}${sel.length > 14 ? '…' : ''}’에 메모 달기`),
+    h('p', { class: 'pop-note', style: 'margin:0 2px 10px' }, '고른 글자에 밑줄을 긋고, 그 위에 작은 글씨로 메모를 달아요.'),
+    inp,
+    h('div', { class: 'pop-foot' },
+      hit ? h('button', { type: 'button', class: 'link-btn danger', onclick: () => { inp.value = ''; apply(); } }, '메모 지우기') : h('span'),
+      h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: apply }, hit ? '바꾸기' : '달기'))), anchor);
+  inp.focus(); inp.select();
+}
+
 function openTextColorPop(anchor) {
   const grid = h('div', { class: 'palette hl' });
   const mark = () => $$('button', grid).forEach((b) => b.classList.toggle('on', b.dataset.c === state.typo.tc));
@@ -4782,7 +4829,9 @@ async function buildFontEmbedCSS(cards) {
 function freezeLines(E, scale) {
   const cs = getComputedStyle(E);
   const lh = (parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.4) * scale;
-  const walker = document.createTreeWalker(E, NodeFilter.SHOW_TEXT);
+  const walker = document.createTreeWalker(E, NodeFilter.SHOW_TEXT, {
+    acceptNode: (n) => (n.parentElement && n.parentElement.closest('.anno-n') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
+  });
   const r = document.createRange();
   const breaks = [];
   let prevTop = null, node;
