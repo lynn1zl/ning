@@ -2682,12 +2682,6 @@ const SCHEMA = {
       { t: 'switch', p: 'typo.paren.fontOn', l: '다른 서체', show: () => state.typo.paren.on },
       { t: 'font', p: 'typo.paren.font', c: 'typo.paren.fontCustom', l: '괄호 글자 서체', show: () => state.typo.paren.on && state.typo.paren.fontOn },
     ] },
-    { sec: '메모', note: '텍스트 편집창의 ‘메모’로 달아요. 글자를 고르면 그 단어 · 구에, 안 고르면 문장 · 말풍선 · 이미지에 달려요. 메모는 글을 가리지 않는 빈 곳에 알아서 붙고, 미리보기에서 누르면 바로 고칠 수 있어요.', rows: [
-      { t: 'slider', p: 'typo.note.scale', l: '글자 크기', sub: '본문 글자에 대한 비율', min: 50, max: 110, step: 1, u: '%' },
-      { t: 'color', p: 'typo.note.color', l: '색' },
-      { t: 'switch', p: 'typo.note.selBar', l: '글자를 고르면 메모 버튼 띄우기', sub: '입력창에서 드래그하면 근처에 작은 메모 버튼이 떠요' },
-      { t: 'seg', p: 'typo.note.mark', l: '이음선', sub: '선 없음: 글자 바로 옆에 · 선을 쓰면 카드 바깥 여백에 두고 줄 사이 틈으로 선을 이어요 (여백이 넓을수록 보기 좋아요)', o: [['none', '선 없음'], ['line', '선만'], ['dot', '원'], ['arrow', '화살표']], block: true },
-    ] },
     { sec: '말풍선 글자', rows: [
       { t: 'font', p: 'bubble.font', c: 'bubble.fontCustom' },
       { t: 'slider', p: 'bubble.size', l: '크기', min: 10, max: 36, step: 0.5, u: 'px', pt: true },
@@ -4169,6 +4163,7 @@ function openWordMemo(anchor, hit, s0, e0, sel) {
     h('div', { class: 'pop-title' }, `${memoLabel(hit ? hit.inner : sel)}에 메모`),
     inp,
     h('label', { class: 'row memo-ul' }, labelEl('밑줄 긋기', '메모를 단 글자에 밑줄을 그어요'), ulSw),
+    memoStyleControls(),
     h('div', { class: 'pop-foot' },
       hit ? h('button', { type: 'button', class: 'link-btn danger', onclick: () => { inp.value = ''; apply(); } }, '메모 지우기') : h('span', { class: 'memo-tip' }, '글자를 안 고르면 문장 전체에 달려요'),
       h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: apply }, hit ? '바꾸기' : '달기'))), anchor, null, { beside: anchor.closest && anchor.closest('#stage') ? anchor : null });
@@ -4197,17 +4192,48 @@ function openLineMemo(anchor) {
     h('div', { class: 'pop-title' }, `${memoLabel(t.lines[t.idx].trim())}에 메모`),
     inp,
     h('p', { class: 'memo-tip', style: 'margin:8px 2px 0' }, '메모는 글을 가리지 않는 빈 곳에 알아서 붙어요.'),
+    memoStyleControls(),
     h('div', { class: 'pop-foot' },
       cur ? h('button', { type: 'button', class: 'link-btn danger', onclick: () => { inp.value = ''; apply(); } }, '메모 지우기') : h('span', { class: 'memo-tip' }, '단어에만 달려면 글자를 골라요 · Shift+Enter 줄바꿈'),
       h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: apply }, cur ? '바꾸기' : '달기'))), anchor, null, { beside: anchor.closest && anchor.closest('#stage') ? anchor : null });
   inp.focus(); inp.select();
 }
+/* 메모 창 아래 '메모 모양': 글자 크기 · 색 · 이음선 (모든 메모에 함께 적용, 바로 미리보기에 반영) */
+const MEMO_COLORS = ['#222222', '#8b95a1', '#e8506a', '#f76707', '#2f9e44', '#1c7ed6', '#7048e8'];
+function memoStyleControls() {
+  const N = state.typo.note;
+  const wrap = h('div', { class: 'memo-style' });
+  const out = h('output', {}, `${N.scale || 82}%`);
+  const sl = h('input', { type: 'range', class: 'slider', min: 50, max: 130, step: 1, value: N.scale || 82, 'aria-label': '메모 글자 크기' });
+  const pct = (v) => `${((v - 50) / 80) * 100}%`;
+  sl.style.setProperty('--p', pct(sl.value));
+  sl.addEventListener('input', () => { out.textContent = `${sl.value}%`; sl.style.setProperty('--p', pct(sl.value)); N.scale = +sl.value; changed(); });
+  const dots = h('div', { class: 'shadow-colors' });
+  const paint = () => $$('.sc-dot', dots).forEach((b) => b.classList.toggle('on', b.dataset.c === N.color));
+  MEMO_COLORS.forEach((c) => {
+    const b = h('button', { type: 'button', class: 'sc-dot', 'data-c': c, 'aria-label': c, title: c, onmousedown: (e) => e.preventDefault() });
+    b.style.background = c;
+    b.addEventListener('click', () => { N.color = c; paint(); changed(); });
+    dots.append(b);
+  });
+  const nat = h('input', { type: 'color', class: 'sc-pick', value: /^#[0-9a-f]{6}$/i.test(N.color || '') ? N.color : '#222222', 'aria-label': '메모 색 직접 고르기', title: '직접 고르기' });
+  nat.addEventListener('input', () => { N.color = nat.value; paint(); changed(); });
+  dots.append(nat);
+  paint();
+  wrap.append(
+    h('div', { class: 'pop-label row-top' }, '메모 글자 크기', out), sl,
+    h('div', { class: 'pop-label' }, '메모 색'), dots,
+    h('div', { class: 'pop-label' }, '이음선'),
+    segEl([['none', '선 없음'], ['line', '선만'], ['dot', '원'], ['arrow', '화살표']], N.mark || 'none', (v) => { N.mark = v; changed(); }, true),
+    h('p', { class: 'memo-tip', style: 'margin:6px 2px 0' }, '선 없음: 글자 바로 옆에 · 선을 쓰면 카드 바깥 여백에 두고 선으로 이어요. 모양은 모든 메모에 함께 적용돼요.'));
+  return h('details', { class: 'memo-style-box', open: true }, h('summary', {}, '메모 모양'), wrap);
+}
+
 /* 입력창에서 글자를 고르면 그 근처에 작은 '메모' 버튼 */
 const selBar = h('div', { class: 'sel-bar', hidden: true, role: 'toolbar', 'aria-label': '고른 글자' });
 selBar.append(h('button', { type: 'button', onmousedown: (e) => e.preventDefault(), onclick: () => { selBar.hidden = true; openMemoPop(selBar); }, html: icon('pen') + '<span>메모</span>' }));
 document.body.append(selBar);
 function showSelBar(x, y, touch) {
-  if (state.typo.note && state.typo.note.selBar === false) { selBar.hidden = true; return; }
   const s0 = src.selectionStart, e0 = src.selectionEnd;
   const sel = src.value.slice(s0, e0);
   if (!sel.trim() || sel.includes('\n')) { selBar.hidden = true; return; }
