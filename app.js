@@ -1617,6 +1617,7 @@ function renderBlock(b) {
     if (dropcapPending && !b.cont) { drop = ' dropcap'; dropcapPending = false; }
     const p = h('p', { class: 'narr' + drop + (b.ind && !b.cont ? ' ind' : '') + (b.cont ? ' cont' : '') + (b.key ? ' was-bubble' : ''), 'data-key': b.key || false, html: wrapParens(withDropcap(drop, state.typo.noOrphan === false ? fmt(b.text) : fmtNoOrphan(b.text, state.typo.align === 'justify' || state.typo.wordBreak === 'char'))) });
     if (b.floatImg && state.images[b.floatImg.id]) { p._float = inlineFigure(b.floatImg.id, b.floatImg.alt); p.prepend(p._float); }
+    if (p.querySelector('.anno-side')) p.classList.add('anno-gutter');
     return p;
   }
   if (b.type === 'gap') { const g = h('div', { class: 'gap' }); g.style.setProperty('--gap-n', b.n || 1); return g; }
@@ -1674,6 +1675,7 @@ function renderBlock(b) {
     for (const t of b.tl) inner += '\n<span class="tl">' + tlHtml(t, false) + '</span>';
   }
   const bub = h('div', { class: 'bubble', html: wrapParens(inner) });
+  bub.querySelectorAll('.anno-side').forEach((x) => x.classList.replace('anno-side', 'anno-above'));
   const ov = state.overrides[b.key] || {};
   if (ov.img) {
     const box = h('span', { class: 'bimg-box', 'data-key': b.key }, h('img', { src: ov.img, alt: '', draggable: 'false' }), h('span', { class: 'stk-ui rs-handle', title: '끌어서 크기 조절' }));
@@ -2072,6 +2074,30 @@ function fitNoteLeads(root) {
     note.style.marginLeft = shift > 1 ? `${(-shift).toFixed(1)}px` : '';
   });
 }
+/* 단어 메모 '옆': 문단 오른쪽 메모 칸에 두고, 그 단어의 줄 바로 아래 빈 틈으로 선을 그어 이음 (글자를 가리지 않게) */
+function fitAnnoSide(root) {
+  for (const p of root.querySelectorAll('.narr.anno-gutter')) {
+    const pr = p.getBoundingClientRect();
+    const sc = pr.width / (p.offsetWidth || 1) || 1;
+    const cs = getComputedStyle(p);
+    const gutterLeft = p.clientWidth - (parseFloat(cs.paddingRight) || 0) + (parseFloat(cs.fontSize) || 14) * 0.7;
+    let lastBottom = -Infinity;
+    for (const an of p.querySelectorAll('.anno-side')) {
+      const t = an.querySelector('.anno-t'), n = an.querySelector('.anno-n');
+      const rs = [...t.getClientRects()].filter((x) => x.width > 0);
+      if (!rs.length) continue;
+      const last = rs[rs.length - 1];
+      const wordRight = (last.right - pr.left) / sc;
+      let y = (last.bottom - pr.top) / sc + 1.5; // 그 줄 글자 바로 아래 (줄 사이 빈 틈)
+      const hgt = n.offsetHeight || 12;
+      if (y - hgt / 2 < lastBottom + 2) y = lastBottom + 2 + hgt / 2; // 메모끼리 겹치지 않게
+      lastBottom = y + hgt / 2;
+      n.style.left = `${gutterLeft.toFixed(1)}px`;
+      n.style.top = `${y.toFixed(1)}px`;
+      n.style.setProperty('--lead', `${Math.max(4, gutterLeft - wordRight - 2).toFixed(1)}px`);
+    }
+  }
+}
 /* 문장 메모 상자: [덩어리 | 메모] · 메모 위에 덩어리 · 덩어리 아래 메모 */
 function wrapNote(el, note, posOverride) {
   const N = state.typo.note || {};
@@ -2181,6 +2207,7 @@ function render() {
   }
   pages.forEach((p) => fitTails(p.card));
   pages.forEach((p) => fitNoteLeads(p.card));
+  pages.forEach((p) => fitAnnoSide(p.card));
   renderStickers(pages);
   htmlBgReady = applyHtmlBg(pages);
   rescale();
