@@ -1813,3 +1813,14 @@ img[src^="nnimg:"] { visibility: hidden; }
 .fchip-add { border-style: dashed; }
 .bulk-folder-row { margin-top: 8px; }
 .bulk-folder-row .select { width: 100%; }
+
+/* 글 위에 얹은 메모 · 직접 옮긴 메모 */
+.card .memo-note.memo-over { --hl: var(--memo-halo, #fff);
+  text-shadow: 1px 0 var(--hl), -1px 0 var(--hl), 0 1px var(--hl), 0 -1px var(--hl), 1px 1px var(--hl), -1px -1px var(--hl), 1px -1px var(--hl), -1px 1px var(--hl), 0 0 3px var(--hl), 0 0 5px var(--hl); }
+.card .memo-note.memo-sized { white-space: pre-wrap; max-width: none; }
+.page-wrap .memo-note { touch-action: none; user-select: none; -webkit-user-select: none; }
+.page-wrap .memo-note:hover { outline: 1px dashed rgba(49, 130, 246, .45); outline-offset: 2px; }
+.page-wrap .memo-note.memo-sel { cursor: move; outline: none; }
+.memo-frame { position: absolute; inset: -4px; border: 1.5px solid #3182f6; border-radius: 4px; pointer-events: none; }
+.memo-rs { position: absolute; right: -9px; top: 50%; width: 10px; height: 22px; margin-top: -11px; border-radius: 5px; background: #fff; border: 1.5px solid #3182f6; cursor: ew-resize; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+.memo-bar .mb-done { color: #3182f6; }

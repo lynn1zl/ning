@@ -151,6 +151,7 @@ const DEFAULTS = {
   ],
   charFolders: [], // 캐릭터 폴더: { id, name } · 캐릭터마다 folders: [id…] (여러 폴더에 넣을 수 있음)
   overrides: {},
+  memoPos: {}, // 메모마다 직접 옮긴 자리 · 폭: { key: { dx, dy, w } }
   skin: '',
   bgHtml: '',
   bgRef: '', // 등록된 배경 파일 (코드는 저장하지 않음)
@@ -2174,8 +2175,11 @@ function layoutMemos(card) {
   };
   const link = (tg, a) => {
     // 메모 쪽 가까운 점과 글자 쪽 가까운 점을 이음
-    const tx = Math.max(tg.l, Math.min((a.l + a.r) / 2, tg.r)), ty = a.b < tg.t ? tg.t : a.t > tg.b ? tg.b : (tg.t + tg.b) / 2;
-    const ax = a.r < tg.l ? a.r + 2 : a.l > tg.r ? a.l - 2 : (a.l + a.r) / 2, ay = a.b < tg.t ? a.b + 1 : a.t > tg.b ? a.t - 1 : (a.t + a.b) / 2;
+    // 글자 쪽은 위 · 아래 가장자리에서 시작 (글자 한가운데를 가로질러 지운 줄처럼 보이지 않게)
+    const up = (a.t + a.b) / 2 < (tg.t + tg.b) / 2;
+    const tx = Math.max(tg.l + 1, Math.min((a.l + a.r) / 2, tg.r - 1)), ty = up ? tg.t : tg.b;
+    const ax = Math.max(a.l - 2, Math.min(tx, a.r + 2)), ay = Math.max(a.t - 1, Math.min(ty, a.b + 1));
+    if (Math.hypot(ax - tx, ay - ty) < 4) return;
     lines.push({ x1: tx, y1: ty, x2: ax, y2: ay });
   };
   const memoFs = (el) => (parseFloat(getComputedStyle(el).fontSize) || 15) * 0.8 * ((N.scale || 82) / 100);
@@ -2184,52 +2188,51 @@ function layoutMemos(card) {
     const ln = rs.filter((x) => Math.abs(x.t - lastTop) < 2);
     return { l: Math.min(...ln.map((x) => x.l)), r: Math.max(...ln.map((x) => x.r)), t: lastTop, b: Math.max(...ln.map((x) => x.b)) };
   };
-  const flowR = R(flow.getBoundingClientRect());
-  const marginSpots = (tg) => {
-    const cx = (tg.l + tg.r) / 2;
-    const right = { x: flowR.r + 8, w: W0 - flowR.r - 14, side: 'r' };
-    const left = { x: 6, w: flowR.l - 14, side: 'l' };
-    return (cx > (flowR.l + flowR.r) / 2 ? [right, left] : [left, right]).filter((m) => m.w >= 22);
-  };
-  const lineGapY = (tg, el) => {
-    const lhPx = el ? parseFloat(getComputedStyle(el).lineHeight) || 0 : 0;
-    return tg.b + Math.max(1.5, (lhPx - (tg.b - tg.t)) / 2);
-  };
-  const placeMargin = (n, tg, lineEl) => {
-    const nat = n.offsetWidth; // 한 줄로 썼을 때 폭
-    for (const m of marginSpots(tg)) {
-      const w = Math.min(nat + 1, m.w);
-      n.classList.add('memo-margin');
-      n.style.width = `${w}px`;
-      const hh = n.offsetHeight;
-      const x = m.side === 'r' ? m.x : m.x + (m.w - w);
-      const y0 = lineGapY(tg, lineEl);
-      let t = y0 - hh / 2, a = { l: x, t, r: x + w, b: t + hh }, guard = 0;
-      while (!free(a) && guard++ < 60) { t += 3; a = { l: x, t, r: x + w, b: t + hh }; }
-      if (guard >= 60) { n.classList.remove('memo-margin'); n.style.width = ''; continue; }
-      put(n, a);
-      // 글자 끝 → 줄 사이 틈으로 → 여백 가장자리 → 메모
-      // 글자 아래 가운데 → 줄 사이 틈 → 여백 가장자리 → 메모 (글자 위를 지나가지 않게)
-      const sx = (tg.l + tg.r) / 2;
-      const ex = m.side === 'r' ? a.l - 3 : a.r + 3;
-      lines.push({ pts: [[sx, tg.b + 1], [sx, y0], [ex - (m.side === 'r' ? 5 : -5), y0], [ex, (a.t + a.b) / 2]] });
-      return true;
-    }
-    return false;
-  };
-  const placeOne = (n, tg, skip, lineEl) => {
-    if (withLine && placeMargin(n, tg, lineEl)) return;
+  const memoPos = state.memoPos || (state.memoPos = {});
+  const seen = {};
+  const keyOf = (k) => { seen[k] = (seen[k] || 0) + 1; return seen[k] > 1 ? `${k}#${seen[k]}` : k; };
+  const overlaps = (a, tg) => a.l < tg.r && a.r > tg.l && a.t < tg.b && a.b > tg.t;
+  const placeOne = (n, tg, skip, key) => {
+    n.dataset.key = key; n.dataset.ax = tg.r.toFixed(1); n.dataset.ay = tg.b.toFixed(1);
+    const mp = memoPos[key];
+    if (mp && mp.w) { n.classList.add('memo-sized'); n.style.width = `${mp.w}px`; }
     const w = n.offsetWidth, hh = n.offsetHeight;
-    // 선 없음: 바로 붙일 수 있는 자리만 · 선 있음: 둘레에서 가장 가까운 빈 곳까지 (선으로 이음)
-    const f = nearestFree(w, hh, tg, skip, withLine ? Math.max(120, hh * 8) : 0);
+    // 직접 옮긴 메모: 글자 기준으로 그 자리에 (글 위여도 그대로)
+    if (mp && mp.dx != null) {
+      const a = { l: tg.r + mp.dx, t: tg.b + mp.dy }; a.r = a.l + w; a.b = a.t + hh;
+      put(n, a);
+      n.classList.add('memo-over');
+      if (withLine && !overlaps(a, tg)) link(tg, a);
+      return;
+    }
+    // 선 없음: 바로 붙일 수 있는 자리만 · 선 있음: 가까운 빈 곳까지 (선으로 이음)
+    const f = nearestFree(w, hh, tg, skip, withLine ? Math.max(60, hh * 3) : 0);
     if (f) { put(n, f.a); if (f.d > 6 && withLine) link(tg, f.a); return; }
-    // 빈 곳이 없으면 줄 사이 틈에 작게 (본문은 그대로)
+    if (withLine) {
+      // 빈 곳이 없으면 바깥으로 빼지 않고 글자 위쪽에 얹고 선으로 이음 (본문은 그대로)
+      // 바로 윗줄과 이 줄 사이 틈 가운데에 (글자와 최대한 덜 겹치게)
+      const lh = tg.b - tg.t;
+      let l = Math.max(4, Math.min((tg.l + tg.r) / 2 - w / 2, W0 - 4 - w));
+      const above = obstacles.filter((o) => !o.el && o.b <= tg.t + 2 && o.r > l && o.l < l + w).reduce((m, o) => Math.max(m, o.b), -1);
+      let t = above >= 0 && tg.t - above < lh * 1.5 ? (above + tg.t) / 2 - hh / 2 : tg.t - hh - 2;
+      let a = { l, t, r: l + w, b: t + hh }, guard = 0;
+      while (placed.some((o) => a.l < o.r + 3 && a.r > o.l - 3 && a.t < o.b + 2 && a.b > o.t - 2) && guard++ < 30) { t -= 4; a = { l, t, r: l + w, b: t + hh }; }
+      if (a.t < 2) { t = tg.b + 2; a = { l, t, r: l + w, b: t + hh }; }
+      put(n, a);
+      n.classList.add('memo-over');
+      link(tg, a);
+      return;
+    }
+    // 선 없음 · 빈 곳이 없으면 줄 사이 틈에 작게
     n.classList.add('memo-tight');
     const w2 = n.offsetWidth, h2 = n.offsetHeight;
-    const a = { l: Math.max(4, Math.min((tg.l + tg.r) / 2 - w2 / 2, W0 - 4 - w2)), t: tg.t - h2 + (tg.b - tg.t) * 0.06 };
-    a.r = a.l + w2; a.b = a.t + h2;
-    put(n, a);
+    const a2 = { l: Math.max(4, Math.min((tg.l + tg.r) / 2 - w2 / 2, W0 - 4 - w2)), t: tg.t - h2 + (tg.b - tg.t) * 0.06 };
+    a2.r = a2.l + w2; a2.b = a2.t + h2;
+    put(n, a2);
   };
+  // 글 위에 얹힌 메모가 읽히도록 카드 바탕색으로 글자 둘레를 살짝 감쌈
+  const bgc = getComputedStyle(card).backgroundColor;
+  layer.style.setProperty('--memo-halo', !bgc || /rgba\(.*,\s*0\)$/.test(bgc) || bgc === 'transparent' ? '#ffffff' : bgc);
 
   for (const an of words) {
     const rs = [...an.querySelector('.anno-t').getClientRects()].filter((x) => x.width > 0).map(R);
@@ -2237,7 +2240,7 @@ function layoutMemos(card) {
     const tg = rs[rs.length - 1];
     const n = make(an.querySelector('.anno-n').innerHTML, 'word', memoFs(an));
     n.dataset.src = an.dataset.src;
-    placeOne(n, tg, an.closest('.bubble'), an.closest('.narr, .bubble'));
+    placeOne(n, tg, an.closest('.bubble'), keyOf(`w:${an.dataset.src}`));
   }
   for (const el of blocks) {
     const tgEl = el.querySelector('.bubble') || el.querySelector('.img-box') || el.querySelector('.hb-root > *');
@@ -2246,7 +2249,7 @@ function layoutMemos(card) {
     else { const rs = textRectsOf(el); if (!rs.length) continue; tg = lineTarget(rs); }
     const n = make(fmt(el.dataset.memo), 'block', memoFs(el.querySelector('.bubble') || el));
     n.dataset.note = el.dataset.memo.split('\n')[0];
-    placeOne(n, tg, null, el.classList.contains('narr') ? el : el.querySelector('.bubble'));
+    placeOne(n, tg, null, keyOf(`b:${el.dataset.memo}|${(el.textContent || '').trim().slice(0, 30)}`));
   }
 
   if (lines.length) {
@@ -2391,6 +2394,7 @@ function render() {
   }
   pages.forEach((p) => fitTails(p.card));
   pages.forEach((p) => layoutMemos(p.card));
+  requestAnimationFrame(paintMemoSel);
   renderStickers(pages);
   htmlBgReady = applyHtmlBg(pages);
   rescale();
@@ -3383,7 +3387,8 @@ $('#stage').addEventListener('click', (e) => {
   if (e.target.closest('.sticker') || e.target.closest('.rs-handle')) return;
   const fig = e.target.closest('.inline-img');
   if (fig) { selectImage('inline', fig.dataset.img); return; }
-  const memo = e.target.closest('.memo-note, .anno');
+  if (e.target.closest('.memo-note')) return; // 메모 고르기 · 옮기기는 memoMove에서
+  const memo = e.target.closest('.anno');
   if (memo) { editMemoFromPreview(memo); return; }
   const hb = e.target.closest('.hbox');
   if (hb) { openBoxPop(hb, hb.dataset.box); return; }
@@ -4230,7 +4235,7 @@ function memoStyleControls() {
     h('div', { class: 'pop-label' }, '메모 색'), dots,
     h('div', { class: 'pop-label' }, '이음선'),
     segEl([['none', '선 없음'], ['solid', '실선'], ['dashed', '점선']], ['none', 'solid', 'dashed'].includes(N.mark) ? N.mark : 'dashed', (v) => { N.mark = v; changed(); }, true),
-    h('p', { class: 'memo-tip', style: 'margin:6px 2px 0' }, '선 없음: 글자 바로 옆에 · 선을 쓰면 카드 바깥 여백에 두고 선으로 이어요. 모양은 모든 메모에 함께 적용돼요.'));
+    h('p', { class: 'memo-tip', style: 'margin:6px 2px 0' }, '선 없음: 글자 바로 옆에 · 선을 쓰면 가까운 곳(빈 곳이 없으면 글 위)에 두고 선으로 이어요. 미리보기에서 메모를 누르면 자리 · 폭을 바꿀 수 있어요.'));
   return h('details', { class: 'memo-style-box', open: true }, h('summary', {}, '메모 모양'), wrap);
 }
 
@@ -4276,6 +4281,82 @@ function editMemoFromPreview(el) {
   }
   openMemoPop(el);
 }
+
+/* 미리보기에서 메모를 누르면: 끌어서 옮기기 · 오른쪽 손잡이로 폭 조절 · 작은 바(고치기 · 원래대로 · 완료) */
+let selMemoKey = null;
+const memoBar = h('div', { class: 'sel-bar memo-bar', hidden: true, role: 'toolbar', 'aria-label': '메모' });
+const selMemoEl = () => (selMemoKey ? $$('#stage .memo-note').find((n) => n.dataset.key === selMemoKey) : null);
+memoBar.append(
+  h('button', { type: 'button', onclick: () => { const n = selMemoEl(); deselectMemo(); if (n) editMemoFromPreview(n); }, html: icon('pen') + '<span>고치기</span>' }),
+  h('button', { type: 'button', onclick: () => {
+    const k = selMemoKey;
+    if (!k || !state.memoPos || !state.memoPos[k]) { toast('이미 원래 자리예요'); return; }
+    commit(); delete state.memoPos[k]; changed(); commit();
+  } }, '원래대로'),
+  h('button', { type: 'button', class: 'mb-done', onclick: () => deselectMemo() }, '완료'));
+document.body.append(memoBar);
+function paintMemoSel() {
+  $$('#stage .memo-note').forEach((n) => {
+    const on = !!selMemoKey && n.dataset.key === selMemoKey;
+    n.classList.toggle('memo-sel', on);
+    if (on && !n.querySelector('.memo-frame')) n.append(h('span', { class: 'stk-ui memo-frame' }), h('span', { class: 'stk-ui memo-rs', title: '끌어서 폭 조절' }));
+    if (!on) n.querySelectorAll('.stk-ui').forEach((x) => x.remove());
+  });
+  placeMemoBar();
+}
+function placeMemoBar() {
+  const n = selMemoEl();
+  if (!n) { memoBar.hidden = true; return; }
+  memoBar.hidden = false;
+  const r = n.getBoundingClientRect();
+  const bw = memoBar.offsetWidth, bh = memoBar.offsetHeight;
+  let top = r.bottom + 10;
+  if (top + bh > innerHeight - 8) top = r.top - bh - 10;
+  memoBar.style.left = `${Math.max(8, Math.min(r.left + r.width / 2 - bw / 2, innerWidth - bw - 8))}px`;
+  memoBar.style.top = `${Math.max(8, top)}px`;
+}
+function deselectMemo() { if (!selMemoKey) return; selMemoKey = null; paintMemoSel(); }
+addEventListener('scroll', () => { if (selMemoKey) placeMemoBar(); }, { passive: true, capture: true });
+addEventListener('resize', () => { if (selMemoKey) placeMemoBar(); });
+document.addEventListener('pointerdown', (e) => {
+  if (selMemoKey && !e.target.closest('.memo-note') && !memoBar.contains(e.target) && !e.target.closest('.pop')) deselectMemo();
+});
+(function memoMove() {
+  const stage = $('#stage');
+  let d = null;
+  stage.addEventListener('pointerdown', (e) => {
+    const n = e.target.closest('.memo-note');
+    if (!n || !n.dataset.key) return;
+    e.preventDefault(); e.stopPropagation();
+    closePop();
+    d = { n, rs: !!e.target.closest('.memo-rs'), x0: e.clientX, y0: e.clientY, l0: parseFloat(n.style.left) || 0, t0: parseFloat(n.style.top) || 0, w0: n.offsetWidth, moved: false };
+    n.setPointerCapture(e.pointerId);
+  }, true);
+  stage.addEventListener('pointermove', (e) => {
+    if (!d) return;
+    const dx = (e.clientX - d.x0) / currentScale, dy = (e.clientY - d.y0) / currentScale;
+    if (!d.moved && Math.abs(dx) + Math.abs(dy) < 3) return;
+    if (!d.moved) { d.moved = true; selMemoKey = d.n.dataset.key; paintMemoSel(); memoBar.hidden = true; }
+    if (d.rs) { d.n.classList.add('memo-sized'); d.n.style.width = `${Math.max(20, d.w0 + dx)}px`; }
+    else { d.n.style.left = `${d.l0 + dx}px`; d.n.style.top = `${d.t0 + dy}px`; d.n.classList.add('memo-over'); }
+  });
+  const end = () => {
+    if (!d) return;
+    const x = d; d = null;
+    const key = x.n.dataset.key;
+    if (!x.moved) { selMemoKey = key; paintMemoSel(); return; }
+    commit();
+    const pos = { ...((state.memoPos || {})[key] || {}) };
+    if (x.rs) pos.w = Math.round(x.n.offsetWidth);
+    else { pos.dx = +(parseFloat(x.n.style.left) - +x.n.dataset.ax).toFixed(1); pos.dy = +(parseFloat(x.n.style.top) - +x.n.dataset.ay).toFixed(1); }
+    state.memoPos = { ...(state.memoPos || {}), [key]: pos };
+    selMemoKey = key;
+    changed(); commit();
+  };
+  stage.addEventListener('pointerup', end);
+  stage.addEventListener('pointercancel', end);
+  stage.addEventListener('dblclick', (e) => { const n = e.target.closest('.memo-note'); if (n) { deselectMemo(); editMemoFromPreview(n); } });
+})();
 
 function openTextColorPop(anchor) {
   const grid = h('div', { class: 'palette hl' });
@@ -5983,7 +6064,7 @@ const RESETS = [
       state.parse.nameless = 'none';
     } },
   { id: 'text', icon: 'text', title: '글 지우기', desc: '입력한 글과 제목 · 출처 · 제작자를 비워요', done: '글을 비웠어요',
-    run() { state.text = ''; state.title = ''; state.credit = ''; state.creator = ''; state.overrides = {}; state.images = {}; state.stickers = []; } },
+    run() { state.text = ''; state.title = ''; state.credit = ''; state.creator = ''; state.overrides = {}; state.memoPos = {}; state.images = {}; state.stickers = []; } },
   { id: 'all', icon: 'refresh', title: '전부 처음부터', desc: '글 · 캐릭터 · 디자인 · 대사 인식 설정까지 모두 처음 상태로', done: '처음 상태로 되돌렸어요', danger: true,
     run() { state = copyState(DEFAULTS); autoTried.clear(); } },
 ];
