@@ -16,7 +16,7 @@
 <!-- 글꼴 파일을 기다리지 않고 화면부터 띄움 (글꼴은 받는 대로 바뀜) -->
 <link rel="preload" as="style" crossorigin="anonymous" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/pretendard-dynamic-subset.min.css" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" crossorigin="anonymous" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/pretendard-dynamic-subset.min.css"></noscript>
-<link rel="stylesheet" href="style.css?v=202611100524">
+<link rel="stylesheet" href="style.css?v=202611111347">
 <style id="gen-style"></style>
 <style id="skin-style"></style>
 </head>
@@ -113,6 +113,7 @@
                 <input type="text" class="input" id="bulk-names" placeholder="어린 왕자, 장미, 여우" autocomplete="off">
                 <button type="button" class="btn btn-primary" id="btn-bulk-add">추가</button>
               </div>
+              <div class="bulk-folder-row"><select class="select" id="bulk-folder" aria-label="넣을 폴더"></select></div>
               <div class="bulk-preview" id="bulk-preview" hidden></div>
             </div>
           </div>
@@ -295,6 +296,6 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-<script src="app.js?v=202611100524" defer></script>
+<script src="app.js?v=202611111347" defer></script>
 </body>
 </html>

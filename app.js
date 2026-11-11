@@ -149,6 +149,7 @@ const DEFAULTS = {
   chars: [
     { id: 'c1', name: '닝', avatar: '', side: 'left', shape: '', custom: true, bg: '#f2f4f6', color: '#191f28', border: '#f2f4f6' },
   ],
+  charFolders: [], // 캐릭터 폴더: { id, name } · 캐릭터마다 folders: [id…] (여러 폴더에 넣을 수 있음)
   overrides: {},
   skin: '',
   bgHtml: '',
@@ -4368,7 +4369,7 @@ let myStyles = [];
 function styleSnapshot(name, withChars) {
   const data = {};
   for (const k of STYLE_KEYS) data[k] = copyState(state[k]);
-  if (withChars) data.chars = copyState(state.chars);
+  if (withChars) { data.chars = copyState(state.chars); data.charFolders = copyState(state.charFolders || []); }
   return { type: 'ninining-style', version: 1, name, createdAt: Date.now(), data };
 }
 function applyStyle(st) {
@@ -4379,6 +4380,7 @@ function applyStyle(st) {
   }
   if (data.typo && 'paraMode' in data.typo) migrate(state, null); // 예전 양식의 문단 구분 옮기기
   if (Array.isArray(data.chars)) state.chars = copyState(data.chars);
+  if (Array.isArray(data.charFolders)) state.charFolders = copyState(data.charFolders);
   commit(); rebuildAll(); save();
   toast(`‘${st.name || '프리셋'}’을(를) 적용했어요`, { label: '되돌리기', fn: undo });
 }
@@ -4560,6 +4562,87 @@ function syncNameless() {
   });
 }
 
+/* ── 캐릭터 폴더 ── */
+const folderList = () => (state.charFolders = state.charFolders || []);
+const charFolderIds = (ch) => (ch.folders = (ch.folders || []).filter((id) => folderList().some((f) => f.id === id)));
+let charFolderView = (uiState && uiState.charFolder) || ''; // 캐릭터 탭에서 지금 보는 폴더 ('' = 전체)
+function setFolderView(id) { charFolderView = id; uiState.charFolder = id; saveUi(); buildChars(); }
+function newFolder(name) {
+  const f = { id: 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name: name.trim() || '새 폴더' };
+  folderList().push(f);
+  return f;
+}
+/** 폴더 이름 입력 창 (만들기 · 이름 바꾸기) */
+function openFolderNamePop(anchor, cur, onOk, title) {
+  const inp = h('input', { type: 'text', class: 'input', value: cur || '', placeholder: '예) 주인공들, 1부, 단역', maxlength: 20 });
+  const ok = () => { const v = inp.value.trim(); if (!v) { inp.focus(); return; } closePop(); onOk(v); };
+  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); ok(); } });
+  openPop(h('div', {}, h('div', { class: 'pop-title' }, title || '새 폴더'), inp,
+    h('div', { class: 'pop-foot' }, h('span'), h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: ok }, cur ? '바꾸기' : '만들기'))), anchor);
+  inp.focus(); inp.select();
+}
+function openFolderMenu(anchor, f) {
+  const n = state.chars.filter((c) => (c.folders || []).includes(f.id)).length;
+  openPop(h('div', {}, h('div', { class: 'pop-title' }, `‘${f.name}’ 폴더 · ${n}명`),
+    h('button', { type: 'button', class: 'btn btn-block', onclick: () => openFolderNamePop(anchor, f.name, (v) => { commit(); f.name = v; changed(); commit(); buildChars(); }, '폴더 이름 바꾸기') }, '이름 바꾸기'),
+    h('p', { class: 'pop-note' }, '폴더를 지워도 안의 캐릭터는 그대로 남아요.'),
+    h('div', { class: 'pop-foot' },
+      h('button', { type: 'button', class: 'link-btn danger', onclick: () => {
+        closePop(); commit();
+        state.charFolders = folderList().filter((x) => x.id !== f.id);
+        state.chars.forEach((c) => { if (c.folders) c.folders = c.folders.filter((id) => id !== f.id); });
+        if (charFolderView === f.id) charFolderView = '';
+        changed(); commit(); buildChars();
+        toast(`‘${f.name}’ 폴더를 지웠어요`, { label: '되돌리기', fn: undo });
+      } }, '폴더 지우기'),
+      h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: closePop }, '닫기'))), anchor);
+}
+/** 캐릭터 탭 위 폴더 줄: 전체 · 폴더들 · + 새 폴더 (지금 보는 폴더를 다시 누르면 이름 바꾸기 · 지우기) */
+function folderBar() {
+  const fs = folderList();
+  if (charFolderView && !fs.some((f) => f.id === charFolderView)) charFolderView = '';
+  const row = h('div', { class: 'chip-row folder-chips' });
+  row.append(h('button', { type: 'button', class: 'chip' + (charFolderView ? '' : ' on'), onclick: () => setFolderView('') }, `전체 ${state.chars.length}`));
+  fs.forEach((f) => {
+    const n = state.chars.filter((c) => (c.folders || []).includes(f.id)).length;
+    const on = charFolderView === f.id;
+    const b = h('button', { type: 'button', class: 'chip folder-chip' + (on ? ' on' : ''), title: on ? '한 번 더 누르면 이름 바꾸기 · 지우기' : '' },
+      h('span', { html: icon('folder') }), `${f.name} ${n}`, on ? h('span', { class: 'fc-more', html: icon('more') }) : null);
+    b.addEventListener('click', () => (on ? openFolderMenu(b, f) : setFolderView(f.id)));
+    row.append(b);
+  });
+  const add = h('button', { type: 'button', class: 'chip chip-add' }, '+ 새 폴더');
+  add.addEventListener('click', () => openFolderNamePop(add, '', (v) => { commit(); const f = newFolder(v); changed(); commit(); setFolderView(f.id); }));
+  row.append(add);
+  return h('div', { class: 'section folder-card' }, h('div', { class: 'row stack' }, labelEl('폴더', fs.length ? '폴더를 누르면 그 폴더의 캐릭터만 보여요' : '캐릭터를 폴더로 나눠 볼 수 있어요'), row));
+}
+/** 캐릭터 카드 안 '폴더' 줄: 여러 폴더에 넣고 빼기 */
+function charFolderRow(ch) {
+  const row = h('div', { class: 'chip-row char-folders' });
+  folderList().forEach((f) => {
+    const on = charFolderIds(ch).includes(f.id);
+    row.append(h('button', { type: 'button', class: 'fchip' + (on ? ' on' : ''), 'aria-pressed': String(on), onclick: () => {
+      ch.folders = on ? ch.folders.filter((x) => x !== f.id) : [...charFolderIds(ch), f.id];
+      changed(); commit(); buildChars();
+    } }, f.name));
+  });
+  const add = h('button', { type: 'button', class: 'fchip fchip-add' }, '+ 새 폴더');
+  add.addEventListener('click', () => openFolderNamePop(add, '', (v) => { commit(); const f = newFolder(v); ch.folders = [...charFolderIds(ch), f.id]; changed(); commit(); buildChars(); }));
+  row.append(add);
+  return h('div', { class: 'row stack' }, labelEl('폴더', '여러 폴더에 함께 넣을 수 있어요'), row);
+}
+/** '아, 캐릭터 너무 많아!' 넣을 폴더 고르기 */
+function syncBulkFolder() {
+  const sel = $('#bulk-folder');
+  if (!sel) return;
+  const keep = sel.value;
+  sel.innerHTML = '';
+  sel.append(h('option', { value: '' }, '폴더 없이'));
+  folderList().forEach((f) => sel.append(h('option', { value: f.id }, `‘${f.name}’ 폴더에`)));
+  sel.append(h('option', { value: '__new' }, '+ 새 폴더 만들어서'));
+  sel.value = keep && (keep === '' || folderList().some((f) => f.id === keep)) ? keep : charFolderView || '';
+}
+
 function buildChars() {
   const list = $('#chars-list');
   list.innerHTML = '';
@@ -4568,8 +4651,12 @@ function buildChars() {
     namelessOptions().map(([v, l]) => h('option', { value: v }, l)));
   list.append(h('div', { class: 'section nameless-card' },
     h('div', { class: 'row' }, labelEl('이름 없는 대사의 화자', '이름 없이 따옴표만 있는 대사를 누구의 말풍선으로 할지 정해요'), nlSel)));
+  list.prepend(folderBar());
+  syncBulkFolder();
   if (!state.chars.length) list.append(h('p', { class: 'footnote' }, '아직 캐릭터가 없어요. 아래 버튼으로 추가해 보세요.'));
+  else if (charFolderView && !state.chars.some((c) => (c.folders || []).includes(charFolderView))) list.append(h('p', { class: 'footnote' }, '이 폴더에는 아직 캐릭터가 없어요. 캐릭터 카드의 ‘폴더’에서 넣거나, 아래 버튼으로 추가해 보세요.'));
   state.chars.forEach((ch, i) => {
+    if (charFolderView && !(ch.folders || []).includes(charFolderView)) return;
     const av = h('button', { type: 'button', class: 'char-av', title: '얼굴 사진 바꾸기', 'aria-label': `${ch.name || '캐릭터'} 얼굴 사진 바꾸기` });
     if (ch.avatar) av.style.backgroundImage = `url("${ch.avatar}")`;
     else { av.textContent = [...(ch.name || '?')][0]; av.style.background = avatarColor(ch, ch.name); }
@@ -4656,7 +4743,8 @@ function buildChars() {
         h('div', { class: 'row' }, labelEl('이름 색', ch.nameColor ? '' : '말풍선 설정의 이름 색을 따라요'),
           h('div', { class: 'img-field' },
             ch.nameColor ? h('button', { type: 'button', class: 'link-btn muted', onclick: () => { ch.nameColor = ''; changed(); buildChars(); } }, '기본으로') : null,
-            colorButton(() => ch.nameColor || state.bubble.nameColor, (v) => { const first = !ch.nameColor; ch.nameColor = v; changed(); if (first) buildChars(); })))));
+            colorButton(() => ch.nameColor || state.bubble.nameColor, (v) => { const first = !ch.nameColor; ch.nameColor = v; changed(); if (first) buildChars(); }))),
+        charFolderRow(ch)));
     dropTarget(card, isImageFile, setAvatar);
     list.append(card);
   });
@@ -4693,16 +4781,25 @@ function bulkAddChars() {
     return;
   }
   const base = Date.now().toString(36);
+  const fsel = $('#bulk-folder');
+  const fid = fsel ? fsel.value : '';
   add.forEach((name, i) => state.chars.push({
     id: `c${base}${i}`, name, avatar: '', side: 'left', shape: '',
     custom: true, bg: '#ffffff', color: '#222222', border: '#ffffff',
+    folders: fid && fid !== '__new' ? [fid] : [],
   }));
   input.value = '';
   updateBulkPreview();
   changed(); commit();
   buildChars(); buildFields(); buildQuickInsert();
-  toast(`${add.length}명을 추가했어요${skip.length ? ` · 이미 있는 ${skip.length}명은 건너뛰었어요` : ''}`, { label: '되돌리기', fn: undo });
+  const fname = (folderList().find((f) => f.id === fid) || {}).name;
+  toast(`${add.length}명을 ${fname ? `‘${fname}’ 폴더에 ` : ''}추가했어요${skip.length ? ` · 이미 있는 ${skip.length}명은 건너뛰었어요` : ''}`, { label: '되돌리기', fn: undo });
 }
+$('#bulk-folder').addEventListener('change', (e) => {
+  if (e.target.value !== '__new') return;
+  openFolderNamePop(e.target, '', (v) => { const f = newFolder(v); changed(); commit(); syncBulkFolder(); e.target.value = f.id; buildChars(); });
+  e.target.value = charFolderView || '';
+});
 $('#bulk-names').addEventListener('input', updateBulkPreview);
 $('#bulk-names').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); bulkAddChars(); } });
 $('#btn-bulk-add').addEventListener('click', bulkAddChars);
@@ -5004,6 +5101,7 @@ $('#btn-add-char').addEventListener('click', () => {
   state.chars.push({
     id: 'c' + Date.now().toString(36), name: `캐릭터${n + 1}`, avatar: '',
     side: n % 2 ? 'right' : 'left', shape: '', custom: false, bg: '#ffffff', color: '#222222', border: '#888888',
+    folders: charFolderView ? [charFolderView] : [],
   });
   changed(); buildChars(); buildFields(); buildQuickInsert();
   const names = $$('.char-name');

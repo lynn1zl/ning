@@ -1802,3 +1802,14 @@ img[src^="nnimg:"] { visibility: hidden; }
 .menu > .menu-contact { display: block; padding: 10px 12px; border-radius: 10px; font-size: 13px; color: var(--text-3); text-decoration: none; }
 .menu > .menu-contact b { color: var(--text-2); font-weight: 600; }
 .menu > .menu-contact:hover { background: var(--fill); }
+
+/* 캐릭터 폴더 */
+.folder-card .folder-chips { margin-top: 2px; }
+.folder-chip { display: inline-flex; align-items: center; gap: 5px; }
+.folder-chip svg { width: 14px; height: 14px; }
+.folder-chip .fc-more { display: inline-grid; margin-left: 2px; opacity: .85; }
+.chip-add { background: transparent; border: 1px dashed var(--hair); }
+.char-folders { gap: 6px; }
+.fchip-add { border-style: dashed; }
+.bulk-folder-row { margin-top: 8px; }
+.bulk-folder-row .select { width: 100%; }
