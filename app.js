@@ -2651,7 +2651,7 @@ const SCHEMA = {
       { t: 'slider', p: 'bubble.nameW', l: '이름 칸 너비', sub: '0이면 이름 길이에 맞춰요', min: 0, max: 160, step: 2, u: 'px', show: () => state.bubble.namePos === 'side', when: () => state.bubble.showName },
       { t: 'slider', p: 'bubble.nameSize', l: '이름 크기', min: 8, max: 24, step: 0.5, u: 'px', when: () => state.bubble.showName , pt: true },
       { t: 'color', p: 'bubble.nameColor', l: '이름 색', when: () => state.bubble.showName },
-      { t: 'switch', p: 'bubble.groupSame', l: '이어지는 대사는 첫 말풍선에만', sub: '같은 사람이 나레이션 없이 이어서 말하면 사진 · 이름을 맨 위 말풍선에만 보여요', when: () => state.bubble.avatar || state.bubble.showName },
+      { t: 'switch', p: 'bubble.groupSame', l: '이어지는 대사는 첫 말풍선에만', sub: '같은 사람이 이어서 말하면 얼굴 사진 · 이름은 맨 위 말풍선에만 보여요', when: () => state.bubble.avatar || state.bubble.showName },
     ] },
   ],
   typo: [
