@@ -143,7 +143,7 @@ const DEFAULTS = {
     speech: 'round', tail: true, side: 'left',
     font: 'Pretendard', fontCustom: '', size: 14, lh: 1.55, ls: 0, weight: 400,
     bg: '#ffffff', color: '#222222', border: '#2b2a27', bw: 0, radius: 14, px: 12, py: 8, maxw: 78, shadow: true, gap: 12,
-    avatar: true, avatarSize: 34, avatarShape: 'circle', showName: true, namePos: 'top', nameW: 0, nameSize: 10.5, nameColor: '#6b665e',
+    avatar: true, avatarSize: 34, avatarShape: 'circle', showName: true, groupSame: true, namePos: 'top', nameW: 0, nameSize: 10.5, nameColor: '#6b665e',
   },
   canvas: { ratio: 'auto', width: 600, pad: 40, bgType: 'solid', bg: '#f7f3ea', bg2: '#e6dcc8', gradType: 'linear', gradAngle: 160, pattern: 'dots', patColor: '#8a7f6a', patOpacity: 0.22, patSize: 18, bgImage: '', overlay: 0, overlayColor: '#000000', valign: 'flex-start', fit: false, paginate: true, pageNum: false, scale: 2 },
   chars: [
@@ -2342,6 +2342,11 @@ function render() {
     if (!b || (b.type === 'gap' && !page.flow.childElementCount)) continue;
     const el = renderBlock(b);
     if (b.note) el.dataset.memo = b.note;
+    // 같은 사람이 나레이션 없이 이어서 말하면 첫 말풍선에만 사진 · 이름 (쪽이 바뀌면 다시 보임)
+    if (b.type === 'bubble' && b.speaker && state.bubble.groupSame !== false) {
+      const prev = page.flow.lastElementChild;
+      if (prev && prev.classList.contains('msg') && prev.dataset.speaker === b.speaker && prev.classList.contains(`msg-${b.side}`)) el.classList.add('msg-cont');
+    }
     page.flow.append(el);
     if (!split || !overflows(page)) continue;
     const alone = page.flow.childElementCount === 1;
@@ -2646,6 +2651,7 @@ const SCHEMA = {
       { t: 'slider', p: 'bubble.nameW', l: '이름 칸 너비', sub: '0이면 이름 길이에 맞춰요', min: 0, max: 160, step: 2, u: 'px', show: () => state.bubble.namePos === 'side', when: () => state.bubble.showName },
       { t: 'slider', p: 'bubble.nameSize', l: '이름 크기', min: 8, max: 24, step: 0.5, u: 'px', when: () => state.bubble.showName , pt: true },
       { t: 'color', p: 'bubble.nameColor', l: '이름 색', when: () => state.bubble.showName },
+      { t: 'switch', p: 'bubble.groupSame', l: '이어지는 대사는 첫 말풍선에만', sub: '같은 사람이 나레이션 없이 이어서 말하면 사진 · 이름을 맨 위 말풍선에만 보여요', when: () => state.bubble.avatar || state.bubble.showName },
     ] },
   ],
   typo: [

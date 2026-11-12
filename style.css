@@ -1824,3 +1824,8 @@ img[src^="nnimg:"] { visibility: hidden; }
 .memo-frame { position: absolute; inset: -4px; border: 1.5px solid #3182f6; border-radius: 4px; pointer-events: none; }
 .memo-rs { position: absolute; right: -9px; top: 50%; width: 10px; height: 22px; margin-top: -11px; border-radius: 5px; background: #fff; border: 1.5px solid #3182f6; cursor: ew-resize; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
 .memo-bar .mb-done { color: #3182f6; }
+
+/* 같은 사람이 이어서 말할 때: 맨 위 말풍선에만 사진 · 이름 (자리는 그대로 두어 줄이 맞게) */
+.msg.msg-cont > .avatar { visibility: hidden; height: 0 !important; min-height: 0; }
+.msg.msg-cont .msg-body > .name { display: none; }
+.msg.msg-cont.name-side .msg-body > .name { display: block; visibility: hidden; height: 0; padding-top: 0; }
