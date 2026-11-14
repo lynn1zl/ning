@@ -1853,3 +1853,14 @@ img[src^="nnimg:"] { visibility: hidden; }
     linear-gradient(currentColor, currentColor) right center / calc(50% - 1.1em) 1px no-repeat;
 }
 .divider.hr-diamond::after { content: '◇'; }
+
+/* 구분선 모양 고르기 */
+.hr-pick { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; min-width: 240px; }
+.hr-opt { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px 6px; border: 1px solid var(--hair); border-radius: 10px; background: var(--surface); color: var(--text-1, #222); cursor: pointer; font: inherit; }
+.hr-opt:hover, .hr-opt.on { border-color: var(--accent, #3182f6); }
+.hr-opt.on { box-shadow: 0 0 0 1px var(--accent, #3182f6); }
+.hr-demo { display: flex; justify-content: center; align-items: center; width: 100%; height: 16px; }
+.hr-demo .divider { width: 70%; margin: 0 !important; opacity: .6; }
+.hr-demo .divider.hr-dots, .hr-demo .divider.hr-stars { width: auto; }
+.hr-opt small { font-size: 11.5px; color: var(--text-3); }
+.page-wrap hr.divider { cursor: pointer; }

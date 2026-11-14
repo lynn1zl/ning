@@ -131,7 +131,7 @@ const DEFAULTS = {
   credit: '출처',
   creator: '제작자',
   parse: { auto: true, formats: ['dq', 'sq', 'corner', 'wcorner'], custom: [], mode: 'marked', inline: false, strip: true, nameless: 'none', blank: 'para1', blankV3: true, mergeTl: true, tlShow: 'both', autoChars: true },
-  typo: { hr: 'line', font: 'Noto Serif KR', fontCustom: '', size: 15, lh: 1.75, ls: -0.01, weight: 400, color: '#2a2826', align: 'left', gap: 10, indentOn: false, indent: 1, indentWhere: 'all', hl: '#ffe58a', hlStyle: 'under',
+  typo: { font: 'Noto Serif KR', fontCustom: '', size: 15, lh: 1.75, ls: -0.01, weight: 400, color: '#2a2826', align: 'left', gap: 10, indentOn: false, indent: 1, indentWhere: 'all', hl: '#ffe58a', hlStyle: 'under',
     wordBreak: 'auto', noOrphan: true, ws: 0, palt: false, kern: true, alignLast: 'auto', measure: 0, dropcap: false, dropLines: 2, annoColor: '#e8506a',
     // 옆 메모: 문장 · 말풍선 · 이미지 · 상자 바로 옆(또는 아래)에 다는 작은 멘트
     note: { w: 28, scale: 82, color: '#222222', mark: 'none', ul: true },
@@ -490,6 +490,11 @@ const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, 
 const TC_RE = /\[\[(#[0-9a-fA-F]{3,8})\|([\s\S]+?)\]\]/g;
 // 교정 메모: [[@메모|글자]] (안쪽 글자에 글자색이 있어도 됨)
 const ANNO_RE = /\[\[@(\^|_|&gt;|>)?(~?)([^|\]\n]+)\|((?:\[\[#[0-9a-fA-F]{3,8}\|[\s\S]+?\]\]|[\s\S])+?)\]\]/g;
+// 구분선: '---' (실선) 또는 '--- 물결'처럼 뒤에 모양 이름
+const HR_KINDS = [['line', '실선'], ['dashed', '점선'], ['dotted', '동그란점선'], ['double', '이중선'], ['wave', '물결'], ['dots', '점'], ['stars', '별'], ['diamond', '다이아']];
+const HR_BY_NAME = Object.fromEntries(HR_KINDS.map(([k, n]) => [n, k]));
+const HR_RE = /^(-{3,}|\*{3,}|_{3,}|—{2,})\s*(\S+)?$/;
+const hrLine = (k) => (k && k !== 'line' ? `--- ${HR_KINDS.find((x) => x[0] === k)[1]}` : '---');
 const MEMO_POS = { '^': 'above', _: 'below', '>': 'side', '&gt;': 'side' }; // 화면용으로 바뀐 > 도 옆
 const POS_MARK = { above: '^', below: '_', side: '>' };
 // 속성 안에 원문을 넣을 때 다른 서식 기호가 바뀌지 않게 숫자 문자 참조로
@@ -1092,7 +1097,8 @@ function parseText() {
         continue;
       }
     }
-    if (/^(-{3,}|\*{3,}|_{3,}|—{2,})$/.test(line)) { out.push({ type: 'hr' }); continue; }
+    const hrm = line.match(HR_RE);
+    if (hrm && (!hrm[2] || HR_BY_NAME[hrm[2]])) { out.push({ type: 'hr', kind: hrm[2] ? HR_BY_NAME[hrm[2]] : 'line', line: li }); continue; }
     const bxm = line.match(/^!\[[^\]]*\]\(box:([\w-]+)\)$/);
     if (bxm) { if (state.boxes && state.boxes[bxm[1]]) out.push({ type: 'box', id: bxm[1] }); continue; }
     const im = line.match(/^!\[([^\]]*)\]\(img:([\w-]+)\)$/);
@@ -1644,7 +1650,7 @@ function renderBlock(b) {
     return p;
   }
   if (b.type === 'gap') { const g = h('div', { class: 'gap' }); g.style.setProperty('--gap-n', b.n || 1); return g; }
-  if (b.type === 'hr') return h('hr', { class: `divider hr-${state.typo.hr || 'line'}` });
+  if (b.type === 'hr') return h('hr', { class: `divider hr-${b.kind || 'line'}`, 'data-line': b.line ?? false, title: '눌러서 구분선 모양 바꾸기' });
   if (b.type === 'img') return inlineFigure(b.id, b.alt);
   if (b.type === 'box') return boxFigure(b.id);
 
@@ -2705,7 +2711,6 @@ const SCHEMA = {
       { t: 'slider', p: 'typo.measure', l: '최대 행 길이', sub: '0이면 제한 없음', min: 0, max: 60, step: 1, u: '자' },
       { t: 'switch', p: 'typo.dropcap', l: '드롭캡', sub: '첫 문단의 첫 글자를 여러 줄 높이로 크게' },
       { t: 'slider', p: 'typo.dropLines', l: '드롭캡 높이', min: 2, max: 4, step: 1, u: '줄', show: () => !!state.typo.dropcap },
-      { t: 'select', p: 'typo.hr', l: '구분선 모양', sub: '글에 --- 만 쓴 줄', o: [['line', '실선'], ['dashed', '점선'], ['dotted', '동그란 점선'], ['double', '이중선'], ['wave', '물결'], ['dots', '· · ·'], ['stars', '✻ ✻ ✻'], ['diamond', '◇ 가운데 장식']] },
     ] },
     { sec: '줄바꿈 · 조판', note: '본문과 말풍선 글자에 함께 적용돼요.', rows: [
       { t: 'seg', p: 'typo.wordBreak', l: '줄바꿈 단위', o: [['auto', '자동'], ['word', '어절'], ['char', '글자']], block: true },
@@ -3428,6 +3433,17 @@ $('#stage').addEventListener('click', (e) => {
   if (e.target.closest('.memo-note')) return; // 메모 고르기 · 옮기기는 memoMove에서
   const memo = e.target.closest('.anno');
   if (memo) { editMemoFromPreview(memo); return; }
+  const hr = e.target.closest('hr.divider[data-line]');
+  if (hr) {
+    const li = +hr.dataset.line;
+    const cur = (hr.className.match(/hr-(\w+)/) || [])[1];
+    openHrPop(hr, cur, (k) => {
+      const lines = src.value.split('\n');
+      if (!HR_RE.test((lines[li] || '').trim())) return;
+      commit(); lines[li] = hrLine(k); src.value = lines.join('\n'); state.text = src.value; changed(); commit();
+    });
+    return;
+  }
   const hb = e.target.closest('.hbox');
   if (hb) { openBoxPop(hb, hb.dataset.box); return; }
   const wb = e.target.closest('.narr.was-bubble');
@@ -3552,6 +3568,17 @@ function replaceRange(s, e, text) {
   if (!ok) { src.setRangeText(text, s, e, 'end'); src.dispatchEvent(new Event('input')); }
 }
 
+/* 구분선 모양 고르기: 넣을 때 · 미리보기에서 구분선을 눌렀을 때 */
+function openHrPop(anchor, cur, onPick) {
+  const grid = h('div', { class: 'hr-pick' });
+  HR_KINDS.forEach(([k, name]) => {
+    const b = h('button', { type: 'button', class: 'hr-opt' + (k === cur ? ' on' : ''), onmousedown: (e) => e.preventDefault(), onclick: () => { closePop(); onPick(k); } },
+      h('span', { class: 'hr-demo' }, h('hr', { class: `divider hr-${k}` })), h('small', {}, name));
+    grid.append(b);
+  });
+  openPop(h('div', {}, h('div', { class: 'pop-title' }, cur ? '구분선 모양 바꾸기' : '구분선 넣기'), grid,
+    h('p', { class: 'memo-tip', style: 'margin:8px 2px 0' }, '글에는 ‘--- 물결’처럼 들어가요. 그냥 ---는 실선이에요.')), anchor);
+}
 function insertSnippet(before, after = '', block = true) {
   const s = src.selectionStart, e = src.selectionEnd, v = src.value;
   const sel = v.slice(s, e);
@@ -3659,7 +3686,9 @@ function buildFmtBar() {
   bar.append(annoBtn);
   bar.append(h('span', { class: 'ft-sep' }));
   bar.append(h('button', { type: 'button', class: 'ft ft-text', title: '이름 없는 대사', onmousedown: keep, onclick: () => insertSnippet('"', '"') }, '“대사”'));
-  bar.append(h('button', { type: 'button', class: 'ft ft-text', title: '구분선 넣기', onmousedown: keep, onclick: () => insertSnippet('---\n', '', true) }, '구분선'));
+  const hrBtn = h('button', { type: 'button', class: 'ft ft-text', title: '구분선 넣기 (모양 고르기)', onmousedown: keep }, '구분선');
+  hrBtn.addEventListener('click', () => openHrPop(hrBtn, null, (k) => insertSnippet(hrLine(k) + '\n', '', true)));
+  bar.append(hrBtn);
   const imgBtn = h('button', { type: 'button', class: 'ft ft-img', title: '이미지 넣기', 'aria-label': '이미지 넣기', onmousedown: keep, html: icon('image') + '<span>이미지</span>' });
   imgBtn.addEventListener('click', () => openImageInsertPop(imgBtn));
   bar.append(imgBtn);
