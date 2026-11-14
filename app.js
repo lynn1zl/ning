@@ -1518,8 +1518,8 @@ function bgLayout(k) {
   const T = !!(state.title || '').trim(), S = !!((state.accord || {}).sub || '').trim();
   const r1 = (n) => Math.round(n * 10) / 10, pct = (n) => r1(n / 6);
   if (k === 'AC') {
-    const top = 60 + (S ? 31 : 0) + (T ? 39 * sc + 17 : 0) + 32;
-    return { 박스위: r1(top), 머리아래: r1(top - 32), 안전위: pct(top + 50), 최소: pct(top + 110 + 120) };
+    const top = 34 + (S ? 31 : 0) + (T ? 39 * sc + 17 : 0) + 26;
+    return { 박스위: r1(top), 머리아래: r1(top - 26), 안전위: pct(top + 50), 최소: pct(top + 110 + 84) };
   }
   const top = T || S ? 97 + (S ? 28 : 0) + (T ? 44.2 * sc + 17 : 0) + 14 : 66;
   const cred = !!(((state.accord || {}).char || '').trim() || (state.creator || '').trim());
