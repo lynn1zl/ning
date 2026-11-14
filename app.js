@@ -1614,7 +1614,7 @@ const HTML_BG_PRESETS = [
   { name: '미니홈피', file: 'bg/hompy.html', hompy: { today: '25', total: '1004', say: '안녕하세요', talk: [
     { name: '닐', text: '뭐하냐' }, { name: '린', text: '로그 좀 올려' }, { name: '익명', text: '잘 구경했다...ㅋㅋ' }] } },
   { name: '다이어리', file: 'bg/diary.html' },
-  { name: 'ACCORD', file: 'bg/accord.html', creator: '@dogpig' },
+  { name: 'ACCORD', file: 'bg/accord.html', creator: '@dogpig', canvas: { ratio: 'auto' } },
 ];
 
 function applySkin() {
@@ -5258,6 +5258,7 @@ function buildSkin() {
         if (bp.creator && !('credit' in bp)) state.creator = bp.creator;
         else if (HTML_BG_PRESETS.some((x) => x !== bp && x.creator && !('credit' in x) && x.creator === state.creator)) state.creator = '';
         if (bp.scene) for (const k of Object.keys(bp.scene)) if (!String(state.scene[k] ?? '').trim()) state.scene[k] = bp.scene[k];
+        if (bp.canvas) Object.assign(state.canvas, copyState(bp.canvas)); // 예: 내용 길이에 맞춰 카드 높이
         if (bp.parse) Object.assign(state.parse, copyState(bp.parse), { auto: true });
         if (bp.hompy) {
           const hp = state.hompy;
