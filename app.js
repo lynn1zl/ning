@@ -131,7 +131,7 @@ const DEFAULTS = {
   credit: '출처',
   creator: '제작자',
   parse: { auto: true, formats: ['dq', 'sq', 'corner', 'wcorner'], custom: [], mode: 'marked', inline: false, strip: true, nameless: 'none', blank: 'para1', blankV3: true, mergeTl: true, tlShow: 'both', autoChars: true },
-  typo: { font: 'Noto Serif KR', fontCustom: '', size: 15, lh: 1.75, ls: -0.01, weight: 400, color: '#2a2826', align: 'left', gap: 10, indentOn: false, indent: 1, indentWhere: 'all', hl: '#ffe58a', hlStyle: 'under',
+  typo: { hr: 'line', font: 'Noto Serif KR', fontCustom: '', size: 15, lh: 1.75, ls: -0.01, weight: 400, color: '#2a2826', align: 'left', gap: 10, indentOn: false, indent: 1, indentWhere: 'all', hl: '#ffe58a', hlStyle: 'under',
     wordBreak: 'auto', noOrphan: true, ws: 0, palt: false, kern: true, alignLast: 'auto', measure: 0, dropcap: false, dropLines: 2, annoColor: '#e8506a',
     // 옆 메모: 문장 · 말풍선 · 이미지 · 상자 바로 옆(또는 아래)에 다는 작은 멘트
     note: { w: 28, scale: 82, color: '#222222', mark: 'none', ul: true },
@@ -151,6 +151,7 @@ const DEFAULTS = {
   ],
   charFolders: [], // 캐릭터 폴더: { id, name } · 캐릭터마다 folders: [id…] (여러 폴더에 넣을 수 있음)
   overrides: {},
+  memoStyle: {}, // 메모마다 모양: { 'w:메모' | 'b:메모': { color, scale, mark } }
   memoPos: {}, // 메모마다 직접 옮긴 자리 · 폭: { key: { dx, dy, w } }
   skin: '',
   bgHtml: '',
@@ -1610,21 +1611,20 @@ function applyHtmlBg(pages) {
 let htmlBgReady = Promise.resolve();
 // HTML 배경 프리셋: 고를 때만 불러와서 사이트는 가볍게 유지
 const HTML_BG_PRESETS = [
-  { name: '생존 게임 시뮬레이터', file: 'bg/survival.html', credit: '⚠️생존 게임 시뮬레이터', creator: '@wooya', scene: { place: '골목길', alive: '31', total: '31' } },
   // 언덕 시리즈: 출처 · 제작자는 비우고, 지문 형식은 '*텍스트*'를 나레이션으로
-  { name: '언덕 위의 마녀', file: 'bg/witch.html', clearCredit: true, parse: { formats: ['star1'], mode: 'plain' }, avatars: true,
+  { name: '언덕 위의 마녀', genre: true, file: 'bg/witch.html', clearCredit: true, parse: { formats: ['star1'], mode: 'plain' }, avatars: true,
     chars: ['마녀', { name: '노엘', avatar: 'bg/witch/noel.webp' }, { name: '륜', avatar: 'bg/witch/ryun.webp' }, { name: '악셀', avatar: 'bg/witch/axel.webp' }, { name: '루카', avatar: 'bg/witch/luka.webp' }] },
-  { name: '언덕 위의 마왕', file: 'bg/demon.html', clearCredit: true, parse: { formats: ['star1'], mode: 'plain' }, avatars: true,
+  { name: '언덕 위의 마왕', genre: true, file: 'bg/demon.html', clearCredit: true, parse: { formats: ['star1'], mode: 'plain' }, avatars: true,
     chars: ['마왕', { name: '체페슈', avatar: 'bg/demon/tepes.webp' }, { name: '아자젤', avatar: 'bg/demon/azazel.webp' }, { name: '노먼', avatar: 'bg/demon/norman.webp' }, { name: '빌터', avatar: 'bg/demon/wilter.webp' }, { name: '한', avatar: 'bg/demon/han.webp' }, { name: '라이케', avatar: 'bg/demon/raike.webp' }] },
   // 미니홈피: 비어 있는 칸만 예시로 채움 (이미 쓴 마이룸 · 한마디는 그대로)
   { name: '미니홈피', file: 'bg/hompy.html', hompy: { today: '25', total: '1004', say: '안녕하세요', talk: [
     { name: '닐', text: '뭐하냐' }, { name: '린', text: '로그 좀 올려' }, { name: '익명', text: '잘 구경했다...ㅋㅋ' }] } },
   { name: '다이어리', file: 'bg/diary.html' },
-  { name: 'ACCORD', file: 'bg/accord.html', creator: '@dogpig', canvas: { ratio: 'auto' }, sub: 'TITLE  ·  FILE 06', accord: { dark: false } },
+  { name: 'ACCORD', genre: true, file: 'bg/accord.html', creator: '@dogpig', canvas: { ratio: 'auto' }, sub: 'TITLE  ·  FILE 06', accord: { dark: false } },
   // 다크 모드: 같은 배경에 어두운 색 + 글 · 말풍선 색도 밝게 (밝은 ACCORD로 돌아가면 원래 색으로)
-  { name: 'ACCORD 다크', file: 'bg/accord.html', creator: '@dogpig', canvas: { ratio: 'auto' }, sub: 'TITLE  ·  FILE 06', accord: { dark: true },
+  { name: 'ACCORD 다크', genre: true, file: 'bg/accord.html', creator: '@dogpig', canvas: { ratio: 'auto' }, sub: 'TITLE  ·  FILE 06', accord: { dark: true },
     set: { typo: { color: '#e6e1d3' }, bubble: { bg: '#252933', color: '#ece7d8', border: '#3a3f4c', nameColor: '#a9a59a', shadow: false } } },
-  { name: 'MENAGERIE', file: 'bg/menagerie.html', creator: '@earth', canvas: { ratio: 'auto' }, sub: 'MERIDIAN SOLUTIONS / EST. 2041' },
+  { name: 'MENAGERIE', genre: true, file: 'bg/menagerie.html', creator: '@earth', canvas: { ratio: 'auto' }, sub: 'MERIDIAN SOLUTIONS / EST. 2041' },
 ];
 
 function applySkin() {
@@ -1644,7 +1644,7 @@ function renderBlock(b) {
     return p;
   }
   if (b.type === 'gap') { const g = h('div', { class: 'gap' }); g.style.setProperty('--gap-n', b.n || 1); return g; }
-  if (b.type === 'hr') return h('hr', { class: 'divider' });
+  if (b.type === 'hr') return h('hr', { class: `divider hr-${state.typo.hr || 'line'}` });
   if (b.type === 'img') return inlineFigure(b.id, b.alt);
   if (b.type === 'box') return boxFigure(b.id);
 
@@ -2136,7 +2136,11 @@ function layoutMemos(card) {
   if (!layer) { layer = h('div', { class: 'memo-layer' }); card.append(layer); }
   layer.innerHTML = '';
   const N = state.typo.note || {};
-  const withLine = N.mark && N.mark !== 'none';
+  // 메모마다 따로 정한 모양 (없으면 공통 설정)
+  const MS = state.memoStyle || {};
+  const styleOf = (k) => { const x = MS[k] || {}; return { color: x.color || N.color || '#222222', scale: x.scale || N.scale || 82, mark: x.mark || N.mark || 'none' }; };
+  let withLine = false, curSt = styleOf('');
+  const useStyle = (k) => { curSt = styleOf(k); withLine = curSt.mark !== 'none'; return curSt; };
   const cr = card.getBoundingClientRect();
   const sc = cr.width / (card.offsetWidth || 1) || 1;
   const R = (r) => ({ l: (r.left - cr.left) / sc, t: (r.top - cr.top) / sc, r: (r.right - cr.left) / sc, b: (r.bottom - cr.top) / sc });
@@ -2196,9 +2200,9 @@ function layoutMemos(card) {
     const tx = Math.max(tg.l + 1, Math.min((a.l + a.r) / 2, tg.r - 1)), ty = up ? tg.t : tg.b;
     const ax = Math.max(a.l - 2, Math.min(tx, a.r + 2)), ay = Math.max(a.t - 1, Math.min(ty, a.b + 1));
     if (Math.hypot(ax - tx, ay - ty) < 4) return;
-    lines.push({ x1: tx, y1: ty, x2: ax, y2: ay });
+    lines.push({ x1: tx, y1: ty, x2: ax, y2: ay, col: curSt.color, mark: curSt.mark });
   };
-  const memoFs = (el) => (parseFloat(getComputedStyle(el).fontSize) || 15) * 0.8 * ((N.scale || 82) / 100);
+  const memoFs = (el) => (parseFloat(getComputedStyle(el).fontSize) || 15) * 0.8 * (curSt.scale / 100);
   const lineTarget = (rs) => {
     const lastTop = Math.max(...rs.map((x) => x.t));
     const ln = rs.filter((x) => Math.abs(x.t - lastTop) < 2);
@@ -2254,7 +2258,11 @@ function layoutMemos(card) {
     const rs = [...an.querySelector('.anno-t').getClientRects()].filter((x) => x.width > 0).map(R);
     if (!rs.length) continue;
     const tg = rs[rs.length - 1];
+    const am = new RegExp(ANNO_RE.source).exec(an.dataset.src || '');
+    const st = useStyle(`w:${am ? am[3] : ''}`);
+    an.style.setProperty('--note-color', st.color);
     const n = make(an.querySelector('.anno-n').innerHTML, 'word', memoFs(an));
+    n.style.color = st.color;
     n.dataset.src = an.dataset.src;
     placeOne(n, tg, an.closest('.bubble'), keyOf(`w:${an.dataset.src}`));
   }
@@ -2263,7 +2271,9 @@ function layoutMemos(card) {
     let tg;
     if (tgEl) tg = R(tgEl.getBoundingClientRect());
     else { const rs = textRectsOf(el); if (!rs.length) continue; tg = lineTarget(rs); }
+    const st = useStyle(`b:${el.dataset.memo}`);
     const n = make(fmt(el.dataset.memo), 'block', memoFs(el.querySelector('.bubble') || el));
+    n.style.color = st.color;
     n.dataset.note = el.dataset.memo.split('\n')[0];
     placeOne(n, tg, null, keyOf(`b:${el.dataset.memo}|${(el.textContent || '').trim().slice(0, 30)}`));
   }
@@ -2272,22 +2282,22 @@ function layoutMemos(card) {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('class', 'memo-lines');
     svg.setAttribute('width', W0); svg.setAttribute('height', H0); svg.setAttribute('viewBox', `0 0 ${W0} ${H0}`);
-    const col = N.color || '#222222';
     for (const L0 of lines) {
+      const col = L0.col || N.color || '#222222', mk = L0.mark || N.mark;
       const pts = L0.pts || [[L0.x1, L0.y1], [L0.x2, L0.y2]];
       const L = { x1: pts[0][0], y1: pts[0][1], x2: pts[1][0], y2: pts[1][1] };
       const path = document.createElementNS(svg.namespaceURI, 'path');
       path.setAttribute('d', 'M' + pts.map((q) => `${q[0].toFixed(1)},${q[1].toFixed(1)}`).join(' L'));
       path.setAttribute('fill', 'none'); path.setAttribute('stroke', col); path.setAttribute('stroke-width', '1');
       // 실선 · 점선
-      if (N.mark !== 'solid') path.setAttribute('stroke-dasharray', '3 3');
-      path.setAttribute('opacity', N.mark === 'solid' ? '.7' : '.6');
+      if (mk !== 'solid') path.setAttribute('stroke-dasharray', '3 3');
+      path.setAttribute('opacity', mk === 'solid' ? '.7' : '.6');
       svg.append(path);
-      if (N.mark === 'dot') {
+      if (mk === 'dot') {
         const c = document.createElementNS(svg.namespaceURI, 'circle');
         c.setAttribute('cx', L.x1); c.setAttribute('cy', L.y1); c.setAttribute('r', '2.2'); c.setAttribute('fill', col);
         svg.append(c);
-      } else if (N.mark === 'arrow') {
+      } else if (mk === 'arrow') {
         const ang = Math.atan2(L.y2 - L.y1, L.x2 - L.x1);
         const p1 = [L.x1 + Math.cos(ang - 0.45) * 7, L.y1 + Math.sin(ang - 0.45) * 7];
         const p2 = [L.x1 + Math.cos(ang + 0.45) * 7, L.y1 + Math.sin(ang + 0.45) * 7];
@@ -2695,6 +2705,7 @@ const SCHEMA = {
       { t: 'slider', p: 'typo.measure', l: '최대 행 길이', sub: '0이면 제한 없음', min: 0, max: 60, step: 1, u: '자' },
       { t: 'switch', p: 'typo.dropcap', l: '드롭캡', sub: '첫 문단의 첫 글자를 여러 줄 높이로 크게' },
       { t: 'slider', p: 'typo.dropLines', l: '드롭캡 높이', min: 2, max: 4, step: 1, u: '줄', show: () => !!state.typo.dropcap },
+      { t: 'select', p: 'typo.hr', l: '구분선 모양', sub: '글에 --- 만 쓴 줄', o: [['line', '실선'], ['dashed', '점선'], ['dotted', '동그란 점선'], ['double', '이중선'], ['wave', '물결'], ['dots', '· · ·'], ['stars', '✻ ✻ ✻'], ['diamond', '◇ 가운데 장식']] },
     ] },
     { sec: '줄바꿈 · 조판', note: '본문과 말풍선 글자에 함께 적용돼요.', rows: [
       { t: 'seg', p: 'typo.wordBreak', l: '줄바꿈 단위', o: [['auto', '자동'], ['word', '어절'], ['char', '글자']], block: true },
@@ -4185,9 +4196,11 @@ function openWordMemo(anchor, hit, s0, e0, sel) {
   let ul = hit ? hit.ul : N.ul !== false;
   const inp = h('input', { type: 'text', class: 'input', value: hit ? hit.note : '', placeholder: '예) 여기서 웃음 터짐', maxlength: 60 });
   const ulSw = h('input', { type: 'checkbox', class: 'switch', role: 'switch', checked: ul, onchange: (e) => { ul = e.target.checked; } });
+  const ms = memoDraft(hit ? `w:${hit.note}` : null);
   const apply = () => {
     const note = inp.value.replace(/[|\]\n]/g, ' ').trim();
     closePop();
+    if (note) saveMemoStyle(hit ? `w:${hit.note}` : null, `w:${note}`, ms);
     const inner = hit ? hit.inner : sel;
     const mark = ul ? '~' : '';
     const out = note ? `[[@${mark}${note}|${inner}]]` : inner;
@@ -4200,7 +4213,7 @@ function openWordMemo(anchor, hit, s0, e0, sel) {
     h('div', { class: 'pop-title' }, `${memoLabel(hit ? hit.inner : sel)}에 메모`),
     inp,
     h('label', { class: 'row memo-ul' }, labelEl('밑줄 긋기', '메모를 단 글자에 밑줄을 그어요'), ulSw),
-    memoStyleControls(),
+    memoStyleControls(ms, !!hit),
     h('div', { class: 'pop-foot' },
       hit ? h('button', { type: 'button', class: 'link-btn danger', onclick: () => { inp.value = ''; apply(); } }, '메모 지우기') : h('span', { class: 'memo-tip' }, '글자를 안 고르면 문장 전체에 달려요'),
       h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: apply }, hit ? '바꾸기' : '달기'))), anchor, null, { beside: anchor.closest && anchor.closest('#stage') ? anchor : null });
@@ -4213,9 +4226,11 @@ function openLineMemo(anchor) {
   const curLines = t.noteIdx.map((i) => t.lines[i].trim());
   const cur = curLines.map((l) => l.replace(/^>>[\^_>]?\s?/, '')).join('\n');
   const inp = h('textarea', { class: 'input area-input', rows: 3, placeholder: '예) 여기서 표정 진짜 웃겼음' }, cur);
+  const ms = memoDraft(cur ? `b:${cur}` : null);
   const apply = () => {
     const txt = inp.value.split('\n').map((l) => l.trim()).filter(Boolean);
     closePop();
+    if (txt.length) saveMemoStyle(cur ? `b:${cur}` : null, `b:${txt.join('\n')}`, ms);
     const lines = src.value.split('\n');
     const at = t.noteIdx.length ? t.noteIdx[0] : t.end + 1;
     lines.splice(at, t.noteIdx.length, ...txt.map((l) => `>> ${l}`));
@@ -4229,41 +4244,67 @@ function openLineMemo(anchor) {
     h('div', { class: 'pop-title' }, `${memoLabel(t.lines[t.idx].trim())}에 메모`),
     inp,
     h('p', { class: 'memo-tip', style: 'margin:8px 2px 0' }, '메모는 글을 가리지 않는 빈 곳에 알아서 붙어요.'),
-    memoStyleControls(),
+    memoStyleControls(ms, !!cur),
     h('div', { class: 'pop-foot' },
       cur ? h('button', { type: 'button', class: 'link-btn danger', onclick: () => { inp.value = ''; apply(); } }, '메모 지우기') : h('span', { class: 'memo-tip' }, '단어에만 달려면 글자를 골라요 · Shift+Enter 줄바꿈'),
       h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: apply }, cur ? '바꾸기' : '달기'))), anchor, null, { beside: anchor.closest && anchor.closest('#stage') ? anchor : null });
   inp.focus(); inp.select();
 }
-/* 메모 창 아래 '메모 모양': 글자 크기 · 색 · 이음선 (모든 메모에 함께 적용, 바로 미리보기에 반영) */
+/* 메모 모양: 메모마다 따로 (색 · 글자 크기 · 이음선)
+   - 새 메모는 직전에 단 메모의 모양으로 시작 (state.typo.note.last)
+   - 이미 있는 메모를 고치면 그 메모만 바뀌고 미리보기에 바로 반영 */
 const MEMO_COLORS = ['#222222', '#8b95a1', '#e8506a', '#f76707', '#2f9e44', '#1c7ed6', '#7048e8'];
-function memoStyleControls() {
-  const N = state.typo.note;
+function memoDraft(key) {
+  const N = state.typo.note || {};
+  const base = { color: N.color || '#222222', scale: N.scale || 82, mark: ['none', 'solid', 'dashed'].includes(N.mark) ? N.mark : 'none' };
+  const old = key && (state.memoStyle || {})[key];
+  const x = { ...base, ...(old || (key ? {} : N.last || {})) };
+  x._live = key && old ? key : null; // 이미 따로 정한 메모면 고치는 즉시 반영
+  x._key = key;
+  return x;
+}
+function saveMemoStyle(oldKey, newKey, ms) {
+  const { _live, _key, ...st } = ms;
+  state.memoStyle = { ...(state.memoStyle || {}) };
+  if (oldKey && oldKey !== newKey) delete state.memoStyle[oldKey];
+  state.memoStyle[newKey] = st;
+  state.typo.note.last = { ...st }; // 다음 새 메모는 이 모양으로 시작
+}
+function memoStyleControls(ms, editing) {
+  // 고치는 메모는 바로 미리보기에 반영
+  const live = () => {
+    if (!editing || !ms._key) return;
+    const { _live, _key, ...st } = ms;
+    state.memoStyle = { ...(state.memoStyle || {}), [ms._key]: st };
+    changed();
+  };
   const wrap = h('div', { class: 'memo-style' });
-  const out = h('output', {}, `${N.scale || 82}%`);
-  const sl = h('input', { type: 'range', class: 'slider', min: 50, max: 130, step: 1, value: N.scale || 82, 'aria-label': '메모 글자 크기' });
+  const out = h('output', {}, `${ms.scale}%`);
+  const sl = h('input', { type: 'range', class: 'slider', min: 50, max: 130, step: 1, value: ms.scale, 'aria-label': '메모 글자 크기' });
   const pct = (v) => `${((v - 50) / 80) * 100}%`;
   sl.style.setProperty('--p', pct(sl.value));
-  sl.addEventListener('input', () => { out.textContent = `${sl.value}%`; sl.style.setProperty('--p', pct(sl.value)); N.scale = +sl.value; changed(); });
+  sl.addEventListener('input', () => { out.textContent = `${sl.value}%`; sl.style.setProperty('--p', pct(sl.value)); ms.scale = +sl.value; live(); });
   const dots = h('div', { class: 'shadow-colors' });
-  const paint = () => $$('.sc-dot', dots).forEach((b) => b.classList.toggle('on', b.dataset.c === N.color));
+  const paint = () => $$('.sc-dot', dots).forEach((b) => b.classList.toggle('on', b.dataset.c === ms.color));
   MEMO_COLORS.forEach((c) => {
     const b = h('button', { type: 'button', class: 'sc-dot', 'data-c': c, 'aria-label': c, title: c, onmousedown: (e) => e.preventDefault() });
     b.style.background = c;
-    b.addEventListener('click', () => { N.color = c; paint(); changed(); });
+    b.addEventListener('click', () => { ms.color = c; paint(); live(); });
     dots.append(b);
   });
-  const nat = h('input', { type: 'color', class: 'sc-pick', value: /^#[0-9a-f]{6}$/i.test(N.color || '') ? N.color : '#222222', 'aria-label': '메모 색 직접 고르기', title: '직접 고르기' });
-  nat.addEventListener('input', () => { N.color = nat.value; paint(); changed(); });
+  const nat = h('input', { type: 'color', class: 'sc-pick', value: /^#[0-9a-f]{6}$/i.test(ms.color || '') ? ms.color : '#222222', 'aria-label': '메모 색 직접 고르기', title: '직접 고르기' });
+  nat.addEventListener('input', () => { ms.color = nat.value; paint(); live(); });
   dots.append(nat);
   paint();
   wrap.append(
     h('div', { class: 'pop-label row-top' }, '메모 글자 크기', out), sl,
     h('div', { class: 'pop-label' }, '메모 색'), dots,
     h('div', { class: 'pop-label' }, '이음선'),
-    segEl([['none', '선 없음'], ['solid', '실선'], ['dashed', '점선']], ['none', 'solid', 'dashed'].includes(N.mark) ? N.mark : 'dashed', (v) => { N.mark = v; changed(); }, true),
-    h('p', { class: 'memo-tip', style: 'margin:6px 2px 0' }, '선 없음: 글자 바로 옆에 · 선을 쓰면 가까운 곳(빈 곳이 없으면 글 위)에 두고 선으로 이어요. 미리보기에서 메모를 누르면 자리 · 폭을 바꿀 수 있어요.'));
-  return h('details', { class: 'memo-style-box', open: true }, h('summary', {}, '메모 모양'), wrap);
+    segEl([['none', '선 없음'], ['solid', '실선'], ['dashed', '점선']], ms.mark, (v) => { ms.mark = v; live(); }, true),
+    h('p', { class: 'memo-tip', style: 'margin:6px 2px 0' }, editing
+      ? '이 메모에만 적용돼요. 다른 메모는 그대로예요.'
+      : '이 메모에만 적용되고, 다음에 다는 메모도 이 모양으로 시작해요.'));
+  return h('details', { class: 'memo-style-box', open: true }, h('summary', {}, '이 메모의 모양'), wrap);
 }
 
 /* 입력창에서 글자를 고르면 그 근처에 작은 '메모' 버튼 */
@@ -5236,7 +5277,7 @@ function buildSkin() {
   const hrow = $('#html-presets');
   hrow.innerHTML = '';
   HTML_BG_PRESETS.forEach((bp) => hrow.append(h('button', {
-    type: 'button', class: 'chip',
+    type: 'button', class: 'chip', 'data-name': bp.name,
     onclick: async () => {
       try {
         await loadBgRef(bp.file);
@@ -5289,7 +5330,7 @@ function buildSkin() {
         toast(`‘${bp.name}’ 배경을 적용했어요${added.length ? ` · 캐릭터 ${added.length}명 등록` : ''}${bp.scene ? ' · 장소 · 생존 인원은 텍스트 탭 ‘상황판’에서' : ''}${bp.hompy ? ' · 색 · 마이룸 · 한마디는 텍스트 탭에서' : ''}${bp.file === 'bg/diary.html' ? ' · 색 · 날짜 · 날씨 · 메모는 텍스트 탭에서' : ''}${bp.sub != null ? ` · 소제목 · 캐릭터명 · 제작자는 텍스트 탭에서${bp.set ? ' · 글 · 말풍선 색도 어둡게 맞췄어요' : ''}` : ''}`, { label: '되돌리기', fn: undo }, 4200);
       } catch (e) { toast('배경을 불러오지 못했어요'); }
     },
-  }, bp.name)));
+  }, bp.name, bp.genre ? h('small', { class: 'chip-tag' }, '장르') : null)));
   $('#skin-css').value = state.skin;
   syncHtmlEditor();
   setHtmlStatus(htmlBg.status);
@@ -5316,7 +5357,7 @@ function syncHtmlEditor() {
   card.hidden = !state.bgRef;
   if (state.bgRef) $('#html-ref-name').textContent = bp ? bp.name : '등록된 배경';
   else if (ta.value !== (state.bgHtml || '')) ta.value = state.bgHtml || '';
-  $$('#html-presets .chip').forEach((c) => c.classList.toggle('on', !!bp && c.textContent === bp.name));
+  $$('#html-presets .chip').forEach((c) => c.classList.toggle('on', !!bp && c.dataset.name === bp.name));
 }
 let skinTimer;
 $('#skin-css').addEventListener('input', (e) => {
@@ -6105,7 +6146,7 @@ const RESETS = [
       state.parse.nameless = 'none';
     } },
   { id: 'text', icon: 'text', title: '글 지우기', desc: '입력한 글과 제목 · 출처 · 제작자를 비워요', done: '글을 비웠어요',
-    run() { state.text = ''; state.title = ''; state.credit = ''; state.creator = ''; state.overrides = {}; state.memoPos = {}; state.images = {}; state.stickers = []; } },
+    run() { state.text = ''; state.title = ''; state.credit = ''; state.creator = ''; state.overrides = {}; state.memoPos = {}; state.memoStyle = {}; state.images = {}; state.stickers = []; } },
   { id: 'all', icon: 'refresh', title: '전부 처음부터', desc: '글 · 캐릭터 · 디자인 · 대사 인식 설정까지 모두 처음 상태로', done: '처음 상태로 되돌렸어요', danger: true,
     run() { state = copyState(DEFAULTS); autoTried.clear(); } },
 ];
@@ -6218,6 +6259,8 @@ rebuildAll();
 resetHistory();
 // 따로 보관한 사진을 불러와 다시 그림 (예전 설정은 다음 자동 저장 때 사진만 옮겨 짐)
 restoreImages().then((n) => { if (n) { rebuildAll(); resetHistory(); } save(); });
+// 목록에서 빠진 등록 배경(예: 생존 게임)을 쓰던 중이면 배경을 비움
+if (state.bgRef && !HTML_BG_PRESETS.some((x) => x.file === state.bgRef)) { state.bgRef = ''; save(); }
 if (state.bgRef) loadBgRef(state.bgRef).then(() => { htmlBg.cache.clear(); render(); }).catch(() => toast('배경을 불러오지 못했어요'));
 
 /* ── 첫 방문 튜토리얼: 메뉴를 하나씩 강조하며 설명 ── */
