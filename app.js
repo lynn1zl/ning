@@ -24,6 +24,7 @@ const ICONS = {
   rotate: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
   shadow: '<rect x="3.5" y="3.5" width="12" height="12" rx="2"/><path d="M19.5 8v9.5a2 2 0 0 1-2 2H8" stroke-opacity=".45"/>',
   border: '<rect x="3.5" y="3.5" width="17" height="17" rx="2.5"/><rect x="8" y="8" width="8" height="8" rx="1" stroke-opacity=".45"/>',
+  wand: '<path d="m4 20 11-11"/><path d="m13.5 7.5 3 3"/><path d="M18 3v3M16.5 4.5h3M20.5 9.5v2M19.5 10.5h2M10 3v2M9 4h2"/>',
   crop: '<path d="M6.5 2.5v13a2 2 0 0 0 2 2h13"/><path d="M17.5 21.5v-13a2 2 0 0 0-2-2h-13"/>',
   fit: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
   check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
@@ -1927,6 +1928,16 @@ function drawImgBar() {
       const src0 = o.src;
       const out = await cropImage(src0);
       if (out && out !== src0) { updSel({ src: out, round: lastCropShape === 'circle' }); changed(); commit(); }
+    }),
+    btn('wand', '배경 지우기', null, () => {
+      const kind = t.kind;
+      openBgRemove(t.box, o.src, (out, kw) => {
+        commit();
+        if (kind === 'sticker') { o.src = out; o.w = Math.max(20, Math.round((o.w || 200) * kw)); o.round = false; }
+        else state.images = { ...state.images, [selInline]: { ...state.images[selInline], src: out, round: false } };
+        changed(); commit();
+        toast('배경을 지웠어요', { label: '되돌리기', fn: undo });
+      });
     }),
     h('i', { class: 'ib-sep' }),
     btn('more', '설정', null, () => (t.kind === 'sticker' ? openStickerPop(t.el, o.id) : openInlineImagePop(t.el, selInline)), ' mo'),
@@ -5135,6 +5146,10 @@ function openInlineImagePop(fig, id) {
         const out = await cropImage(info.src);
         if (out && out !== info.src) { state.images = { ...state.images, [id]: { ...state.images[id], src: out, round: lastCropShape === 'circle' } }; changed(); commit(); }
       } }, '자르기'),
+      h('button', { type: 'button', class: 'link-btn', onclick: () => openBgRemove(fig, info.src, (out) => {
+        commit(); state.images = { ...state.images, [id]: { ...state.images[id], src: out, round: false } }; changed(); commit();
+        toast('배경을 지웠어요', { label: '되돌리기', fn: undo });
+      }) }, '배경 지우기'),
       h('button', { type: 'button', class: 'link-btn', onclick: () => {
         removeImageToken(id);
         const W = state.canvas.width, w = Math.round(W * 0.34);
@@ -5175,6 +5190,10 @@ function openStickerPop(el, id) {
         const out = await cropImage(st.src);
         if (out && out !== st.src) { st.src = out; st.round = lastCropShape === 'circle'; changed(); commit(); }
       } }, '자르기'),
+      h('button', { type: 'button', class: 'link-btn', onclick: () => openBgRemove(el, st.src, (out, kw) => {
+        commit(); st.src = out; st.w = Math.max(20, Math.round((st.w || 200) * kw)); st.round = false; changed(); commit();
+        toast('배경을 지웠어요', { label: '되돌리기', fn: undo });
+      }) }, '배경 지우기'),
       h('button', { type: 'button', class: 'link-btn danger', onclick: () => {
         state.stickers = state.stickers.filter((x) => x.id !== id); selSticker = null; changed(); closePop();
         toast('이미지를 지웠어요', { label: '되돌리기', fn: undo });
@@ -6025,6 +6044,135 @@ function loadImg(src) {
 }
 /** src를 잘라 dataURL로 돌려줌. 취소하면 null, '자르지 않고 넣기'면 원래 src.
  *  opts: { avatar: true } — 원형 미리보기 · 정사각형 256px 고정 */
+/* =========================================================
+   배경 지우기: 가장자리와 이어진 단색 배경을 투명하게 + 남은 부분만 남기고 잘라내기
+   - 바탕색은 가장자리 픽셀 중 가장 많은 색 (또는 미리보기를 눌러 직접 고르기)
+   - 비슷한 정도(허용 범위) 안의 색을 가장자리부터 번져 가며 지움, 경계는 부드럽게
+   ========================================================= */
+function openBgRemove(anchor, src, onApply) {
+  closePop();
+  const img = new Image();
+  img.onload = () => {
+    const MAX = 1400;
+    const k = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight));
+    const W = Math.max(1, Math.round(img.naturalWidth * k)), H = Math.max(1, Math.round(img.naturalHeight * k));
+    const base = document.createElement('canvas'); base.width = W; base.height = H;
+    const bctx = base.getContext('2d', { willReadFrequently: true });
+    bctx.drawImage(img, 0, 0, W, H);
+    const px = bctx.getImageData(0, 0, W, H).data;
+    // 가장자리에서 가장 많은 색 = 바탕색
+    const count = new Map();
+    const edge = (x, y) => { const i = (y * W + x) * 4; if (px[i + 3] < 20) return; const q = ((px[i] >> 3) << 10) | ((px[i + 1] >> 3) << 5) | (px[i + 2] >> 3); count.set(q, (count.get(q) || 0) + 1); };
+    for (let x = 0; x < W; x++) { edge(x, 0); edge(x, H - 1); }
+    for (let y = 0; y < H; y++) { edge(0, y); edge(W - 1, y); }
+    let best = 0, bq = 0;
+    count.forEach((n, q) => { if (n > best) { best = n; bq = q; } });
+    let bg = [((bq >> 10) & 31) * 8 + 4, ((bq >> 5) & 31) * 8 + 4, (bq & 31) * 8 + 4];
+    const opt = { tol: 18, all: false, trim: true };
+    // 미리보기 (체크무늬 위)
+    const view = document.createElement('canvas');
+    const vk = Math.min(1, 300 / Math.max(W, H));
+    view.width = Math.round(W * vk); view.height = Math.round(H * vk);
+    view.className = 'bgr-view';
+    view.title = '눌러서 지울 바탕색 고르기';
+    let result = null;
+    const run = () => {
+      const tol = opt.tol * 4.41; // 0~100 → RGB 거리
+      const n = W * H;
+      const dist = new Float32Array(n);
+      for (let i = 0; i < n; i++) {
+        const j = i * 4;
+        dist[i] = px[j + 3] < 10 ? 0 : Math.hypot(px[j] - bg[0], px[j + 1] - bg[1], px[j + 2] - bg[2]);
+      }
+      const gone = new Uint8Array(n);
+      if (opt.all) { for (let i = 0; i < n; i++) if (dist[i] <= tol) gone[i] = 1; }
+      else {
+        const stack = [];
+        const seed = (i) => { if (!gone[i] && dist[i] <= tol) { gone[i] = 1; stack.push(i); } };
+        for (let x = 0; x < W; x++) { seed(x); seed((H - 1) * W + x); }
+        for (let y = 0; y < H; y++) { seed(y * W); seed(y * W + W - 1); }
+        while (stack.length) {
+          const i = stack.pop(), x = i % W;
+          if (x > 0) seed(i - 1);
+          if (x < W - 1) seed(i + 1);
+          if (i >= W) seed(i - W);
+          if (i < n - W) seed(i + W);
+        }
+      }
+      const out = new ImageData(new Uint8ClampedArray(px), W, H);
+      const d = out.data;
+      const soft = Math.max(6, tol * 0.8);
+      let x0 = W, y0 = H, x1 = -1, y1 = -1;
+      for (let i = 0; i < n; i++) {
+        const j = i * 4;
+        if (gone[i]) { d[j + 3] = 0; continue; }
+        // 지운 곳 바로 옆 픽셀은 바탕색에 가까울수록 반투명 (경계 부드럽게)
+        const x = i % W;
+        const nb = (x > 0 && gone[i - 1]) || (x < W - 1 && gone[i + 1]) || (i >= W && gone[i - W]) || (i < n - W && gone[i + W]);
+        if (nb && dist[i] < tol + soft) d[j + 3] = Math.round(d[j + 3] * Math.min(1, (dist[i] - tol) / soft + 0.15));
+        if (d[j + 3] > 12) { const y = (i - x) / W; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+      }
+      const c = document.createElement('canvas'); c.width = W; c.height = H;
+      c.getContext('2d').putImageData(out, 0, 0);
+      let crop = { x: 0, y: 0, w: W, h: H };
+      if (opt.trim && x1 >= 0) { const m = 2; crop = { x: Math.max(0, x0 - m), y: Math.max(0, y0 - m) }; crop.w = Math.min(W, x1 + m + 1) - crop.x; crop.h = Math.min(H, y1 + m + 1) - crop.y; }
+      result = { canvas: c, crop, empty: x1 < 0 };
+      const v = view.getContext('2d');
+      v.clearRect(0, 0, view.width, view.height);
+      v.drawImage(c, 0, 0, view.width, view.height);
+      if (opt.trim && x1 >= 0) {
+        v.save(); v.strokeStyle = '#3182f6'; v.setLineDash([4, 3]); v.lineWidth = 1.5;
+        v.strokeRect(crop.x * vk + 0.5, crop.y * vk + 0.5, crop.w * vk - 1, crop.h * vk - 1); v.restore();
+      }
+      sw.style.background = `rgb(${bg.join(',')})`;
+    };
+    let raf = 0;
+    const later = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(run); };
+    view.addEventListener('click', (e) => {
+      const r = view.getBoundingClientRect();
+      const x = Math.min(W - 1, Math.max(0, Math.round(((e.clientX - r.left) / r.width) * W)));
+      const y = Math.min(H - 1, Math.max(0, Math.round(((e.clientY - r.top) / r.height) * H)));
+      const j = (y * W + x) * 4;
+      bg = [px[j], px[j + 1], px[j + 2]];
+      later();
+    });
+    const sw = h('span', { class: 'bgr-sw' });
+    const outEl = h('output', {}, String(opt.tol));
+    const sl = h('input', { type: 'range', class: 'slider', min: 1, max: 60, step: 1, value: opt.tol, 'aria-label': '허용 범위' });
+    const pct = (v) => `${((v - 1) / 59) * 100}%`;
+    sl.style.setProperty('--p', pct(sl.value));
+    sl.addEventListener('input', () => { opt.tol = +sl.value; outEl.textContent = sl.value; sl.style.setProperty('--p', pct(sl.value)); later(); });
+    const sw1 = h('input', { type: 'checkbox', class: 'switch', role: 'switch', checked: opt.all, onchange: (e) => { opt.all = e.target.checked; later(); } });
+    const sw2 = h('input', { type: 'checkbox', class: 'switch', role: 'switch', checked: opt.trim, onchange: (e) => { opt.trim = e.target.checked; later(); } });
+    const apply = () => {
+      if (!result) return;
+      if (result.empty) { toast('이미지가 전부 지워져요. 허용 범위를 줄여 주세요'); return; }
+      const { canvas: c, crop } = result;
+      const o = document.createElement('canvas'); o.width = crop.w; o.height = crop.h;
+      o.getContext('2d').drawImage(c, crop.x, crop.y, crop.w, crop.h, 0, 0, crop.w, crop.h);
+      // 투명을 지키는 형식으로 (webp가 안 되면 png)
+      const webp = o.toDataURL('image/webp', 0.92);
+      const url = webp.startsWith('data:image/webp') ? webp : o.toDataURL('image/png');
+      closePop();
+      onApply(url, crop.w / W);
+    };
+    openPop(h('div', { class: 'bgr-pop' },
+      h('div', { class: 'pop-title' }, '배경 지우기'),
+      h('div', { class: 'bgr-stage' }, view),
+      h('p', { class: 'memo-tip', style: 'margin:6px 2px 0' }, '단색 배경에 잘 맞아요. 지울 색이 다르면 미리보기에서 그 색을 눌러요.'),
+      h('div', { class: 'pop-label row-top' }, h('span', { class: 'bgr-lab' }, '지울 바탕색', sw), ''),
+      h('div', { class: 'pop-label row-top' }, '허용 범위', outEl), sl,
+      h('label', { class: 'row bgr-row' }, labelEl('떨어진 곳도 지우기', '가장자리와 이어지지 않은 같은 색(글자 속 구멍 등)도 지워요'), sw1),
+      h('label', { class: 'row bgr-row' }, labelEl('남은 부분만 남기고 잘라내기', '투명해진 바깥 여백을 잘라내요'), sw2),
+      h('div', { class: 'pop-foot' },
+        h('button', { type: 'button', class: 'link-btn muted', onclick: closePop }, '취소'),
+        h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: apply }, '적용'))), anchor, null, { beside: anchor });
+    run();
+  };
+  img.onerror = () => toast('이미지를 불러오지 못했어요');
+  img.src = src;
+}
+
 async function cropImage(src, opts = {}) {
   if (!/^data:/i.test(src)) return src; // 외부에서 막힌 링크는 자를 수 없음
   let im;
