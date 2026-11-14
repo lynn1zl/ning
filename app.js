@@ -1620,10 +1620,11 @@ const HTML_BG_PRESETS = [
   { name: '미니홈피', file: 'bg/hompy.html', hompy: { today: '25', total: '1004', say: '안녕하세요', talk: [
     { name: '닐', text: '뭐하냐' }, { name: '린', text: '로그 좀 올려' }, { name: '익명', text: '잘 구경했다...ㅋㅋ' }] } },
   { name: '다이어리', file: 'bg/diary.html' },
-  { name: 'ACCORD', file: 'bg/accord.html', creator: '@dogpig', canvas: { ratio: 'auto' }, accord: { dark: false } },
+  { name: 'ACCORD', file: 'bg/accord.html', creator: '@dogpig', canvas: { ratio: 'auto' }, sub: 'TITLE  ·  FILE 06', accord: { dark: false } },
   // 다크 모드: 같은 배경에 어두운 색 + 글 · 말풍선 색도 밝게 (밝은 ACCORD로 돌아가면 원래 색으로)
-  { name: 'ACCORD 다크', file: 'bg/accord.html', creator: '@dogpig', canvas: { ratio: 'auto' }, accord: { dark: true },
+  { name: 'ACCORD 다크', file: 'bg/accord.html', creator: '@dogpig', canvas: { ratio: 'auto' }, sub: 'TITLE  ·  FILE 06', accord: { dark: true },
     set: { typo: { color: '#e6e1d3' }, bubble: { bg: '#252933', color: '#ece7d8', border: '#3a3f4c', nameColor: '#a9a59a', shadow: false } } },
+  { name: 'MENAGERIE', file: 'bg/menagerie.html', creator: '@earth', canvas: { ratio: 'auto' }, sub: 'MERIDIAN SOLUTIONS / EST. 2041' },
 ];
 
 function applySkin() {
@@ -2603,8 +2604,8 @@ const SCHEMA = {
       { t: 'text', p: 'credit', l: '출처 · 작품명', ph: '예) 채팅방 이름 · 날짜', show: () => !bgUsesAccord() },
       { t: 'text', p: 'creator', l: '출처 · 제작자', ph: '예) @내계정', show: () => !bgUsesAccord() },
     ] },
-    { sec: 'ACCORD', note: '제목은 위 ‘제목’ 칸에서 바꿔요. 캐릭터명 · 제작자는 아래 검은 띠에 들어가요.', show: () => bgUsesAccord(), rows: [
-      { t: 'text', p: 'accord.sub', l: '소제목', ph: '예) TITLE · FILE 06 · 비워두면 숨겨요' },
+    { sec: '소제목 · 크레딧', note: '제목은 위 ‘제목’ 칸에서 바꿔요. 캐릭터명 · 제작자는 배경 아래쪽 크레딧에 들어가요.', show: () => bgUsesAccord(), rows: [
+      { t: 'text', p: 'accord.sub', l: '소제목', ph: '비워두면 숨겨요' },
       { t: 'text', p: 'accord.char', l: '캐릭터명', ph: '예) 닝' },
       { t: 'text', p: 'creator', l: '제작자', ph: '예) @dogpig' },
     ] },
@@ -5269,6 +5270,8 @@ function buildSkin() {
         if (bp.scene) for (const k of Object.keys(bp.scene)) if (!String(state.scene[k] ?? '').trim()) state.scene[k] = bp.scene[k];
         if (bp.canvas) Object.assign(state.canvas, copyState(bp.canvas)); // 예: 내용 길이에 맞춰 카드 높이
         if (bp.accord) Object.assign(state.accord, copyState(bp.accord));
+        // 소제목: 비었거나 다른 배경의 기본 소제목 그대로면 이 배경의 기본 소제목으로
+        if (bp.sub != null && (!String(state.accord.sub || '').trim() || HTML_BG_PRESETS.some((x) => x.sub && x.sub === state.accord.sub))) state.accord.sub = bp.sub;
         // 다른 등록 배경이 바꿔 둔 색(예: 다크 모드)이 그대로면 기본값으로 되돌린 뒤, 이 배경의 색을 씀
         HTML_BG_PRESETS.forEach((x) => {
           if (x === bp || !x.set) return;
@@ -5283,7 +5286,7 @@ function buildSkin() {
         }
         changed(); commit();
         buildChars(); buildFields(); buildQuickInsert(); syncHtmlEditor();
-        toast(`‘${bp.name}’ 배경을 적용했어요${added.length ? ` · 캐릭터 ${added.length}명 등록` : ''}${bp.scene ? ' · 장소 · 생존 인원은 텍스트 탭 ‘상황판’에서' : ''}${bp.hompy ? ' · 색 · 마이룸 · 한마디는 텍스트 탭에서' : ''}${bp.file === 'bg/diary.html' ? ' · 색 · 날짜 · 날씨 · 메모는 텍스트 탭에서' : ''}${bp.file === 'bg/accord.html' ? ` · 소제목 · 캐릭터명 · 제작자는 텍스트 탭에서${bp.set ? ' · 글 · 말풍선 색도 어둡게 맞췄어요' : ''}` : ''}`, { label: '되돌리기', fn: undo }, 4200);
+        toast(`‘${bp.name}’ 배경을 적용했어요${added.length ? ` · 캐릭터 ${added.length}명 등록` : ''}${bp.scene ? ' · 장소 · 생존 인원은 텍스트 탭 ‘상황판’에서' : ''}${bp.hompy ? ' · 색 · 마이룸 · 한마디는 텍스트 탭에서' : ''}${bp.file === 'bg/diary.html' ? ' · 색 · 날짜 · 날씨 · 메모는 텍스트 탭에서' : ''}${bp.sub != null ? ` · 소제목 · 캐릭터명 · 제작자는 텍스트 탭에서${bp.set ? ' · 글 · 말풍선 색도 어둡게 맞췄어요' : ''}` : ''}`, { label: '되돌리기', fn: undo }, 4200);
       } catch (e) { toast('배경을 불러오지 못했어요'); }
     },
   }, bp.name)));
