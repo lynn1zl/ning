@@ -159,7 +159,7 @@ const DEFAULTS = {
   // 미니홈피 배경: 프레임 · 바탕 색, 방문자 수, 마이룸 사진 · 말풍선, TALK! TALK! 한마디
   hompy: { frame: '#8fd0e6', bg: '#eceff3', today: '', total: '', room: '', say: '', talk: [] },
   // 다이어리 배경: 표지 색, 날짜(비우면 오늘), 날씨, 메모지 제목 · 내용, 키링 글자
-  accord: { sub: 'TITLE  ·  FILE 06', char: '' },
+  accord: { sub: 'TITLE  ·  FILE 06', char: '', dark: false },
   diary: { color: '#ff8a80', date: '', weather: 'sun', memoTitle: 'to do ♡', todo: '✓ 장보기\n✓ 발췌하기\n☐ 헬스장 등록', beads: 'LOVE', keyring: true },
   boxes: {},    // 글 사이에 넣은 HTML 상자: id → { preset, code, head, text, w(%), align }
   images: {},   // 글자처럼 넣은 이미지: id → { src, w(%), align }
@@ -1530,6 +1530,10 @@ function fillBgTokens(html) {
     .replace(/\{\{\s*마이룸\s*\}\}/g, () => (hp.room ? `<img src="${hp.room.replace(/"/g, '&quot;')}" alt="">` : '')
       + ((hp.say || '').trim() ? `<div class="say">${e(hp.say)}</div>` : ''))
     .replace(/\{\{\s*소제목\s*\}\}/g, () => e(ac.sub))
+    // ACCORD 색: 밝은 모드 · 다크 모드
+    .replace(/\{\{AC블루\}\}/g, () => (ac.dark ? '5b6dff' : '2438c8'))
+    .replace(/\{\{AC잉크\}\}/g, () => (ac.dark ? 'e8e3d3' : '15171d'))
+    .replace(/\{\{AC종이\}\}/g, () => (ac.dark ? '111318' : 'f3eedf'))
     .replace(/\{\{\s*캐릭터명\s*\}\}/g, () => e(ac.char))
     .replace(/\{\{\s*다이어리색\s*\}\}/g, () => safeColor(dy.color, '#ff8a80'))
     .replace(/\{\{\s*날짜\s*\}\}/g, () => e(String(dy.date || '').trim() || todayLabel()))
@@ -1614,7 +1618,10 @@ const HTML_BG_PRESETS = [
   { name: '미니홈피', file: 'bg/hompy.html', hompy: { today: '25', total: '1004', say: '안녕하세요', talk: [
     { name: '닐', text: '뭐하냐' }, { name: '린', text: '로그 좀 올려' }, { name: '익명', text: '잘 구경했다...ㅋㅋ' }] } },
   { name: '다이어리', file: 'bg/diary.html' },
-  { name: 'ACCORD', file: 'bg/accord.html', creator: '@dogpig', canvas: { ratio: 'auto' } },
+  { name: 'ACCORD', file: 'bg/accord.html', creator: '@dogpig', canvas: { ratio: 'auto' }, accord: { dark: false } },
+  // 다크 모드: 같은 배경에 어두운 색 + 글 · 말풍선 색도 밝게 (밝은 ACCORD로 돌아가면 원래 색으로)
+  { name: 'ACCORD 다크', file: 'bg/accord.html', creator: '@dogpig', canvas: { ratio: 'auto' }, accord: { dark: true },
+    set: { typo: { color: '#e6e1d3' }, bubble: { bg: '#252933', color: '#ece7d8', border: '#3a3f4c', nameColor: '#a9a59a', shadow: false } } },
 ];
 
 function applySkin() {
@@ -5259,6 +5266,13 @@ function buildSkin() {
         else if (HTML_BG_PRESETS.some((x) => x !== bp && x.creator && !('credit' in x) && x.creator === state.creator)) state.creator = '';
         if (bp.scene) for (const k of Object.keys(bp.scene)) if (!String(state.scene[k] ?? '').trim()) state.scene[k] = bp.scene[k];
         if (bp.canvas) Object.assign(state.canvas, copyState(bp.canvas)); // 예: 내용 길이에 맞춰 카드 높이
+        if (bp.accord) Object.assign(state.accord, copyState(bp.accord));
+        // 다른 등록 배경이 바꿔 둔 색(예: 다크 모드)이 그대로면 기본값으로 되돌린 뒤, 이 배경의 색을 씀
+        HTML_BG_PRESETS.forEach((x) => {
+          if (x === bp || !x.set) return;
+          for (const [k, o] of Object.entries(x.set)) for (const [kk, v] of Object.entries(o)) if (state[k][kk] === v && DEFAULTS[k]) state[k][kk] = DEFAULTS[k][kk];
+        });
+        if (bp.set) for (const [k, o] of Object.entries(bp.set)) Object.assign(state[k], copyState(o));
         if (bp.parse) Object.assign(state.parse, copyState(bp.parse), { auto: true });
         if (bp.hompy) {
           const hp = state.hompy;
@@ -5266,8 +5280,8 @@ function buildSkin() {
           if (!(hp.talk || []).some((t) => (t.text || '').trim())) hp.talk = copyState(bp.hompy.talk);
         }
         changed(); commit();
-        buildChars(); buildFields(); buildQuickInsert();
-        toast(`‘${bp.name}’ 배경을 적용했어요${added.length ? ` · 캐릭터 ${added.length}명 등록` : ''}${bp.scene ? ' · 장소 · 생존 인원은 텍스트 탭 ‘상황판’에서' : ''}${bp.hompy ? ' · 색 · 마이룸 · 한마디는 텍스트 탭에서' : ''}${bp.file === 'bg/diary.html' ? ' · 색 · 날짜 · 날씨 · 메모는 텍스트 탭에서' : ''}${bp.file === 'bg/accord.html' ? ' · 소제목 · 캐릭터명 · 제작자는 텍스트 탭에서' : ''}`, { label: '되돌리기', fn: undo }, 4200);
+        buildChars(); buildFields(); buildQuickInsert(); syncHtmlEditor();
+        toast(`‘${bp.name}’ 배경을 적용했어요${added.length ? ` · 캐릭터 ${added.length}명 등록` : ''}${bp.scene ? ' · 장소 · 생존 인원은 텍스트 탭 ‘상황판’에서' : ''}${bp.hompy ? ' · 색 · 마이룸 · 한마디는 텍스트 탭에서' : ''}${bp.file === 'bg/diary.html' ? ' · 색 · 날짜 · 날씨 · 메모는 텍스트 탭에서' : ''}${bp.file === 'bg/accord.html' ? ` · 소제목 · 캐릭터명 · 제작자는 텍스트 탭에서${bp.set ? ' · 글 · 말풍선 색도 어둡게 맞췄어요' : ''}` : ''}`, { label: '되돌리기', fn: undo }, 4200);
       } catch (e) { toast('배경을 불러오지 못했어요'); }
     },
   }, bp.name)));
@@ -5290,7 +5304,9 @@ function syncHtmlEditor() {
   if (ico && !ico.firstElementChild) ico.innerHTML = icon('image');
   const card = $('#html-ref');
   const ta = $('#html-bg');
-  const bp = state.bgRef && HTML_BG_PRESETS.find((x) => x.file === state.bgRef);
+  // 같은 파일을 쓰는 배경(ACCORD · ACCORD 다크)은 모드로 구분
+  const same = HTML_BG_PRESETS.filter((x) => x.file === state.bgRef);
+  const bp = state.bgRef && (same.find((x) => !x.accord || !!x.accord.dark === !!(state.accord || {}).dark) || same[0]);
   ta.closest('.code-card').hidden = !!state.bgRef;
   card.hidden = !state.bgRef;
   if (state.bgRef) $('#html-ref-name').textContent = bp ? bp.name : '등록된 배경';
