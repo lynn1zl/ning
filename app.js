@@ -6045,7 +6045,7 @@ function loadImg(src) {
 /** src를 잘라 dataURL로 돌려줌. 취소하면 null, '자르지 않고 넣기'면 원래 src.
  *  opts: { avatar: true } — 원형 미리보기 · 정사각형 256px 고정 */
 /* =========================================================
-   배경 지우기: 가장자리와 이어진 단색 배경을 투명하게 + 남은 부분만 남기고 잘라내기
+   배경 지우기: 가장자리와 이어진 단색 배경을 투명하게 (크기는 그대로)
    - 바탕색은 가장자리 픽셀 중 가장 많은 색 (또는 미리보기를 눌러 직접 고르기)
    - 비슷한 정도(허용 범위) 안의 색을 가장자리부터 번져 가며 지움, 경계는 부드럽게
    ========================================================= */
@@ -6068,7 +6068,7 @@ function openBgRemove(anchor, src, onApply) {
     let best = 0, bq = 0;
     count.forEach((n, q) => { if (n > best) { best = n; bq = q; } });
     let bg = [((bq >> 10) & 31) * 8 + 4, ((bq >> 5) & 31) * 8 + 4, (bq & 31) * 8 + 4];
-    const opt = { tol: 18, all: false, trim: true };
+    const opt = { tol: 18, all: false };
     // 미리보기 (체크무늬 위)
     const view = document.createElement('canvas');
     const vk = Math.min(1, 300 / Math.max(W, H));
@@ -6115,15 +6115,10 @@ function openBgRemove(anchor, src, onApply) {
       const c = document.createElement('canvas'); c.width = W; c.height = H;
       c.getContext('2d').putImageData(out, 0, 0);
       let crop = { x: 0, y: 0, w: W, h: H };
-      if (opt.trim && x1 >= 0) { const m = 2; crop = { x: Math.max(0, x0 - m), y: Math.max(0, y0 - m) }; crop.w = Math.min(W, x1 + m + 1) - crop.x; crop.h = Math.min(H, y1 + m + 1) - crop.y; }
       result = { canvas: c, crop, empty: x1 < 0 };
       const v = view.getContext('2d');
       v.clearRect(0, 0, view.width, view.height);
       v.drawImage(c, 0, 0, view.width, view.height);
-      if (opt.trim && x1 >= 0) {
-        v.save(); v.strokeStyle = '#3182f6'; v.setLineDash([4, 3]); v.lineWidth = 1.5;
-        v.strokeRect(crop.x * vk + 0.5, crop.y * vk + 0.5, crop.w * vk - 1, crop.h * vk - 1); v.restore();
-      }
       sw.style.background = `rgb(${bg.join(',')})`;
     };
     let raf = 0;
@@ -6143,7 +6138,6 @@ function openBgRemove(anchor, src, onApply) {
     sl.style.setProperty('--p', pct(sl.value));
     sl.addEventListener('input', () => { opt.tol = +sl.value; outEl.textContent = sl.value; sl.style.setProperty('--p', pct(sl.value)); later(); });
     const sw1 = h('input', { type: 'checkbox', class: 'switch', role: 'switch', checked: opt.all, onchange: (e) => { opt.all = e.target.checked; later(); } });
-    const sw2 = h('input', { type: 'checkbox', class: 'switch', role: 'switch', checked: opt.trim, onchange: (e) => { opt.trim = e.target.checked; later(); } });
     const apply = () => {
       if (!result) return;
       if (result.empty) { toast('이미지가 전부 지워져요. 허용 범위를 줄여 주세요'); return; }
@@ -6162,8 +6156,7 @@ function openBgRemove(anchor, src, onApply) {
       h('p', { class: 'memo-tip', style: 'margin:6px 2px 0' }, '단색 배경에 잘 맞아요. 지울 색이 다르면 미리보기에서 그 색을 눌러요.'),
       h('div', { class: 'pop-label row-top' }, h('span', { class: 'bgr-lab' }, '지울 바탕색', sw), ''),
       h('div', { class: 'pop-label row-top' }, '허용 범위', outEl), sl,
-      h('label', { class: 'row bgr-row' }, labelEl('떨어진 곳도 지우기', '가장자리와 이어지지 않은 같은 색(글자 속 구멍 등)도 지워요'), sw1),
-      h('label', { class: 'row bgr-row' }, labelEl('남은 부분만 남기고 잘라내기', '투명해진 바깥 여백을 잘라내요'), sw2),
+      h('label', { class: 'row bgr-row' }, labelEl('선택한 색 모두 지우기', '끄면 테두리와 이어진 바탕만 지워요. 켜면 그림 안쪽(구멍 · 글자 속 등)에 있는 같은 색까지 지워요'), sw1),
       h('div', { class: 'pop-foot' },
         h('button', { type: 'button', class: 'link-btn muted', onclick: closePop }, '취소'),
         h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: apply }, '적용'))), anchor, null, { beside: anchor });
