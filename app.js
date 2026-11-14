@@ -1530,6 +1530,8 @@ function fillBgTokens(html) {
     .replace(/\{\{\s*마이룸\s*\}\}/g, () => (hp.room ? `<img src="${hp.room.replace(/"/g, '&quot;')}" alt="">` : '')
       + ((hp.say || '').trim() ? `<div class="say">${e(hp.say)}</div>` : ''))
     .replace(/\{\{\s*소제목\s*\}\}/g, () => e(ac.sub))
+    // 서체 탭 '제목 크기'를 배경 속 제목에도 반영 (기본 19px = 1배)
+    .replace(/\{\{\s*제목배율\s*\}\}/g, () => String(Math.max(0.3, Math.min(4, (+state.head.size || 19) / 19)).toFixed(3)))
     // ACCORD 색: 밝은 모드 · 다크 모드
     .replace(/\{\{AC블루\}\}/g, () => (ac.dark ? '5b6dff' : '2438c8'))
     .replace(/\{\{AC잉크\}\}/g, () => (ac.dark ? 'e8e3d3' : '15171d'))
