@@ -159,6 +159,7 @@ const DEFAULTS = {
   // 미니홈피 배경: 프레임 · 바탕 색, 방문자 수, 마이룸 사진 · 말풍선, TALK! TALK! 한마디
   hompy: { frame: '#8fd0e6', bg: '#eceff3', today: '', total: '', room: '', say: '', talk: [] },
   // 다이어리 배경: 표지 색, 날짜(비우면 오늘), 날씨, 메모지 제목 · 내용, 키링 글자
+  accord: { sub: 'TITLE  ·  FILE 06', char: '' },
   diary: { color: '#ff8a80', date: '', weather: 'sun', memoTitle: 'to do ♡', todo: '✓ 장보기\n✓ 발췌하기\n☐ 헬스장 등록', beads: 'LOVE', keyring: true },
   boxes: {},    // 글 사이에 넣은 HTML 상자: id → { preset, code, head, text, w(%), align }
   images: {},   // 글자처럼 넣은 이미지: id → { src, w(%), align }
@@ -1496,6 +1497,7 @@ const bgUsesHompy = () => /\{\{\s*(마이룸|톡톡|프레임색)\s*\}\}/.test(b
 const bgUsesDiary = () => /\{\{\s*(다이어리색|날짜|날씨)\s*\}\}/.test(bgCode());
 // 직접 붙여넣은 HTML도 {{메모제목}} · {{할일}} · {{키링}}만 쓰면 그 칸만 텍스트 탭에 보여 줌
 const bgUsesMemo = () => /\{\{\s*(메모제목|할일)\s*\}\}/.test(bgCode());
+const bgUsesAccord = () => /\{\{\s*(소제목|캐릭터명)\s*\}\}/.test(bgCode());
 const bgUsesBeads = () => /\{\{\s*키링\s*\}\}/.test(bgCode());
 const WEATHERS = [['sun', '맑음', '☀\uFE0E'], ['cloud', '흐림', '☁\uFE0E'], ['rain', '비', '☂\uFE0E'], ['snow', '눈', '❄\uFE0E']];
 function todayLabel() {
@@ -1509,6 +1511,7 @@ function fillBgTokens(html) {
   const sc = state.scene || {};
   const hp = state.hompy || {};
   const dy = state.diary || {};
+  const ac = state.accord || {};
   // 상황판 끄기: data-scene 이 붙은 요소를 숨김
   if (sc.show === false) html = (html || '') + '<style>[data-scene]{display:none !important}</style>';
   return (html || '')
@@ -1526,6 +1529,8 @@ function fillBgTokens(html) {
     .replace(/\{\{\s*토탈\s*\}\}/g, () => e(String(hp.total ?? '')))
     .replace(/\{\{\s*마이룸\s*\}\}/g, () => (hp.room ? `<img src="${hp.room.replace(/"/g, '&quot;')}" alt="">` : '')
       + ((hp.say || '').trim() ? `<div class="say">${e(hp.say)}</div>` : ''))
+    .replace(/\{\{\s*소제목\s*\}\}/g, () => e(ac.sub))
+    .replace(/\{\{\s*캐릭터명\s*\}\}/g, () => e(ac.char))
     .replace(/\{\{\s*다이어리색\s*\}\}/g, () => safeColor(dy.color, '#ff8a80'))
     .replace(/\{\{\s*날짜\s*\}\}/g, () => e(String(dy.date || '').trim() || todayLabel()))
     .replace(/\{\{\s*날씨\s*\}\}/g, () => WEATHERS.map(([k, , g]) => `<i class="${k === dy.weather ? 'on' : ''}">${g}</i>`).join(''))
@@ -1609,6 +1614,7 @@ const HTML_BG_PRESETS = [
   { name: '미니홈피', file: 'bg/hompy.html', hompy: { today: '25', total: '1004', say: '안녕하세요', talk: [
     { name: '닐', text: '뭐하냐' }, { name: '린', text: '로그 좀 올려' }, { name: '익명', text: '잘 구경했다...ㅋㅋ' }] } },
   { name: '다이어리', file: 'bg/diary.html' },
+  { name: 'ACCORD', file: 'bg/accord.html', creator: '@dogpig' },
 ];
 
 function applySkin() {
@@ -2585,8 +2591,13 @@ const SCHEMA = {
     ] },
     { sec: '제목 · 출처', rows: [
       { t: 'text', p: 'title', l: '제목', ph: '비워두면 표시하지 않아요' },
-      { t: 'text', p: 'credit', l: '출처 · 작품명', ph: '예) 채팅방 이름 · 날짜' },
-      { t: 'text', p: 'creator', l: '출처 · 제작자', ph: '예) @내계정' },
+      { t: 'text', p: 'credit', l: '출처 · 작품명', ph: '예) 채팅방 이름 · 날짜', show: () => !bgUsesAccord() },
+      { t: 'text', p: 'creator', l: '출처 · 제작자', ph: '예) @내계정', show: () => !bgUsesAccord() },
+    ] },
+    { sec: 'ACCORD', note: '제목은 위 ‘제목’ 칸에서 바꿔요. 캐릭터명 · 제작자는 아래 검은 띠에 들어가요.', show: () => bgUsesAccord(), rows: [
+      { t: 'text', p: 'accord.sub', l: '소제목', ph: '예) TITLE · FILE 06 · 비워두면 숨겨요' },
+      { t: 'text', p: 'accord.char', l: '캐릭터명', ph: '예) 닝' },
+      { t: 'text', p: 'creator', l: '제작자', ph: '예) @dogpig' },
     ] },
     { sec: '상황판', note: '생존 게이지는 생존 인원 ÷ 전체 인원으로 채워져요.', show: () => bgUsesScene(), rows: [
       { t: 'switch', p: 'scene.show', l: '상황판 보이기', sub: '끄면 배경에서 상황판을 숨겨요' },
@@ -4450,7 +4461,7 @@ function buildQuickInsert() {
 }
 
 /* 내 양식: 디자인 · 대사 인식 설정을 저장/불러오기 (글은 제외) */
-const STYLE_KEYS = ['typo', 'head', 'bubble', 'canvas', 'parse', 'skin', 'bgHtml', 'bgRef', 'scene', 'hompy', 'diary'];
+const STYLE_KEYS = ['typo', 'head', 'bubble', 'canvas', 'parse', 'skin', 'bgHtml', 'bgRef', 'scene', 'hompy', 'diary', 'accord'];
 let myStyles = [];
 
 function styleSnapshot(name, withChars) {
@@ -5244,6 +5255,8 @@ function buildSkin() {
         if (!('credit' in bp) && HTML_BG_PRESETS.some((x) => x !== bp && x.credit && x.credit === state.credit)) { state.credit = ''; state.creator = ''; }
         if (bp.clearCredit) { state.credit = ''; state.creator = ''; }
         if ('credit' in bp) { state.credit = bp.credit; state.creator = bp.creator || ''; }
+        if (bp.creator && !('credit' in bp)) state.creator = bp.creator;
+        else if (HTML_BG_PRESETS.some((x) => x !== bp && x.creator && !('credit' in x) && x.creator === state.creator)) state.creator = '';
         if (bp.scene) for (const k of Object.keys(bp.scene)) if (!String(state.scene[k] ?? '').trim()) state.scene[k] = bp.scene[k];
         if (bp.parse) Object.assign(state.parse, copyState(bp.parse), { auto: true });
         if (bp.hompy) {
@@ -5253,7 +5266,7 @@ function buildSkin() {
         }
         changed(); commit();
         buildChars(); buildFields(); buildQuickInsert();
-        toast(`‘${bp.name}’ 배경을 적용했어요${added.length ? ` · 캐릭터 ${added.length}명 등록` : ''}${bp.scene ? ' · 장소 · 생존 인원은 텍스트 탭 ‘상황판’에서' : ''}${bp.hompy ? ' · 색 · 마이룸 · 한마디는 텍스트 탭에서' : ''}${bp.file === 'bg/diary.html' ? ' · 색 · 날짜 · 날씨 · 메모는 텍스트 탭에서' : ''}`, { label: '되돌리기', fn: undo }, 4200);
+        toast(`‘${bp.name}’ 배경을 적용했어요${added.length ? ` · 캐릭터 ${added.length}명 등록` : ''}${bp.scene ? ' · 장소 · 생존 인원은 텍스트 탭 ‘상황판’에서' : ''}${bp.hompy ? ' · 색 · 마이룸 · 한마디는 텍스트 탭에서' : ''}${bp.file === 'bg/diary.html' ? ' · 색 · 날짜 · 날씨 · 메모는 텍스트 탭에서' : ''}${bp.file === 'bg/accord.html' ? ' · 소제목 · 캐릭터명 · 제작자는 텍스트 탭에서' : ''}`, { label: '되돌리기', fn: undo }, 4200);
       } catch (e) { toast('배경을 불러오지 못했어요'); }
     },
   }, bp.name)));
