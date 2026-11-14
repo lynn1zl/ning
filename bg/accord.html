@@ -1,4 +1,4 @@
-<!-- ninining-safe: 38% 9.4% 23.6% 19%; min-height: 72% -->
+<!-- ninining-safe: {{AC안전위}}% 9.4% 23.6% 19%; min-height: {{AC최소}}% -->
 <!-- ACCORD (밝은 · 다크 모드 공용): 소제목 · 캐릭터명 · 제작자는 텍스트 탭에서 바꿔요 -->
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@300;400;500;600&family=Space+Grotesk:wght@500;700&display=swap');
@@ -71,7 +71,7 @@
   /* 제목 칸 (긴 제목은 위로 늘어남) */
   .head {
     left: calc(92 * var(--u)); width: calc(352 * var(--u));
-    bottom: calc(100cqh - 146 * var(--u));
+    bottom: calc(100cqh - {{AC머리아래}} * var(--u));
   }
   .sub {
     display: inline-block; margin-bottom: calc(12 * var(--u));
@@ -81,6 +81,7 @@
     color: var(--ivory);
   }
   .sub:empty { display: none; }
+  h1:empty { display: none; }
   h1 {
     margin: 0; padding: 0 0 calc(16 * var(--u));
     border-bottom: calc(1 * var(--u)) solid var(--ink);
@@ -91,18 +92,18 @@
 
   /* 본문 상자 */
   .freq {
-    top: calc(158 * var(--u)); right: calc(34 * var(--u));
+    top: calc(({{AC박스위}} - 20) * var(--u)); right: calc(34 * var(--u));
     font: 400 calc(9.5 * var(--u))/1 var(--mono); letter-spacing: .16em; color: var(--ink);
   }
   .box {
-    top: calc(178 * var(--u)); left: calc(92 * var(--u)); right: calc(34 * var(--u)); bottom: calc(120 * var(--u));
+    top: calc({{AC박스위}} * var(--u)); left: calc(92 * var(--u)); right: calc(34 * var(--u)); bottom: calc(120 * var(--u));
     background: var(--ivory);
     box-shadow: calc(7 * var(--u)) calc(7 * var(--u)) 0 var(--ink);
     outline: calc(1 * var(--u)) solid var(--blue);
   }
   /* 테두리 위 작은 네모 8개 */
   .knots {
-    top: calc(174 * var(--u)); left: calc(88 * var(--u)); right: calc(30 * var(--u)); bottom: calc(116 * var(--u));
+    top: calc(({{AC박스위}} - 4) * var(--u)); left: calc(88 * var(--u)); right: calc(30 * var(--u)); bottom: calc(116 * var(--u));
     --k: linear-gradient(var(--blue), var(--blue));
     --s: calc(8 * var(--u)) calc(8 * var(--u));
     background:
@@ -111,7 +112,7 @@
       var(--k) 0 100% / var(--s) no-repeat, var(--k) 50% 100% / var(--s) no-repeat, var(--k) 100% 100% / var(--s) no-repeat;
   }
   .bar {
-    top: calc(178 * var(--u)); left: calc(92 * var(--u)); right: calc(34 * var(--u)); height: calc(28 * var(--u));
+    top: calc({{AC박스위}} * var(--u)); left: calc(92 * var(--u)); right: calc(34 * var(--u)); height: calc(28 * var(--u));
     display: flex; align-items: center; padding-left: calc(46 * var(--u));
     background:
       repeating-linear-gradient(90deg, var(--ivory) 0 calc(2 * var(--u)), transparent calc(2 * var(--u)) calc(6 * var(--u))) right calc(38 * var(--u)) center / calc(92 * var(--u)) calc(7 * var(--u)) no-repeat,

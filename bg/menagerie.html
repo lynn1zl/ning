@@ -1,4 +1,4 @@
-<!-- ninining-safe: 38.4% 8.7% 19.4% 8.7%; min-height: 72% -->
+<!-- ninining-safe: {{MG안전위}}% 8.7% {{MG안전아래}}% 8.7%; min-height: {{MG최소}}% -->
 <!-- MENAGERIE: 소제목 · 캐릭터명 · 제작자는 텍스트 탭에서 바꿔요 -->
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@700;800;900&family=Noto+Sans+KR:wght@400;500;700;900&family=Space+Mono:wght@400;700&display=swap');
@@ -42,13 +42,14 @@
   }
 
   /* 제목 칸 (긴 제목은 위로 늘어남) */
-  .head { left: calc(26 * var(--u)); right: calc(26 * var(--u)); bottom: calc(100cqh - calc(186 * var(--u))); }
+  .head { left: calc(26 * var(--u)); right: calc(26 * var(--u)); bottom: calc(100cqh - {{MG머리아래}} * var(--u)); }
   .sub {
     display: inline-block; margin-bottom: calc(12 * var(--u)); padding: calc(3 * var(--u)) 0 calc(2 * var(--u));
     border-top: calc(1 * var(--u)) solid var(--neon); border-bottom: calc(1 * var(--u)) solid var(--neon);
     font: 800 calc(10 * var(--u))/1 'Archivo', 'Noto Sans KR', sans-serif; letter-spacing: .24em; white-space: pre; color: var(--neon);
   }
   .sub:empty { display: none; }
+  h1:empty { display: none; }
   h1 {
     margin: 0; padding: 0 26% calc(16 * var(--u)) 0;
     border-bottom: calc(1 * var(--u)) solid rgba(242,242,238,.55);
@@ -60,13 +61,13 @@
 
   /* 본문 종이 + 뒤에 겹친 그린 망점 종이 */
   .paper-g {
-    top: calc(200 * var(--u)); left: calc(26 * var(--u)); right: calc(26 * var(--u)); bottom: calc(88 * var(--u));
+    top: calc({{MG박스위}} * var(--u)); left: calc(26 * var(--u)); right: calc(26 * var(--u)); bottom: calc({{MG박스아래}} * var(--u));
     transform: translate(calc(10 * var(--u)), calc(12 * var(--u))) rotate(1.6deg);
     background: radial-gradient(rgba(11,12,10,.55) calc(1.1 * var(--u)), transparent calc(1.4 * var(--u))) 0 0 / calc(6 * var(--u)) calc(6 * var(--u)), var(--neon);
     box-shadow: 0 0 calc(60 * var(--u)) rgba(126,217,87,.22);
   }
   .paper {
-    top: calc(200 * var(--u)); left: calc(26 * var(--u)); right: calc(26 * var(--u)); bottom: calc(88 * var(--u));
+    top: calc({{MG박스위}} * var(--u)); left: calc(26 * var(--u)); right: calc(26 * var(--u)); bottom: calc({{MG박스아래}} * var(--u));
     background: var(--white); box-shadow: 0 calc(18 * var(--u)) calc(40 * var(--u)) calc(-18 * var(--u)) rgba(0,0,0,.8);
   }
 

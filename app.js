@@ -1513,6 +1513,19 @@ function todayLabel() {
   return `${d.getFullYear()}. ${p2(d.getMonth() + 1)}. ${p2(d.getDate())}. ${'일월화수목금토'[d.getDay()]}`;
 }
 const safeColor = (v, d) => (/^#[0-9a-f]{3,8}$/i.test(v || '') ? v : d);
+function bgLayout(k) {
+  const sc = Math.max(0.3, Math.min(4, (+state.head.size || 19) / 19));
+  const T = !!(state.title || '').trim(), S = !!((state.accord || {}).sub || '').trim();
+  const r1 = (n) => Math.round(n * 10) / 10, pct = (n) => r1(n / 6);
+  if (k === 'AC') {
+    const top = 60 + (S ? 31 : 0) + (T ? 39 * sc + 17 : 0) + 32;
+    return { 박스위: r1(top), 머리아래: r1(top - 32), 안전위: pct(top + 50), 최소: pct(top + 110 + 120) };
+  }
+  const top = T || S ? 97 + (S ? 28 : 0) + (T ? 44.2 * sc + 17 : 0) + 14 : 66;
+  const cred = !!(((state.accord || {}).char || '').trim() || (state.creator || '').trim());
+  const bot = cred ? 88 : 40;
+  return { 박스위: r1(top), 머리아래: r1(top - 14), 안전위: pct(top + 30), 박스아래: bot, 안전아래: pct(bot + 28), 최소: pct(top + 110 + bot) };
+}
 function fillBgTokens(html) {
   const e = (t) => esc((t || '').trim());
   const sc = state.scene || {};
@@ -1537,6 +1550,8 @@ function fillBgTokens(html) {
     .replace(/\{\{\s*마이룸\s*\}\}/g, () => (hp.room ? `<img src="${hp.room.replace(/"/g, '&quot;')}" alt="">` : '')
       + ((hp.say || '').trim() ? `<div class="say">${e(hp.say)}</div>` : ''))
     .replace(/\{\{\s*소제목\s*\}\}/g, () => e(ac.sub))
+    // 제목 · 소제목 · 크레딧이 비면 그 자리만큼 상자를 끌어올림 (값은 카드 폭 600 기준 단위)
+    .replace(/\{\{(AC|MG)(박스위|머리아래|안전위|박스아래|안전아래|최소)\}\}/g, (m, k, w) => String(bgLayout(k)[w]))
     // 서체 탭 '제목 크기'를 배경 속 제목에도 반영 (기본 19px = 1배)
     .replace(/\{\{\s*제목배율\s*\}\}/g, () => String(Math.max(0.3, Math.min(4, (+state.head.size || 19) / 19)).toFixed(3)))
     // ACCORD 색: 밝은 모드 · 다크 모드
@@ -1558,7 +1573,7 @@ function fillBgTokens(html) {
 }
 // 글이 들어갈 자리: <!-- ninining-safe: 위% 오른쪽% 아래% 왼쪽%; min-height: %--> (모두 카드 가로 기준)
 function bgSafeArea() {
-  const m = bgCode().match(/ninining-safe:\s*([\d.]+)%\s+([\d.]+)%\s+([\d.]+)%\s+([\d.]+)%(?:\s*;\s*min-height:\s*([\d.]+)%)?/);
+  const m = fillBgTokens(bgCode().slice(0, 300)).match(/ninining-safe:\s*([\d.]+)%\s+([\d.]+)%\s+([\d.]+)%\s+([\d.]+)%(?:\s*;\s*min-height:\s*([\d.]+)%)?/);
   return m ? { t: +m[1], r: +m[2], b: +m[3], l: +m[4], minH: m[5] ? +m[5] : 0 } : null;
 }
 
