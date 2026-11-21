@@ -1,0 +1,148 @@
+<!-- ninining-safe: {{XM안전위}}% 12% 15% 12%; min-height: {{XM최소}}% -->
+<!-- DECEMBER: 소나무 초록 바탕 · 크림 종이 · 트리 · 선물 상자 · 크레용 별 · 전구 줄 -->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Jua&family=Silkscreen&display=swap');
+
+  :root {
+    --pine: #1d3a2d;
+    --pine-2: #2c5641;
+    --sage: #86a985;
+    --paper: #fbf4e6;
+    --pink: #f3b3cc;
+    --magenta: #d860b6;
+    --red: #e0473a;
+    --mustard: #e3a93b;
+    --cocoa: #8b5a3c;
+  }
+  body { background: var(--pine); }
+
+  /* 카드 폭에 맞춰 모든 치수가 함께 커지고 작아지도록 (600px 기준 1u) */
+  .xm { position: absolute; inset: 0; overflow: hidden; container-type: size; }
+  .xm * { --u: calc(100cqw / 600); }
+  .xm > div, .xm > svg { position: absolute; }
+
+  /* 바탕: 소나무 초록 + 크레용 결 */
+  .base { inset: 0; background: var(--pine); }
+  .grain { inset: 0; width: 100%; height: 100%; opacity: .5; mix-blend-mode: soft-light; }
+
+  /* 크림 종이 (가장자리는 좁게) */
+  .paper { top: calc(16 * var(--u)); left: calc(16 * var(--u)); right: calc(16 * var(--u)); bottom: calc(16 * var(--u));
+    background: var(--paper); border-radius: calc(3 * var(--u)); }
+  .paper-grain { top: calc(16 * var(--u)); left: calc(16 * var(--u)); width: calc(100% - 32 * var(--u)); height: calc(100% - 32 * var(--u)); opacity: .55; mix-blend-mode: multiply; }
+  /* 바느질 선 */
+  .stitch { top: calc(26 * var(--u)); left: calc(26 * var(--u)); right: calc(26 * var(--u)); bottom: calc(26 * var(--u));
+    border: calc(1.2 * var(--u)) dashed rgba(216, 96, 182, .45); border-radius: calc(2 * var(--u)); }
+
+  /* 크레용 결: 오브제 가장자리가 살짝 거칠고 안쪽에 결이 비침 */
+  .ink { filter: url(#crayon); }
+
+  /* 머리 */
+  .head { left: calc(130 * var(--u)); right: calc(130 * var(--u)); top: calc(42 * var(--u)); text-align: center; }
+  .label { display: block; font: 400 calc(9.5 * var(--u))/1 'Silkscreen', monospace; letter-spacing: .32em; padding-left: .32em; color: var(--red); }
+  h1 { margin: calc(12 * var(--u)) 0 0; font: 400 calc(28 * var(--u) * {{제목배율}})/1.3 'Jua', sans-serif; color: var(--pine); letter-spacing: .02em; word-break: keep-all; }
+  h1:empty { display: none; }
+  .sub { margin: calc(6 * var(--u)) 0 0; font: 400 calc(13 * var(--u))/1.4 'Jua', sans-serif; color: var(--pine-2); letter-spacing: .02em; word-break: keep-all; }
+  .sub:empty { display: none; }
+  h1:empty + .sub { margin-top: calc(12 * var(--u)); }
+  .dash { display: block; width: calc(110 * var(--u)); height: calc(14 * var(--u)); margin: calc(10 * var(--u)) auto 0; }
+  .foot { left: 0; right: 0; bottom: calc(34 * var(--u)); text-align: center; font: 400 calc(9 * var(--u))/1 'Silkscreen', 'Jua', monospace; letter-spacing: .24em; padding-left: .24em; color: var(--pine-2); }
+  .foot:empty { display: none; }
+
+  /* 오브제 자리 */
+  .tree { left: calc(34 * var(--u)); top: calc(32 * var(--u)); width: calc(84 * var(--u)); height: calc(112 * var(--u)); }
+  .gifts { right: calc(32 * var(--u)); top: calc(46 * var(--u)); width: calc(100 * var(--u)); height: calc(98 * var(--u)); }
+  .lights { left: calc(16 * var(--u)); right: calc(16 * var(--u)); bottom: calc(44 * var(--u)); height: calc(40 * var(--u)); width: auto; }
+  .tw { width: calc(14 * var(--u)); height: calc(14 * var(--u)); }
+  .tw.a { left: calc(36 * var(--u)); top: 46%; }
+  .tw.b { right: calc(38 * var(--u)); top: 61%; width: calc(11 * var(--u)); height: calc(11 * var(--u)); }
+  .sb { width: calc(34 * var(--u)); height: calc(34 * var(--u)); }
+  .sb.a { left: calc(118 * var(--u)); top: calc(30 * var(--u)); }
+  .sb.b { right: calc(128 * var(--u)); top: calc(104 * var(--u)); width: calc(26 * var(--u)); height: calc(26 * var(--u)); }
+</style>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <!-- 크레용: 가장자리 미세 흔들림 + 안쪽에 종이 결처럼 빠지는 점 -->
+    <filter id="crayon" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="2" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.1" xChannelSelector="R" yChannelSelector="G" result="d"/>
+      <feTurbulence type="fractalNoise" baseFrequency="1.6" numOctaves="2" seed="3" result="g"/>
+      <feColorMatrix in="g" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -9 7.1" result="keep"/>
+      <feComposite in="d" in2="keep" operator="in"/>
+    </filter>
+    <filter id="grainf"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" seed="11"/><feColorMatrix values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 -1.2 .85"/></filter>
+    <filter id="papergrain"><feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="3" seed="5"/><feColorMatrix values="0 0 0 0 .86  0 0 0 0 .78  0 0 0 0 .66  0 0 0 -1.6 .78"/></filter>
+    <path id="s16" d="M0.0 -30.0 L1.8 -8.8 L9.0 -21.6 L5.0 -7.5 L20.2 -20.2 L7.5 -5.0 L19.4 -8.0 L8.8 -1.8 L30.0 -0.0 L8.8 1.8 L22.7 9.4 L7.5 5.0 L19.1 19.1 L5.0 7.5 L8.5 20.5 L1.8 8.8 L0.0 30.0 L-1.8 8.8 L-9.0 21.6 L-5.0 7.5 L-20.2 20.2 L-7.5 5.0 L-19.4 8.0 L-8.8 1.8 L-30.0 0.0 L-8.8 -1.8 L-22.7 -9.4 L-7.5 -5.0 L-19.1 -19.1 L-5.0 -7.5 L-8.5 -20.5 L-1.8 -8.8Z"/>
+    <path id="s12" d="M3.9 -29.7 L3.8 -9.2 L14.6 -19.1 L7.9 -6.1 L25.5 -10.6 L9.9 -1.3 L22.3 2.9 L9.2 3.8 L23.8 18.2 L6.1 7.9 L9.2 22.2 L1.3 9.9 L-3.6 27.4 L-3.8 9.2 L-13.7 17.9 L-7.9 6.1 L-27.7 11.5 L-9.9 1.3 L-23.8 -3.1 L-9.2 -3.8 L-21.9 -16.8 L-6.1 -7.9 L-8.6 -20.8 L-1.3 -9.9Z"/>
+    <path id="s5" d="M0.0 -10.0 L2.5 -3.4 L9.5 -3.1 L4.0 1.3 L5.9 8.1 L0.0 4.2 L-5.9 8.1 L-4.0 1.3 L-9.5 -3.1 L-2.5 -3.4Z"/>
+    <path id="tw4" d="M0.0 -10.0 L1.8 -1.8 L10.0 -0.0 L1.8 1.8 L0.0 10.0 L-1.8 1.8 L-10.0 0.0 L-1.8 -1.8Z"/>
+  </defs>
+</svg>
+
+<div class="xm">
+  <div class="base"></div>
+  <svg class="grain" preserveAspectRatio="none"><rect width="100%" height="100%" filter="url(#grainf)"/></svg>
+  <div class="paper"></div>
+  <svg class="paper-grain" preserveAspectRatio="none"><rect width="100%" height="100%" filter="url(#papergrain)"/></svg>
+  <div class="stitch"></div>
+
+  <!-- 트리 (왼쪽 위) -->
+  <svg class="tree ink" viewBox="0 0 84 112" fill="none">
+    <path d="M42 14 L 20 44 H 64 Z" fill="var(--sage)"/>
+    <path d="M42 30 L 12 70 H 72 Z" fill="var(--pine-2)"/>
+    <path d="M42 52 L 5 98 H 79 Z" fill="var(--sage)"/>
+    <path d="M26 40 C 34 44, 46 44, 56 38" stroke="var(--paper)" stroke-width="1.4" stroke-dasharray="1.5 3" stroke-linecap="round"/>
+    <path d="M20 64 C 32 70, 52 70, 64 60" stroke="var(--pink)" stroke-width="1.6" stroke-dasharray="1.5 3.2" stroke-linecap="round"/>
+    <path d="M14 90 C 30 98, 56 98, 72 86" stroke="var(--paper)" stroke-width="1.4" stroke-dasharray="1.5 3" stroke-linecap="round"/>
+    <circle cx="34" cy="55" r="3" fill="var(--red)"/><circle cx="54" cy="50" r="2.6" fill="var(--mustard)"/>
+    <circle cx="26" cy="80" r="3" fill="var(--mustard)"/><circle cx="48" cy="78" r="3.2" fill="var(--magenta)"/><circle cx="62" cy="88" r="2.6" fill="var(--red)"/>
+    <rect x="37" y="98" width="10" height="10" rx="1" fill="var(--cocoa)"/>
+    <g transform="translate(42 11)"><use href="#s5" fill="var(--mustard)" transform="scale(1)"/></g>
+  </svg>
+
+  <!-- 선물 상자 (오른쪽 위): 격자 무늬 분홍 상자 + 초록 상자 -->
+  <svg class="gifts ink" viewBox="0 0 100 98" fill="none">
+    <!-- 분홍 격자 상자 (뒤 · 크게) -->
+    <rect x="4" y="40" width="56" height="54" fill="var(--magenta)"/>
+    <path d="M4 50.8 H60 M4 61.6 H60 M4 72.4 H60 M4 83.2 H60 M15.2 40 V94 M26.4 40 V94 M37.6 40 V94 M48.8 40 V94" stroke="var(--red)" stroke-width=".9"/>
+    <rect x="1" y="33" width="62" height="10" fill="var(--magenta)"/>
+    <path d="M1 38 H63" stroke="var(--red)" stroke-width=".9"/>
+    <rect x="28" y="33" width="8" height="61" fill="var(--pink)"/>
+    <path d="M32 33 C 20 18, 6 24, 15 32 Z M32 33 C 44 18, 58 24, 49 32 Z" fill="var(--pink)"/>
+    <path d="M32 33 C 28 26, 22 23, 17 26 M32 33 C 36 26, 42 23, 47 26" stroke="var(--magenta)" stroke-width="1" stroke-linecap="round"/>
+    <!-- 초록 상자 (앞 · 오른쪽) -->
+    <rect x="54" y="62" width="42" height="32" fill="var(--pine-2)"/>
+    <rect x="52" y="56" width="46" height="9" fill="var(--pine)"/>
+    <rect x="71" y="56" width="8" height="38" fill="var(--red)"/>
+    <!-- 작은 머스터드 상자 (초록 상자 위) -->
+    <rect x="62" y="38" width="24" height="18" fill="var(--mustard)"/>
+    <rect x="60" y="34" width="28" height="6" fill="var(--mustard)"/>
+    <path d="M74 34 V56 M60 46 H88" stroke="var(--paper)" stroke-width="3"/>
+    <path d="M74 34 C 68 26, 62 28, 66 33 Z M74 34 C 80 26, 86 28, 82 33 Z" fill="var(--red)"/>
+  </svg>
+
+  <!-- 크레용 별 (트리 옆 · 상자 옆) -->
+  <svg class="sb a ink" viewBox="-32 -32 64 64"><use href="#s16" fill="var(--red)"/></svg>
+  <svg class="sb b ink" viewBox="-32 -32 64 64"><use href="#s12" fill="var(--pink)"/></svg>
+  <svg class="tw a ink" viewBox="-11 -11 22 22"><use href="#tw4" fill="var(--mustard)"/></svg>
+  <svg class="tw b ink" viewBox="-11 -11 22 22"><use href="#tw4" fill="var(--magenta)"/></svg>
+
+  <!-- 아래: 전구 줄 -->
+  <svg class="lights ink" viewBox="0 0 568 40" preserveAspectRatio="none" fill="none">
+    <path d="M18 6 C 110 34, 190 34, 284 14 C 378 34, 458 34, 550 6" stroke="var(--pine-2)" stroke-width="1.3"/>
+    <g transform="translate(61.3 17.3) rotate(-10)"><rect x="-1.8" y="-.5" width="3.6" height="3.4" rx=".6" fill="var(--pine-2)"/><path d="M0 2.6 C 3.8 2.6, 4.2 6, 3.6 8.6 C 3 11.6, 1.4 13, 0 13 C -1.4 13, -3 11.6, -3.6 8.6 C -4.2 6, -3.8 2.6, 0 2.6 Z" fill="var(--red)"/><path d="M-1.6 6 C -1.8 7.4, -1.6 8.8, -1 9.8" stroke="var(--paper)" stroke-width=".8" stroke-linecap="round" opacity=".7"/></g>
+    <g transform="translate(113.9 25.7) rotate(-4)"><rect x="-1.8" y="-.5" width="3.6" height="3.4" rx=".6" fill="var(--pine-2)"/><path d="M0 2.6 C 3.8 2.6, 4.2 6, 3.6 8.6 C 3 11.6, 1.4 13, 0 13 C -1.4 13, -3 11.6, -3.6 8.6 C -4.2 6, -3.8 2.6, 0 2.6 Z" fill="var(--mustard)"/><path d="M-1.6 6 C -1.8 7.4, -1.6 8.8, -1 9.8" stroke="var(--paper)" stroke-width=".8" stroke-linecap="round" opacity=".7"/></g>
+    <g transform="translate(165.8 28.1) rotate(2)"><rect x="-1.8" y="-.5" width="3.6" height="3.4" rx=".6" fill="var(--pine-2)"/><path d="M0 2.6 C 3.8 2.6, 4.2 6, 3.6 8.6 C 3 11.6, 1.4 13, 0 13 C -1.4 13, -3 11.6, -3.6 8.6 C -4.2 6, -3.8 2.6, 0 2.6 Z" fill="var(--magenta)"/><path d="M-1.6 6 C -1.8 7.4, -1.6 8.8, -1 9.8" stroke="var(--paper)" stroke-width=".8" stroke-linecap="round" opacity=".7"/></g>
+    <g transform="translate(223.7 24.2) rotate(8)"><rect x="-1.8" y="-.5" width="3.6" height="3.4" rx=".6" fill="var(--pine-2)"/><path d="M0 2.6 C 3.8 2.6, 4.2 6, 3.6 8.6 C 3 11.6, 1.4 13, 0 13 C -1.4 13, -3 11.6, -3.6 8.6 C -4.2 6, -3.8 2.6, 0 2.6 Z" fill="var(--sage)"/><path d="M-1.6 6 C -1.8 7.4, -1.6 8.8, -1 9.8" stroke="var(--paper)" stroke-width=".8" stroke-linecap="round" opacity=".7"/></g>
+    <g transform="translate(344.3 24.2) rotate(8)"><rect x="-1.8" y="-.5" width="3.6" height="3.4" rx=".6" fill="var(--pine-2)"/><path d="M0 2.6 C 3.8 2.6, 4.2 6, 3.6 8.6 C 3 11.6, 1.4 13, 0 13 C -1.4 13, -3 11.6, -3.6 8.6 C -4.2 6, -3.8 2.6, 0 2.6 Z" fill="var(--sage)"/><path d="M-1.6 6 C -1.8 7.4, -1.6 8.8, -1 9.8" stroke="var(--paper)" stroke-width=".8" stroke-linecap="round" opacity=".7"/></g>
+    <g transform="translate(402.2 28.1) rotate(2)"><rect x="-1.8" y="-.5" width="3.6" height="3.4" rx=".6" fill="var(--pine-2)"/><path d="M0 2.6 C 3.8 2.6, 4.2 6, 3.6 8.6 C 3 11.6, 1.4 13, 0 13 C -1.4 13, -3 11.6, -3.6 8.6 C -4.2 6, -3.8 2.6, 0 2.6 Z" fill="var(--magenta)"/><path d="M-1.6 6 C -1.8 7.4, -1.6 8.8, -1 9.8" stroke="var(--paper)" stroke-width=".8" stroke-linecap="round" opacity=".7"/></g>
+    <g transform="translate(454.1 25.7) rotate(-4)"><rect x="-1.8" y="-.5" width="3.6" height="3.4" rx=".6" fill="var(--pine-2)"/><path d="M0 2.6 C 3.8 2.6, 4.2 6, 3.6 8.6 C 3 11.6, 1.4 13, 0 13 C -1.4 13, -3 11.6, -3.6 8.6 C -4.2 6, -3.8 2.6, 0 2.6 Z" fill="var(--mustard)"/><path d="M-1.6 6 C -1.8 7.4, -1.6 8.8, -1 9.8" stroke="var(--paper)" stroke-width=".8" stroke-linecap="round" opacity=".7"/></g>
+    <g transform="translate(506.7 17.3) rotate(-10)"><rect x="-1.8" y="-.5" width="3.6" height="3.4" rx=".6" fill="var(--pine-2)"/><path d="M0 2.6 C 3.8 2.6, 4.2 6, 3.6 8.6 C 3 11.6, 1.4 13, 0 13 C -1.4 13, -3 11.6, -3.6 8.6 C -4.2 6, -3.8 2.6, 0 2.6 Z" fill="var(--red)"/><path d="M-1.6 6 C -1.8 7.4, -1.6 8.8, -1 9.8" stroke="var(--paper)" stroke-width=".8" stroke-linecap="round" opacity=".7"/></g>
+    <g transform="translate(284 14)"><use href="#s5" fill="var(--mustard)" transform="scale(.75)"/></g>
+  </svg>
+
+  <div class="head"><span class="label">MERRY DECEMBER</span><h1>{{제목}}</h1><p class="sub">{{소제목}}</p>
+    <svg class="dash" viewBox="0 0 110 14" fill="none"><path d="M4 7 H 44 M66 7 H 106" stroke="var(--sage)" stroke-width="1" stroke-dasharray="2 3"/><g transform="translate(55 7)"><use href="#tw4" fill="var(--red)" transform="scale(.6)"/></g></svg>
+  </div>
+  <div class="foot">{{제작자}}</div>
+</div>

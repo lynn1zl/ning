@@ -1,0 +1,4 @@
+*.zip
+screenshot-*.png
+sample-*.png
+.DS_Store

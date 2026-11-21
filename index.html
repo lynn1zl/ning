@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>발췌기 니니닝!</title>
+<meta name="description" content="발췌기 니니닝! — 글을 붙여넣으면 대사는 말풍선으로, 문단은 예쁜 타이포그래피로 정리해 이미지로 만들어 주는 발췌기">
+<meta property="og:title" content="발췌기 니니닝!">
+<meta name="theme-color" content="#f2f4f6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101012" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%233182f6'/%3E%3Cg fill='%23fff' transform='translate(6 5) scale(2.17)'%3E%3Cellipse cx='8.4' cy='7.2' rx='2.4' ry='5.6' transform='rotate(-12 8.4 7.2)'/%3E%3Cellipse cx='15.6' cy='7.2' rx='2.4' ry='5.6' transform='rotate(12 15.6 7.2)'/%3E%3Cellipse cx='12' cy='15.4' rx='7' ry='6.3'/%3E%3Ccircle cx='9.4' cy='14.8' r='1' fill='%233182f6'/%3E%3Ccircle cx='14.6' cy='14.8' r='1' fill='%233182f6'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%233182f6'/%3E%3Cg fill='%23fff' transform='translate(6 5) scale(2.17)'%3E%3Cellipse cx='8.4' cy='7.2' rx='2.4' ry='5.6' transform='rotate(-12 8.4 7.2)'/%3E%3Cellipse cx='15.6' cy='7.2' rx='2.4' ry='5.6' transform='rotate(12 15.6 7.2)'/%3E%3Cellipse cx='12' cy='15.4' rx='7' ry='6.3'/%3E%3Ccircle cx='9.4' cy='14.8' r='1' fill='%233182f6'/%3E%3Ccircle cx='14.6' cy='14.8' r='1' fill='%233182f6'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<!-- 글꼴 파일을 기다리지 않고 화면부터 띄움 (글꼴은 받는 대로 바뀜) -->
+<link rel="preload" as="style" crossorigin="anonymous" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/pretendard-dynamic-subset.min.css" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" crossorigin="anonymous" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/pretendard-dynamic-subset.min.css"></noscript>
+<link rel="stylesheet" href="style.css?v=202611211515">
+<style id="gen-style"></style>
+<style id="skin-style"></style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="appbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-name">발췌기 니니닝!</span>
+    </div>
+    <div class="appbar-tools">
+      <button type="button" class="icon-btn" id="btn-undo" title="실행 취소 (Ctrl/⌘ + Z)" aria-label="실행 취소"></button>
+      <button type="button" class="icon-btn" id="btn-redo" title="다시 실행 (Ctrl/⌘ + Shift + Z)" aria-label="다시 실행"></button>
+    </div>
+    <div class="appbar-right">
+      <div class="menu-wrap">
+        <button type="button" class="icon-btn" id="btn-more" aria-label="더 보기" aria-haspopup="true"></button>
+        <div class="menu" id="menu" hidden>
+          <button type="button" data-act="folder" hidden>저장 폴더 지정…</button>
+          <div class="menu-sep"></div>
+          <button type="button" data-act="export-json">작업 전체 내보내기 (글 포함)</button>
+          <label>작업 전체 불러오기<input type="file" id="file-import-json" accept="application/json,.json" hidden></label>
+          <div class="menu-sep"></div>
+          <button type="button" data-act="tour">메뉴 둘러보기</button>
+          <button type="button" data-act="help">작성 튜토리얼 · 단축키</button>
+          <button type="button" data-act="reset" class="danger">초기화…</button>
+          <div class="menu-sep"></div>
+          <a class="menu-contact" href="https://x.com/lynn1zl" target="_blank" rel="noopener">사용 문의 · 오류 제보 <b>@lynn1zl</b></a>
+        </div>
+      </div>
+      <button type="button" class="btn btn-soft" id="btn-copy" title="이미지를 클립보드에 복사">
+        <span class="btn-icon" data-icon="copy"></span><span class="btn-label">복사</span>
+      </button>
+      <button type="button" class="btn btn-primary" id="btn-save" title="이미지 저장 (Ctrl/⌘ + S)">
+        <span class="btn-icon" data-icon="download"></span><span class="btn-label">이미지 저장</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <nav class="rail" id="rail" aria-label="설정 메뉴"></nav>
+
+    <aside class="panel" id="panel">
+      <div class="panel-resizer" id="panel-resizer" role="separator" aria-orientation="vertical" aria-label="편집 패널 너비 조절" tabindex="0" title="끌어서 너비 조절 · 두 번 누르면 원래대로"></div>
+      <button type="button" class="sheet-handle" id="sheet-handle" aria-label="패널 접기"><span></span></button>
+      <div class="panel-scroll" id="panel-scroll">
+
+        <section class="pane" data-pane="text">
+          <div class="editor-card">
+            <div class="fmt-bar" id="fmt-bar" role="toolbar" aria-label="서식"></div>
+            <div class="find-bar" id="find-bar" hidden></div>
+            <div class="quick-insert" id="quick-insert"></div>
+            <div class="src-wrap"><div class="src-hl" id="src-hl" aria-hidden="true" hidden></div><textarea id="src" spellcheck="false" placeholder="여기에 발췌할 글을 붙여넣으세요."></textarea></div>
+            <div class="editor-foot">
+              <span id="text-stats"></span>
+              <button type="button" class="link-btn" data-act="help">작성 튜토리얼</button>
+            </div>
+          </div>
+          <div data-fields="text"></div>
+        </section>
+
+        <section class="pane" data-pane="template">
+          <div class="section-title">내 프리셋</div>
+          <div class="section">
+            <div class="row stack">
+              <div class="style-save">
+                <input type="text" class="input" id="style-name" placeholder="프리셋 이름 (예: 채팅 로그용)" maxlength="40">
+                <button type="button" class="btn btn-primary" id="btn-style-save">저장</button>
+              </div>
+            </div>
+            <div id="style-list"></div>
+            <div class="row style-files">
+              <button type="button" class="btn btn-sm" id="btn-style-file"><span class="btn-icon" data-icon="download"></span>현재 설정을 파일로</button>
+              <label class="btn btn-sm"><span class="btn-icon" data-icon="folder"></span>프리셋 파일 불러오기<input type="file" id="file-style" accept="application/json,.json" hidden></label>
+            </div>
+          </div>
+          <div class="notice-card">
+            <strong>파일로도 꼭 내려받아 두세요</strong>
+            <span>목록의 프리셋은 이 브라우저에만 저장돼요. 브라우저 캐시 · 사이트 데이터를 지우거나 다른 기기 · 브라우저로 옮기면 사라지니, 각 프리셋 옆 <b>내려받기</b> 버튼이나 ‘현재 설정을 파일로’로 보관해 주세요.</span>
+          </div>
+          <p class="footnote">프리셋에는 서체 · 말풍선 · 배경 · 비율 · 스킨 · 지문 형식 · 캐릭터(이름 · 사진 · 색)가 담기고, 글 내용은 담기지 않아요.</p>
+          <div class="section-title">템플릿</div>
+          <p class="footnote" style="padding-top:0">색 · 배경 · 말풍선 모양 · 스킨만 바뀌고, 화면 비율 · 크기와 서체 · 글자 크기 · 간격은 지금 설정 그대로예요.</p>
+          <div class="template-grid" id="template-grid"></div>
+        </section>
+
+        <section class="pane" data-pane="bubble"><div data-fields="bubble"></div></section>
+
+        <section class="pane" data-pane="chars">
+          <div class="section bulk-card">
+            <div class="row stack">
+              <div class="row-label"><strong>아, 캐릭터 너무 많아!</strong><small>이름을 쉼표로 구분해 넣으면 한 번에 추가돼요. 기본 모양(하얀 배경 · 검은 글씨 · 왼쪽)으로 들어가고, 나중에 하나씩 바꿀 수 있어요.</small></div>
+              <div class="bulk-row">
+                <input type="text" class="input" id="bulk-names" placeholder="어린 왕자, 장미, 여우" autocomplete="off">
+                <button type="button" class="btn btn-primary" id="btn-bulk-add">추가</button>
+              </div>
+              <div class="bulk-folder-row"><select class="select" id="bulk-folder" aria-label="넣을 폴더"></select></div>
+              <div class="bulk-preview" id="bulk-preview" hidden></div>
+            </div>
+          </div>
+          <div class="list-tools"><button type="button" class="link-btn danger" data-reset="chars">캐릭터 모두 지우기</button></div>
+          <div id="chars-list"></div>
+          <button type="button" class="btn btn-soft btn-block" id="btn-add-char"><span class="btn-icon" data-icon="plus"></span>캐릭터 추가</button>
+        </section>
+
+        <section class="pane" data-pane="typo"><div data-fields="typo"></div></section>
+
+        <section class="pane" data-pane="canvas"><div data-fields="canvas"></div></section>
+
+        <section class="pane" data-pane="skin">
+          <div class="section-title sec-head">
+            <span>HTML 배경</span>
+            <span class="sec-actions">
+              <button type="button" class="link-btn" id="btn-html-example">예시 넣기</button>
+              <button type="button" class="link-btn muted" id="btn-html-clear">비우기</button>
+            </span>
+          </div>
+          <div class="chip-row" id="html-presets" style="margin-bottom:10px"></div>
+          <div class="html-ref" id="html-ref" hidden>
+            <span class="html-ref-ico" aria-hidden="true"></span>
+            <div class="html-ref-text"><b id="html-ref-name"></b><small>등록된 배경을 쓰는 중이에요</small></div>
+            <button type="button" class="link-btn muted" id="btn-html-ref-clear">해제</button>
+          </div>
+          <div class="code-card">
+            <textarea id="html-bg" class="code" spellcheck="false" placeholder="<style>&#10;  body { background: #e6f4fd; }&#10;  .deco { position: absolute; top: 20px; right: 20px; }&#10;</style>&#10;<div class=&quot;deco&quot;>★</div>"></textarea>
+          </div>
+          <p class="html-status" id="html-bg-status"></p>
+          <p class="footnote"><code>&lt;style&gt;</code> 태그와 HTML로 카드 배경을 직접 꾸밀 수 있어요. <code>body</code>가 카드 한 장 크기이고, 글과 말풍선 뒤에 깔려요. 글 위에 보여야 하는 장식에는 <code>data-layer="top"</code>을 넣어 주세요. <code>{{제목}}</code> · <code>{{출처}}</code> · <code>{{제작자}}</code>를 쓰면 텍스트 탭의 입력이 그 자리에 들어가요. 스크립트는 실행되지 않아요.</p>
+          <div class="section-title sec-head"><span>CSS 스킨</span><span class="sec-actions"><button type="button" class="link-btn danger" data-reset="skin">스킨 모두 초기화</button></span></div>
+          <div class="chip-row" id="skin-presets"></div>
+          <div class="code-card" style="margin-top: 10px">
+            <textarea id="skin-css" class="code" spellcheck="false" placeholder="/* 예시 */&#10;.card { --card-bg: #111; --text-color: #eee; }&#10;.msg-right .bubble { --b-bg: #ffe14d; }"></textarea>
+          </div>
+          <p class="footnote">글 · 말풍선 · 제목 같은 요소의 모양을 CSS로 직접 바꿔요. <code>@import</code>, <code>@font-face</code>로 외부 웹폰트도 쓸 수 있어요.</p>
+        </section>
+
+        <p class="contact">사용 문의 · 오류 제보 <a href="https://x.com/lynn1zl" target="_blank" rel="noopener">@lynn1zl</a></p>
+      </div>
+    </aside>
+
+    <main class="canvas-area" id="canvas-area">
+      <div id="stage"></div>
+      <div class="hud" id="hud">
+        <span class="hud-info" id="page-info"></span>
+        <span class="hud-sep"></span>
+        <button type="button" class="hud-btn" id="zoom-out" aria-label="축소"></button>
+        <button type="button" class="hud-zoom" id="zoom-label" title="화면에 맞추기">맞춤</button>
+        <button type="button" class="hud-btn" id="zoom-in" aria-label="확대"></button>
+        <button type="button" class="hud-btn" id="zoom-fit" title="화면에 맞추기" aria-label="화면에 맞추기"></button>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div id="pop" class="pop" hidden></div>
+
+<div id="result" class="modal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="result-title">
+    <div class="modal-head">
+      <div>
+        <h3 id="result-title">이미지가 준비됐어요</h3>
+        <p class="modal-sub" id="result-sub">모바일에서는 이미지를 길게 눌러 저장할 수도 있어요.</p>
+      </div>
+      <button type="button" class="icon-btn" data-close aria-label="닫기"></button>
+    </div>
+    <div class="filename-line">
+      <span>파일 이름</span><code id="result-filename"></code>
+      <button type="button" class="link-btn" id="btn-filename-edit">이름 설정</button>
+    </div>
+    <div id="result-list" class="result-list"></div>
+    <div class="folder-line" id="folder-line" hidden></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-soft" id="btn-folder-save" hidden><span class="btn-icon" data-icon="folder"></span>폴더에 저장</button>
+      <button type="button" class="btn btn-soft" id="btn-share-all" hidden><span class="btn-icon" data-icon="share"></span>공유하기</button>
+      <button type="button" class="btn btn-primary" id="btn-dl-all"><span class="btn-icon" data-icon="download"></span>전부 저장</button>
+    </div>
+  </div>
+</div>
+
+<div id="crop" class="modal" hidden>
+  <div class="modal-box narrow" role="dialog" aria-modal="true" aria-labelledby="crop-title">
+    <div class="modal-head">
+      <div>
+        <h3 id="crop-title">사진 자르기</h3>
+        <p class="modal-sub" id="crop-sub">끌어서 위치를 옮기고, 확대해서 보일 부분을 골라요.</p>
+      </div>
+      <button type="button" class="icon-btn" data-close aria-label="닫기"></button>
+    </div>
+    <div class="crop-shapes" id="crop-shapes"></div>
+    <div class="crop-stage" id="crop-stage"><img id="crop-img" alt="" draggable="false"><div class="crop-frame" id="crop-frame"></div></div>
+    <div class="crop-zoom"><span class="cz-ico" data-icon="minus"></span><input type="range" class="slider" id="crop-zoom" min="1" max="4" step="0.01" value="1" aria-label="확대"><span class="cz-ico" data-icon="plus"></span></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-soft" id="crop-skip">자르지 않고 넣기</button>
+      <button type="button" class="btn btn-primary" id="crop-ok">완료</button>
+    </div>
+  </div>
+</div>
+
+<div id="reset" class="modal" hidden>
+  <div class="modal-box narrow" role="dialog" aria-modal="true" aria-labelledby="reset-title">
+    <div class="modal-head">
+      <div>
+        <h3 id="reset-title">무엇을 초기화할까요?</h3>
+        <p class="modal-sub">초기화한 뒤에도 알림의 ‘되돌리기’나 실행 취소로 되돌릴 수 있어요.</p>
+      </div>
+      <button type="button" class="icon-btn" data-close aria-label="닫기"></button>
+    </div>
+    <div class="reset-list" id="reset-list"></div>
+  </div>
+</div>
+
+<div id="help" class="modal" hidden>
+  <div class="modal-box narrow" role="dialog" aria-modal="true" aria-labelledby="help-title">
+    <div class="modal-head">
+      <h3 id="help-title">작성 튜토리얼</h3>
+      <button type="button" class="icon-btn" data-close aria-label="닫기"></button>
+    </div>
+    <div class="help-body">
+      <p class="tut-lead">한 줄씩 읽어서 <b>말풍선</b>이 될지 <b>나레이션</b>이 될지 정해요. 아래 규칙에 맞는 줄이 말풍선이 되고, 나머지는 나레이션이에요.</p>
+
+      <section class="tut-sec">
+        <h4><span class="tut-num">1</span>기호로 감싼 줄 → 말풍선</h4>
+        <p>텍스트 탭 ‘지문 형식’에서 고른 기호로 줄 전체를 감싸면 말풍선이 돼요. 목록 끝의 <b>+ 직접 지정</b>으로 원하는 기호를 더할 수 있어요.</p>
+        <div class="tut-row"><code>"대사"</code><code>「대사」</code><code>『대사』</code><code>⧼대사⟯</code><span class="tut-res bubble">말풍선</span></div>
+        <div class="tut-row"><code>"대사." 그가 말했다.</code><span class="tut-res narr">나레이션</span><small>기호 뒤에 나레이션이 이어지면 그대로 둬요</small></div>
+      </section>
+
+      <section class="tut-sec">
+        <h4><span class="tut-num">2</span>이름을 붙이면 → 그 사람의 말풍선</h4>
+        <p>이름 뒤에 구분 기호를 쓰거나, 윗줄에 이름만 따로 쓰면 돼요. 캐릭터 탭에 같은 이름이 있으면 사진과 색이 붙고, 새 이름은 자동으로 등록돼요.</p>
+        <div class="tut-row"><code>이름: "대사"</code><code>[이름] 대사</code><span class="tut-res bubble">말풍선</span></div>
+        <div class="tut-row"><code>이름 | 대사</code><code>이름ㅣ대사</code><span class="tut-res bubble">말풍선</span><small>따옴표가 없어도 돼요</small></div>
+        <div class="tut-row stack"><code>이름 ——<br>「대사」</code><code>⧙ **이름** ⧙<br>"대사"</code><span class="tut-res bubble">말풍선</span><small>이름만 있는 줄 바로 아래 대사</small></div>
+        <div class="tut-row stack"><code>이름<br>「대사」</code><span class="tut-res bubble">말풍선</span><small>기호 없는 이름 줄은 등록된 캐릭터이거나, 두 번 이상 나오거나, 다음 줄이 외국어 대사일 때만</small></div>
+        <div class="tut-row"><code>시간: 오후 세 시</code><span class="tut-res narr">나레이션</span><small>따옴표 없는 ‘이름:’ 줄은 등록된 캐릭터일 때만 말풍선</small></div>
+      </section>
+
+      <section class="tut-sec">
+        <h4><span class="tut-num">3</span>번역은 → 같은 말풍선 안에</h4>
+        <p>원문 뒤에 이어지는 번역이나, 대사 바로 아랫줄의 괄호는 한 말풍선 안에 작게 들어가요. ‘둘 다 / 번역만 / 원문만’ 중 골라서 보여 줄 수 있어요.</p>
+        <div class="tut-row"><code>「待って」 기다려</code><span class="tut-res bubble">말풍선 + 번역</span></div>
+        <div class="tut-row stack"><code>이름 | Hello<br>(안녕)</code><span class="tut-res bubble">말풍선 + 번역</span></div>
+      </section>
+
+      <section class="tut-sec">
+        <h4><span class="tut-num">4</span>반대로 쓰고 싶다면 → ‘나레이션으로’</h4>
+        <p>텍스트 탭의 <b>위에서 고른 형식을 [나레이션으로]</b>를 고르면, 고른 기호로 감싼 줄이 나레이션이 되고 <b>기호 없는 줄이 말풍선</b>이 돼요. 나레이션을 *기울임*처럼 기호로 표시하는 글에 쓰면 돼요.</p>
+        <div class="tut-row"><code>*그는 창밖을 보았다.*</code><span class="tut-res narr">나레이션</span></div>
+        <div class="tut-row"><code>오늘은 늦었네.</code><span class="tut-res bubble">말풍선</span></div>
+      </section>
+
+      <section class="tut-sec">
+        <h4><span class="tut-num">5</span>잘못 인식됐다면 → 말풍선을 눌러서</h4>
+        <p>미리보기에서 말풍선을 누르면 그 말풍선만 화자 · 위치 · 모양을 바꾸거나 <b>말풍선 해제</b>로 나레이션으로 되돌릴 수 있어요.</p>
+      </section>
+
+      <section class="tut-sec">
+        <h4><span class="tut-num">6</span>서식 · 여백</h4>
+        <div class="tut-row"><code>**굵게**</code><code>*기울임*</code><code>__밑줄__</code><code>~~취소선~~</code><code>==형광펜==</code><small>입력창 위 서식 버튼으로도</small></div>
+        <div class="tut-row"><code>빈 줄 1개</code><small>문단 나눔</small><code>빈 줄 2개 이상</code><small>친 만큼 여백</small><code>---</code><small>구분선</small></div>
+      </section>
+
+      <section class="tut-sec">
+        <h4>단축키</h4>
+        <div class="help-item"><span class="kbd">이미지 넣기</span><span>입력창 위 ‘이미지’ 버튼 · 글자처럼(글 사이) 또는 자유 배치(끌어서 이동 · 모서리로 크기)</span></div>
+            <div class="help-item"><span class="kbd">Ctrl/⌘ Z</span><span>실행 취소 (입력창 밖에서)</span></div>
+        <div class="help-item"><span class="kbd">Ctrl/⌘ Shift Z</span><span>다시 실행</span></div>
+        <div class="help-item"><span class="kbd">Ctrl/⌘ B · I · U</span><span>굵게 · 기울임 · 밑줄 (입력창에서)</span></div>
+        <div class="help-item"><span class="kbd">Ctrl/⌘ Shift X · H</span><span>취소선 · 형광펜</span></div>
+        <div class="help-item"><span class="kbd">Ctrl/⌘ S</span><span>이미지 저장</span></div>
+        <div class="help-item"><span class="kbd">Ctrl/⌘ + / −</span><span>미리보기 확대 · 축소</span></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="app.js?v=202611211515" defer></script>
+</body>
+</html>
