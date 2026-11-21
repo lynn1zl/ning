@@ -6229,7 +6229,12 @@ function buildSkin() {
     },
   }, label));
   chip('없음', '');
-  for (const s of Object.values(SKINS)) chip(s.name, s.css);
+  for (const s of Object.values(SKINS)) {
+    // 글꼴 · 색까지 정해야 제 모양이 나오는 스킨(예: 고전 RPG)은 템플릿 전체를 적용
+    const tpl = TEMPLATES.find((t) => t.own && t.skin === s.css);
+    if (tpl) row.append(h('button', { type: 'button', class: 'chip', onclick: () => { applyTemplate(tpl); toast(`‘${s.name}’ 스킨을 적용했어요 · 글꼴 · 색도 함께 바꿨어요`, { label: '되돌리기', fn: undo }); } }, s.name));
+    else chip(s.name, s.css);
+  }
   const hrow = $('#html-presets');
   hrow.innerHTML = '';
   HTML_BG_PRESETS.forEach((bp) => hrow.append(h('button', {
