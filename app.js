@@ -98,6 +98,7 @@ const FONTS = [
   { n: 'Jua', label: '주아', g: 'display', w: '400' },
   { n: 'Galmuri14', label: '갈무리14 (도트)', g: 'display', css: 'https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css' },
   { n: 'Galmuri11', label: '갈무리11 (도트)', g: 'display', css: 'https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css' },
+  { n: 'Galmuri9', label: '갈무리9 (도트)', g: 'display', css: 'https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css' },
   { n: 'Do Hyeon', label: '도현', g: 'display', w: '400' },
   { n: 'Black Han Sans', label: '검은고딕', g: 'display', w: '400' },
   { n: 'Dongle', label: '동글', g: 'display', w: '300;400;700' },
@@ -243,7 +244,7 @@ const SKINS = {
   filter: none !important; box-shadow: none !important;
 }
 .card-title {
-  width: fit-content; max-width: 100%; padding: .4em 1em .36em;
+  width: fit-content; max-width: 100%; padding: .45em 1em .4em;
   letter-spacing: .04em; line-height: 1.4; background: #15100a;
 }
 .card-title::before, .card-title::after { content: none; }
@@ -255,8 +256,8 @@ const SKINS = {
 }
 /* 이름: 평면 금 명판 */
 .msg .name {
-  width: fit-content; margin: 0 0 -1px 10px; padding: 3px 10px 2px; position: relative; z-index: 1;
-  font-weight: 700; letter-spacing: .04em; line-height: 1.3;
+  width: fit-content; margin: 0 0 -1px 10px; padding: 3px 8px 2px; position: relative; z-index: 1;
+  font-family: 'Galmuri9', var(--b-font); font-weight: 400; letter-spacing: .04em; line-height: 1.3;
   background: #d4ad55; color: #1d1307 !important;
 }
 .msg-right .name { margin: 0 10px -1px 0; }
@@ -469,8 +470,8 @@ const TEMPLATES = [
   },
   {
     id: 'rpg', name: '고전 RPG', sub: '검정 · 금빛 넝쿨 무늬 · 도트 대화창', pv: { bg: '#0b0906', fg: '#f3e6c4', b1: '#14100a', b2: '#1c160c', outline: '#d9b45a', frame: true },
-    set: { typo: { font: 'Galmuri14', size: 14, lh: 1.9, color: '#efe2c0', hl: '#6b4f12', hlStyle: 'under', annoColor: '#d9b45a', note: { color: '#d9b45a' } }, head: { font: 'Galmuri11', size: 22, weight: 700, creditFont: 'Galmuri11', creditSize: 11, creatorFont: 'Galmuri11', creatorSize: 11, color: '#f6e2a4', creditColor: '#a8894a', creatorColor: '#d9b45a', accent: '#d9b45a', subColor: '#c9a85a' },
-      bubble: { font: 'Galmuri14', size: 14, lh: 1.75, avatar: true, avatarShape: 'square', avatarSize: 48, nameSize: 11, speech: 'square', tail: false, radius: 0, bg: '#14100a', color: '#f3e6c4', border: '#d9b45a', bw: 2, px: 14, py: 10, shadow: false, nameColor: '#120d06', gap: 14 }, canvas: { bg: '#0b0906', pad: 64 } },
+    set: { typo: { font: 'Galmuri11', size: 11, lh: 2, color: '#efe2c0', hl: '#6b4f12', hlStyle: 'under', annoColor: '#d9b45a', note: { color: '#d9b45a' } }, head: { font: 'Galmuri11', size: 16.5, weight: 700, subSize: 11, creditFont: 'Galmuri9', creditSize: 9, creatorFont: 'Galmuri9', creatorSize: 9, color: '#f6e2a4', creditColor: '#a8894a', creatorColor: '#d9b45a', accent: '#d9b45a', subColor: '#c9a85a' },
+      bubble: { font: 'Galmuri11', size: 11, lh: 1.85, avatar: true, avatarShape: 'square', avatarSize: 40, nameSize: 9, speech: 'square', tail: false, radius: 0, bg: '#14100a', color: '#f3e6c4', border: '#d9b45a', bw: 2, px: 12, py: 8, shadow: false, nameColor: '#120d06', gap: 12 }, canvas: { bg: '#0b0906', pad: 64 } },
     own: { typo: ['font', 'fontCustom', 'size', 'lh'], head: ['font', 'fontCustom', 'size', 'weight', 'creditFont', 'creditFontCustom', 'creditSize', 'creatorFont', 'creatorFontCustom', 'creatorSize'], bubble: ['font', 'fontCustom', 'size', 'lh', 'avatar', 'avatarShape', 'avatarSize', 'nameSize'], canvas: ['pad'] },
     skin: SKINS.rpg.css, chars: [['#14100a', '#f3e6c4', '#d9b45a'], ['#1c160c', '#f6e2a4', '#d9b45a']],
   },
