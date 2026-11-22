@@ -5851,7 +5851,7 @@ function buildChars() {
           h('div', { class: 'row stack' }, labelEl('말풍선에 보일 이름'),
             h('input', { type: 'text', class: 'input', value: ch.display || '', placeholder: '비우면 ‘닝’', oninput: (e) => { ch.display = e.target.value; changed(); } })),
           h('div', { class: 'row stack' }, labelEl('이름 옆 설명'),
-            h('input', { type: 'text', class: 'input', value: ch.desc || '', placeholder: '예) 39 정장을 입은 정치인', oninput: (e) => { ch.desc = e.target.value; changed(); } }))),
+            h('input', { type: 'text', class: 'input', value: ch.desc || '', placeholder: '예) 정장을 입은 정치인', oninput: (e) => { ch.desc = e.target.value; changed(); } }))),
         h('div', { class: 'row' }, labelEl('위치'), segEl(SIDES, ch.side, (v) => { ch.side = v; ch.homeSide = v; changed(); })),
         h('div', { class: 'row' }, labelEl('말풍선 모양'), shapeSel),
         h('label', { class: 'row' }, labelEl('개별 색상'), customSw),
