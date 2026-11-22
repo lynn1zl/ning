@@ -2002,3 +2002,24 @@ img[src^="nnimg:"] { visibility: hidden; }
 .my-pal-add svg { width: 12px; height: 12px; }
 .my-pal-add:hover { border-color: var(--accent, #3182f6); color: var(--accent, #3182f6); }
 .my-pal-hint { font-size: 11.5px; color: var(--text-3); }
+
+/* 캐릭터 이름 옆 설명 */
+.name .name-desc { margin-left: .4em; font-weight: 400; opacity: .7; font-size: .92em; }
+.name .name-desc::before { content: '· '; }
+.char-2col { position: relative; display: grid; grid-template-columns: 1fr 1fr; }
+.char-2col .row { min-width: 0; }
+.char-2col > .row + .row { padding-left: 4px; }
+.char-2col > .row + .row::before { display: none; }
+.char-2col::before, .char-2col + .row::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; height: 1px; background: var(--hair); }
+/* 말풍선 옆 작은 글자 (숫자 · 읽음 · 시간) */
+.b-line { display: flex; align-items: flex-end; gap: 5px; max-width: 100%; min-width: 0; }
+.msg-right .b-line { flex-direction: row-reverse; }
+.b-line > .bubble { min-width: 0; }
+.b-meta { flex: none; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding-bottom: 1px;
+  font-family: var(--b-font); font-size: max(9px, calc(var(--b-size) * .68)); line-height: 1.2; white-space: nowrap; }
+.msg-right .b-meta { align-items: flex-end; }
+.b-cnt { font-weight: 700; color: var(--meta-cnt, #e8a400); }
+.b-time { color: var(--name-color); opacity: .85; }
+.b-meta-edit .b-meta-in { display: grid; grid-template-columns: 1fr 1.6fr; gap: 6px; }
+.b-meta-edit .chip-row { margin-top: 6px; }
+.pop-sub { margin-left: 6px; font-weight: 400; color: var(--text-3); }

@@ -149,7 +149,7 @@ const DEFAULTS = {
     speech: 'round', tail: true, side: 'left',
     font: 'Pretendard', fontCustom: '', size: 14, lh: 1.55, ls: 0, weight: 400,
     bg: '#ffffff', color: '#222222', border: '#2b2a27', bw: 0, radius: 14, px: 12, py: 8, maxw: 78, shadow: true, gap: 12,
-    avatar: true, avatarSize: 34, avatarShape: 'circle', showName: true, groupSame: true, nameAlign: 'bubble', nameVAlign: 'text', namePos: 'top', nameW: 0, nameSize: 10.5, nameColor: '#6b665e',
+    avatar: true, avatarSize: 34, avatarShape: 'circle', showName: true, groupSame: true, nameAlign: 'bubble', nameVAlign: 'text', namePos: 'top', nameW: 0, nameSize: 10.5, nameColor: '#6b665e', metaColor: '#e8a400',
   },
   canvas: { ratio: 'auto', width: 600, pad: 40, bgType: 'solid', bg: '#f7f3ea', bg2: '#e6dcc8', gradType: 'linear', gradAngle: 160, pattern: 'dots', patColor: '#8a7f6a', patOpacity: 0.22, patSize: 18, bgImage: '', overlay: 0, overlayColor: '#000000', valign: 'flex-start', fit: false, paginate: true, pageNum: false, scale: 2 },
   chars: [
@@ -496,7 +496,7 @@ const BASE_DESIGN = Object.fromEntries(DESIGN_KEYS.map((k) => [k, copyState(DEFA
 const PANES = [
   { id: 'text', label: '텍스트', icon: 'text', desc: '' },
   { id: 'bubble', label: '말풍선', icon: 'bubble', desc: '말풍선 모양과 색, 프로필 표시 방식을 정해요.' },
-  { id: 'chars', label: '캐릭터', icon: 'person', desc: '본문에 쓴 이름이 여기 등록한 캐릭터 이름과 똑같아야(띄어쓰기까지) 말풍선에 사진과 색이 자동으로 연결돼요.' },
+  { id: 'chars', label: '캐릭터', icon: 'person', desc: '본문에 쓴 이름이 캐릭터 이름이나 별명과 똑같아야(띄어쓰기까지) 말풍선에 사진과 색이 자동으로 연결돼요.' },
   { id: 'typo', label: '서체', icon: 'type', desc: '나레이션, 말풍선, 제목의 글꼴과 간격을 다듬어요.' },
   { id: 'canvas', label: '화면', icon: 'frame', desc: '비율과 크기, 배경을 정해요.' },
   { id: 'skin', label: '스킨', icon: 'code', desc: 'CSS로 디자인을 자유롭게 덮어써요.' },
@@ -1073,8 +1073,12 @@ function wrapped(s, pairs) {
 
 const findChar = (name) => {
   const n = (name || '').trim();
-  return n ? state.chars.find((c) => c.name && c.name.trim() === n) || null : null;
+  if (!n) return null;
+  return state.chars.find((c) => c.name && c.name.trim() === n)
+    || state.chars.find((c) => (c.aliases || []).some((a) => a && a.trim() === n)) || null;
 };
+// 말풍선에 보일 이름: 따로 정한 이름 → 캐릭터 이름 → 글에 적힌 이름
+const shownName = (ch, speaker) => (ch && ((ch.display || '').trim() || (ch.name || '').trim())) || speaker || '';
 const charById = (id) => state.chars.find((c) => c.id === id) || null;
 
 function splitSpeaker(line0) {
@@ -1314,7 +1318,7 @@ function resolveBubbles(blocks) {
     let ch = null, name = b.name;
     if (o.speaker === '__none') { name = null; }
     else if (o.speaker) { ch = charById(o.speaker); name = ch ? ch.name : null; }
-    else if (name) { ch = findChar(name); }
+    else if (name) { ch = findChar(name); if (ch && ch.name) name = ch.name; }
     else if (b.kind === 'speech' && state.chars.length) {
       const r = state.parse.nameless;
       if (r === 'alt') {
@@ -1421,6 +1425,7 @@ function genCSS() {
   --avatar-radius: ${ar};
   --name-size: ${fit(b.nameSize)};
   --name-color: ${b.nameColor};
+  --meta-cnt: ${b.metaColor || '#e8a400'};
   --name-w: ${b.nameW > 0 ? `${fit(b.nameW)}` : 'auto'};
   --title-font: ${fontStack(hd.font, hd.fontCustom)};
   --title-size: ${fit(hd.size)};
@@ -1880,14 +1885,15 @@ function renderBlock(b) {
     const av = h('div', { class: 'avatar' });
     if (ch && ch.avatar) av.append(h('img', { src: ch.avatar, alt: '' }));
     else {
-      av.textContent = [...speaker][0];
+      av.textContent = [...shownName(ch, speaker)][0];
       av.style.background = avatarColor(ch, speaker);
     }
     msg.append(av);
   } else msg.classList.add('no-avatar');
   const body = h('div', { class: 'msg-body' });
   if (B.showName && speaker) {
-    const nm = h('div', { class: 'name' }, speaker);
+    const nm = h('div', { class: 'name' }, shownName(ch, speaker));
+    if (ch && (ch.desc || '').trim()) nm.append(h('span', { class: 'name-desc' }, ch.desc.trim()));
     if (ch && ch.nameColor) nm.style.color = ch.nameColor; // 캐릭터별 이름 색
     body.append(nm);
   }
@@ -1916,7 +1922,13 @@ function renderBlock(b) {
     bub.prepend(box);
     if (!(strip ? b.inner : b.full).trim()) bub.classList.add('img-only');
   }
-  body.append(bub);
+  // 말풍선 옆 작은 글자: 숫자(1) · 읽음 · 시간 — 메신저처럼 말풍선 안쪽 아래에
+  if (ov.count || ov.time) {
+    const meta = h('span', { class: 'b-meta' },
+      ov.count ? h('b', { class: 'b-cnt' }, ov.count) : null,
+      ov.time ? h('span', { class: 'b-time' }, ov.time) : null);
+    body.append(h('div', { class: 'b-line' }, bub, meta));
+  } else body.append(bub);
   msg.append(body);
   return msg;
 }
@@ -3062,6 +3074,7 @@ const SCHEMA = {
       { t: 'slider', p: 'bubble.nameW', l: '이름 칸 너비', sub: '0이면 이름 길이에 맞춰요', min: 0, max: 160, step: 2, u: 'px', show: () => state.bubble.namePos === 'side', when: () => state.bubble.showName },
       { t: 'slider', p: 'bubble.nameSize', l: '이름 크기', min: 8, max: 24, step: 0.5, u: 'px', when: () => state.bubble.showName , pt: true },
       { t: 'color', p: 'bubble.nameColor', l: '이름 색', when: () => state.bubble.showName },
+      { t: 'color', p: 'bubble.metaColor', l: '옆 숫자 색', sub: '말풍선을 눌러 넣은 숫자 · 읽음 표시 색이에요' },
       { t: 'switch', p: 'bubble.groupSame', l: '사진 · 이름은 첫 말풍선에만', sub: '같은 사람이 이어서 말하면 얼굴 사진 · 이름은 맨 위 말풍선에만 보여요', when: () => state.bubble.avatar || state.bubble.showName },
     ] },
   ],
@@ -3850,6 +3863,19 @@ function openBubbleEditor(key, anchor) {
       h('div', { class: 'pop-label' }, '모양'), tiles,
       h('div', { class: 'pop-label' }, '말풍선 안 사진'),
       bubblePhotoRow(key, o, () => wrap.replaceWith(build())),
+      h('div', { class: 'pop-label' }, '옆 작은 글자', h('small', { class: 'pop-sub' }, '메신저처럼 말풍선 옆에')),
+      (() => {
+        const setMeta = (k, v) => {
+          const next = { ...(state.overrides[key] || {}) };
+          if (v) next[k] = v; else delete next[k];
+          if (Object.keys(next).length) state.overrides[key] = next; else delete state.overrides[key];
+          changed();
+        };
+        const cnt = h('input', { type: 'text', class: 'input', value: o.count || '', maxlength: 8, placeholder: '숫자 · 읽음', 'aria-label': '숫자 · 읽음', oninput: (e) => setMeta('count', e.target.value.trim()) });
+        const tm = h('input', { type: 'text', class: 'input', value: o.time || '', maxlength: 16, placeholder: '시간 (예: 오후 11:42)', 'aria-label': '시간', oninput: (e) => setMeta('time', e.target.value.trim()) });
+        const quick = (v) => h('button', { type: 'button', class: 'chip sm', onclick: () => { cnt.value = v; setMeta('count', v); } }, v);
+        return h('div', { class: 'b-meta-edit' }, h('div', { class: 'b-meta-in' }, cnt, tm), h('div', { class: 'chip-row' }, quick('1'), quick('2'), quick('읽음')));
+      })(),
       h('div', { class: 'pop-foot' },
         h('div', {},
           h('button', { type: 'button', class: 'link-btn', onclick: () => { delete state.overrides[key]; changed(); wrap.replaceWith(build()); } }, '초기화'),
@@ -5818,6 +5844,14 @@ function buildChars() {
           h('button', { type: 'button', class: 'icon-btn sm', title: '아래로', 'aria-label': '아래로', html: icon('down'), onclick: () => move(1), disabled: i === state.chars.length - 1 }),
           h('button', { type: 'button', class: 'icon-btn sm danger', title: '삭제', 'aria-label': '삭제', html: icon('trash'), onclick: remove }))),
       h('div', { class: 'char-body' },
+        h('div', { class: 'row stack' }, labelEl('다른 이름 (별명)', '글에 이 이름으로 나와도 같은 캐릭터로 묶어요 · 쉼표로 구분'),
+          h('input', { type: 'text', class: 'input', value: (ch.aliases || []).join(', '), placeholder: '예) 데즈, D, Desmond',
+            oninput: (e) => { ch.aliases = [...new Set(e.target.value.split(/[,，、]/).map((x) => x.trim()).filter(Boolean))]; changed(); } })),
+        h('div', { class: 'char-2col' },
+          h('div', { class: 'row stack' }, labelEl('말풍선에 보일 이름'),
+            h('input', { type: 'text', class: 'input', value: ch.display || '', placeholder: `비우면 ‘${ch.name || '이름'}’`, oninput: (e) => { ch.display = e.target.value; changed(); } })),
+          h('div', { class: 'row stack' }, labelEl('이름 옆 설명'),
+            h('input', { type: 'text', class: 'input', value: ch.desc || '', placeholder: '예) 31 · 기사단장', oninput: (e) => { ch.desc = e.target.value; changed(); } }))),
         h('div', { class: 'row' }, labelEl('위치'), segEl(SIDES, ch.side, (v) => { ch.side = v; ch.homeSide = v; changed(); })),
         h('div', { class: 'row' }, labelEl('말풍선 모양'), shapeSel),
         h('label', { class: 'row' }, labelEl('개별 색상'), customSw),
