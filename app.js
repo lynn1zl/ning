@@ -159,6 +159,7 @@ const DEFAULTS = {
   overrides: {},
   memoStyle: {}, // 메모마다 모양: { 'w:메모' | 'b:메모': { color, scale, mark } }
   memoPos: {}, // 메모마다 직접 옮긴 자리 · 폭: { key: { dx, dy, w } }
+  mySkins: [], // 내 스킨: { id, name, html, css }
   bgOwnText: false, // HTML 배경 안의 제목 · 출처 대신 발췌기가 직접 (서체 탭 글꼴 · 정렬 적용)
   bgPad: { on: false, t: 40, r: 40, b: 40, l: 40 }, // HTML 배경의 글 자리를 직접 맞춤 (px)
   typoCheck: true, // 미리보기에서 남은 서식 기호 · 흔한 맞춤법 실수를 물결 밑줄로 (저장 이미지에는 안 나옴)
@@ -503,7 +504,7 @@ const PANES = [
   { id: 'chars', label: '캐릭터', icon: 'person', desc: '본문에 쓴 이름이 캐릭터 이름이나 별명과 똑같아야(띄어쓰기까지) 말풍선에 사진과 색이 자동으로 연결돼요.' },
   { id: 'typo', label: '서체', icon: 'type', desc: '나레이션, 말풍선, 제목의 글꼴과 간격을 다듬어요.' },
   { id: 'canvas', label: '화면', icon: 'frame', desc: '비율과 크기, 배경을 정해요.' },
-  { id: 'skin', label: '스킨', icon: 'code', desc: 'CSS로 디자인을 자유롭게 덮어써요.' },
+  { id: 'skin', label: '스킨', icon: 'code', desc: '배경과 말풍선 모양을 고르거나, AI로 나만의 스킨을 만들어요.' },
   { id: 'template', label: '프리셋', icon: 'grid', desc: '자주 쓰는 설정을 프리셋으로 저장해 두고 불러오거나, 템플릿으로 디자인을 한 번에 바꿔요.' },
 ];
 
@@ -6552,7 +6553,7 @@ function aiSkinPrompt(o) {
     '   .card 카드 전체 · .card-title 제목 · .card-title .card-sub 소제목 · .narr 나레이션 문단',
     '   .msg 말풍선 한 줄 (.msg-left 왼쪽 · .msg-right 오른쪽) · .avatar 프로필 사진 · .name 이름 · .bubble 말풍선',
     '   .card-footer 아래 출처 줄 · mark 형광펜 · .divider 구분선',
-    '3. 색은 변수로 바꿔 주세요: .card { --card-bg: 바탕색; --text-color: 글자색; }',
+    '3. 색은 변수로 바꿔 주세요: .card { --card-bg: 바탕색; --text-color: 글자색; --title-color: 제목색; } (바탕을 어둡게 하면 글자 · 제목 색도 꼭 밝게)',
     '   말풍선은 .msg-left .bubble { --b-bg: 바탕; --b-color: 글자; --b-border: 테두리; } (오른쪽은 .msg-right)',
     '4. 글꼴 · 글자 크기 · 줄 간격 · 정렬(text-align)은 정하지 마세요. 사용자가 발췌기 서체 탭에서 직접 바꿔요. 색과 꾸밈만 바꿔 주세요.',
     '5. 제목(.card-title)은 위 · 아래 장식선, 배경, 테두리 같은 꾸밈만 넣고 글꼴 · 크기 · 정렬은 그대로 두세요.',
@@ -6564,9 +6565,34 @@ function aiSkinPrompt(o) {
     : '■ 답변 형식\n설명 없이 코드 블록 하나로만 답해 주세요.';
   return [head, want, o.kind !== 'css' ? bg : null, o.kind !== 'bg' ? css : null, tail].filter(Boolean).join('\n\n');
 }
+/* 붙여 넣은 코드를 배경(HTML) · 모양(CSS)으로 나눔: ``` 코드 블록이 여러 개여도, 그냥 붙여 넣어도 */
+function splitSkinCode(text) {
+  const t = (text || '').trim();
+  if (!t) return { html: '', css: '' };
+  const blocks = [...t.matchAll(/```[^\n]*\n([\s\S]*?)```/g)].map((m) => m[1].trim()).filter(Boolean);
+  const parts = blocks.length ? blocks : [t];
+  let html = '', css = '';
+  for (let p of parts) {
+    // <style>만 있고 그 안이 카드 · 말풍선 꾸밈이면 모양(CSS)
+    const onlyStyle = /<style[^>]*>[\s\S]*<\/style>/i.test(p) && !p.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').replace(/<!--[\s\S]*?-->/g, '').trim();
+    const inner = [...p.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map((m) => m[1]).join('\n');
+    if (looksLikeHtmlBg(p) || /ninining-safe/.test(p)) html += (html ? '\n' : '') + p;
+    else if (onlyStyle && /\.(card|bubble|msg|narr|name|avatar)\b/.test(inner)) css += (css ? '\n' : '') + inner.trim();
+    else if (/<[a-z][\s\S]*>/i.test(p)) html += (html ? '\n' : '') + p;
+    else if (/[^{}]+\{[^}]*:[^}]*\}/.test(p)) css += (css ? '\n' : '') + p;
+  }
+  return { html, css };
+}
+function applyMySkinParts({ html, css }) {
+  commit();
+  if (html) { dropBgChars(); state.bgRef = ''; state.bgHtml = html; syncHtmlEditor(); htmlBg.cache.clear(); }
+  if (css) { state.skin = css; $('#skin-css').value = css; applySkin(); }
+  changed(); commit();
+}
 function buildAiHelp() {
   const pane = $('[data-pane="skin"].pane');
-  if (!pane || $('#ai-skin-help')) return;
+  if (!pane) return;
+  const old = $('#ai-skin-help');
   const o = { kind: 'bg', theme: '', colors: '', objects: '', links: '' };
   const field = (k, label, ph, area) => h('label', { class: 'ai-field' }, h('span', {}, label),
     h(area ? 'textarea' : 'input', { class: 'input', ...(area ? { rows: 2 } : { type: 'text' }), placeholder: ph, oninput: (e) => { o[k] = e.target.value; } }));
@@ -6577,34 +6603,67 @@ function buildAiHelp() {
     let ok = false; try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
     ta.remove(); return ok;
   };
-  const where = h('div', { class: 'ai-where' });
-  const paintWhere = () => {
-    const rows = { bg: [['배경 · 테두리', 'HTML 배경']], css: [['말풍선 · 글 모양', 'CSS 스킨']], both: [['배경 · 테두리', 'HTML 배경'], ['말풍선 · 글 모양', 'CSS 스킨']] }[o.kind];
-    where.replaceChildren(h('b', {}, 'AI가 준 코드는 여기에 붙여 넣어요'),
-      ...rows.map(([what, box]) => h('div', { class: 'ai-where-row' }, h('span', {}, what), h('span', { class: 'ai-arrow' }, '→'), h('strong', {}, `아래 ‘${box}’ 칸`))),
-      o.kind === 'both' ? h('small', {}, 'AI가 코드를 두 개 줘요. 첫 번째는 HTML 배경 칸, 두 번째는 CSS 스킨 칸에 따로 넣어요. 바꿔 넣으면 적용되지 않아요.')
-        : h('small', {}, o.kind === 'bg' ? 'CSS 스킨 칸에 넣으면 적용되지 않아요.' : 'HTML 배경 칸에 넣으면 적용되지 않아요.'));
-  };
   const copy = h('button', { type: 'button', class: 'btn btn-primary btn-block', onclick: async () => {
     toast((await copyText(aiSkinPrompt(o))) ? '프롬프트 복사 완료' : '복사하지 못했어요. 다시 눌러 주세요');
   } }, '프롬프트 복사');
-  const box = h('details', { class: 'ai-help', id: 'ai-skin-help' },
-    h('summary', {}, h('b', {}, 'AI로 스킨 만들기'), h('small', {}, '테마랑 넣고 싶은 아이콘만 적으면 AI에게 줄 부탁 글을 복사해 줘요')),
-    h('div', { class: 'ai-body' },
-      h('div', { class: 'ai-label' }, '무엇을 만들까요?'),
-      segEl([['bg', '배경 · 테두리'], ['css', '말풍선 · 글 모양'], ['both', '둘 다']], o.kind, (v) => { o.kind = v; paintWhere(); }, true),
-      field('theme', '테마 · 분위기', '예) 겨울밤 기차역, 따뜻한 노란 조명, 레트로 감성', true),
-      field('colors', '주요 색', '예) 남색 · 크림색 · 금색 포인트'),
-      field('objects', '넣고 싶은 오브제 · 아이콘', '예) 눈송이, 기차표, 작은 별 — 모서리에만 작게', true),
-      field('links', '이미지 링크 (선택)', '쓰고 싶은 아이콘 · 사진 주소를 한 줄에 하나씩 · 없으면 AI가 직접 그려요', true),
-      copy,
-      h('p', { class: 'ai-tip' }, 'ChatGPT · Claude 같은 AI 채팅에 붙여 넣어요. 참고 이미지가 있으면 같이 올려요.'),
-      where,
-      h('p', { class: 'ai-tip' }, '글이 테두리와 겹치면 ‘HTML 배경’ 아래 ‘글 자리 여백’으로 직접 맞추거나, AI에게 “글 자리를 더 넉넉하게”라고 이어서 부탁해요.')));
-  paintWhere();
-  pane.prepend(box);
+  // ② 붙여 넣기: 칸 하나 · 자동으로 나눠 넣음
+  const paste = h('textarea', { class: 'input my-paste', rows: 4, placeholder: 'AI가 준 코드를 그대로 붙여 넣어요 (코드가 두 개여도 한 번에)', spellcheck: 'false' });
+  const result = h('p', { class: 'my-result', hidden: true });
+  const applyBtn = h('button', { type: 'button', class: 'btn btn-primary btn-block', onclick: () => {
+    const parts = splitSkinCode(paste.value);
+    if (!parts.html && !parts.css) { toast('코드를 찾지 못했어요. AI가 준 코드를 그대로 붙여 넣어 주세요'); return; }
+    applyMySkinParts(parts);
+    result.hidden = false;
+    result.textContent = [parts.html ? '✓ 배경 · 테두리를 넣었어요' : null, parts.css ? '✓ 말풍선 · 글 모양을 넣었어요' : null].filter(Boolean).join('   ');
+    toast('적용했어요 · 마음에 들면 3번에서 저장해 두세요', { label: '되돌리기', fn: undo });
+  } }, '적용하기');
+  // ③ 저장
+  const nameIn = h('input', { type: 'text', class: 'input', placeholder: '스킨 이름 (예: 겨울밤 기차역)', maxlength: 24 });
+  const list = h('div', { class: 'chip-row my-list' });
+  const paintList = () => {
+    const mine = state.mySkins || [];
+    list.replaceChildren(...(mine.length ? mine.map((m) => h('span', { class: 'my-chip' },
+      h('button', { type: 'button', class: 'chip', onclick: () => { applyMySkinParts(m); toast(`‘${m.name}’ 스킨을 적용했어요`, { label: '되돌리기', fn: undo }); } }, m.name),
+      h('button', { type: 'button', class: 'my-del', title: '지우기', 'aria-label': `${m.name} 지우기`, onclick: () => {
+        commit(); state.mySkins = (state.mySkins || []).filter((x) => x.id !== m.id); changed(); commit(); buildSkin(); paintList();
+        toast(`‘${m.name}’을(를) 지웠어요`, { label: '되돌리기', fn: undo });
+      } }, '×'))) : [h('small', { class: 'my-empty' }, '아직 저장한 스킨이 없어요')]));
+  };
+  const saveBtn = h('button', { type: 'button', class: 'btn btn-sm', onclick: () => {
+    const html = state.bgRef ? '' : (state.bgHtml || '').trim(), css = (state.skin || '').trim();
+    if (!html && !css) { toast('저장할 스킨이 없어요. 2번에서 먼저 적용해 주세요'); return; }
+    const name = nameIn.value.trim() || `내 스킨 ${(state.mySkins || []).length + 1}`;
+    commit();
+    state.mySkins = [...(state.mySkins || []).filter((x) => x.name !== name), { id: Date.now().toString(36), name, html, css }];
+    changed(); commit(); nameIn.value = ''; buildSkin(); paintList();
+    toast(`‘${name}’을(를) 내 스킨에 저장했어요 · 배경 · 모양 목록에도 나와요`);
+  } }, '내 스킨으로 저장');
+  const step = (n, title, sub, ...kids) => h('div', { class: 'my-step' },
+    h('div', { class: 'my-step-head' }, h('span', { class: 'my-num' }, n), h('div', {}, h('b', {}, title), sub ? h('small', {}, sub) : null)), ...kids);
+  const box = h('section', { class: 'my-skin', id: 'ai-skin-help' },
+    h('div', { class: 'my-title' }, h('b', {}, '내 스킨 만들기'), h('small', {}, 'AI에게 부탁해서 나만의 배경 · 말풍선 모양을 만들어요')),
+    step('1', 'AI로 만들기', '테마랑 넣고 싶은 아이콘만 적으면 돼요',
+      h('details', { class: 'my-ai' },
+        h('summary', {}, '부탁 글 만들기'),
+        h('div', { class: 'ai-body' },
+          h('div', { class: 'ai-label' }, '무엇을 만들까요?'),
+          segEl([['bg', '배경 · 테두리'], ['css', '말풍선 · 글 모양'], ['both', '둘 다']], o.kind, (v) => { o.kind = v; }, true),
+          field('theme', '테마 · 분위기', '예) 겨울밤 기차역, 따뜻한 노란 조명, 레트로 감성', true),
+          field('colors', '주요 색', '예) 남색 · 크림색 · 금색 포인트'),
+          field('objects', '넣고 싶은 오브제 · 아이콘', '예) 눈송이, 기차표, 작은 별 — 모서리에만 작게', true),
+          field('links', '이미지 링크 (선택)', '쓰고 싶은 아이콘 · 사진 주소를 한 줄에 하나씩 · 없으면 AI가 직접 그려요', true),
+          copy,
+          h('p', { class: 'ai-tip' }, 'ChatGPT · Claude 같은 AI 채팅에 붙여 넣어요. 참고 이미지가 있으면 같이 올려요.')))),
+    step('2', '붙여 넣기', '배경인지 모양인지 알아서 나눠 넣어요', paste, applyBtn, result,
+      h('p', { class: 'ai-tip' }, '글이 테두리와 겹치면 아래 ‘글 자리 여백 직접 맞추기’로 맞추거나, AI에게 “글 자리를 더 넉넉하게”라고 이어서 부탁해요.')),
+    step('3', '저장', '저장하면 배경 · 모양 목록에도 ‘내 스킨’으로 나와요', h('div', { class: 'my-save' }, nameIn, saveBtn), list));
+  paintList();
+  if (old) old.replaceWith(box);
+  else {
+    const head = $('.pane-head', pane);
+    if (head) head.after(box); else pane.prepend(box);
+  }
 }
-
 
 /* HTML 배경: 글 자리 여백 직접 맞추기 (글이 테두리 · 장식과 겹칠 때) */
 let padGuideTimer;
@@ -6657,6 +6716,7 @@ function buildSkin() {
     },
   }, label));
   chip('없음', '');
+  (state.mySkins || []).filter((m) => m.css).forEach((m) => row.append(h('button', { type: 'button', class: 'chip', onclick: () => { applyMySkinParts({ css: m.css, html: '' }); toast(`‘${m.name}’ 모양을 적용했어요`, { label: '되돌리기', fn: undo }); } }, m.name, h('small', { class: 'chip-tag' }, '내 스킨'))));
   for (const s of Object.values(SKINS)) {
     // 글꼴 · 색까지 정해야 제 모양이 나오는 스킨(예: 고전 RPG)은 템플릿 전체를 적용
     const tpl = TEMPLATES.find((t) => t.own && t.skin === s.css);
@@ -6732,6 +6792,7 @@ function buildSkin() {
       } catch (e) { toast('배경을 불러오지 못했어요'); }
     },
   }, bp.name, bp.genre ? h('small', { class: 'chip-tag' }, '장르') : null)));
+  (state.mySkins || []).filter((m) => m.html).forEach((m) => hrow.append(h('button', { type: 'button', class: 'chip', onclick: () => { applyMySkinParts({ html: m.html, css: '' }); toast(`‘${m.name}’ 배경을 적용했어요`, { label: '되돌리기', fn: undo }); } }, m.name, h('small', { class: 'chip-tag' }, '내 스킨'))));
   $('#skin-css').value = state.skin;
   syncHtmlEditor();
   setHtmlStatus(htmlBg.status);
