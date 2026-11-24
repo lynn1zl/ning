@@ -1059,6 +1059,14 @@ function inlineRegex(rules) {
   return new RegExp('(' + rules.pairs.map(([o, c]) => `${escRe(o)}.+?${escRe(c)}`).join('|') + ')');
 }
 
+function nestedPairs(t, ch) {
+  const pos = [];
+  for (let i = 0; i < t.length; i++) if (t[i] === ch) pos.push(i);
+  if (!pos.length || pos.length % 2) return false;
+  return pos.every((p, k) => (k % 2 === 0
+    ? p + 1 < t.length && !/\s/.test(t[p + 1]) // 여는 기호: 바로 뒤에 글자
+    : p > 0 && !/\s/.test(t[p - 1]))); // 닫는 기호: 바로 앞에 글자
+}
 function wrapped(s, pairs) {
   for (const [o, c] of pairs) {
     if (s.length > o.length + c.length - 1 && s.startsWith(o) && s.endsWith(c)) {
@@ -1066,6 +1074,9 @@ function wrapped(s, pairs) {
       // *지문* 안의 **볼드** 같은 겹친 서식 기호는 짝 세기에서 뺌
       const chk = o === c && o.length === 1 ? inner.split(o + o).join('') : inner;
       if (!chk.includes(c) && (o === c || !chk.includes(o))) return { inner: inner.trim() };
+      // *지문 *기울임* 지문*: 안쪽의 같은 기호가 '열고(뒤에 글자) · 닫고(앞에 글자)' 짝으로만 나오면 겹친 서식으로 봄
+      // ('*지문* 대사 *지문*'처럼 따로 떨어진 두 덩어리는 첫 기호 뒤가 띄어쓰기라 여기서 걸러짐)
+      if (o === c && o.length === 1 && nestedPairs(chk, o)) return { inner: inner.trim() };
     }
   }
   return null;
