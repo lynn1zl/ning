@@ -2023,3 +2023,10 @@ img[src^="nnimg:"] { visibility: hidden; }
 .b-meta-edit .b-meta-in { display: grid; grid-template-columns: 1fr 1.6fr; gap: 6px; }
 .b-meta-edit .chip-row { margin-top: 6px; }
 .pop-sub { margin-left: 6px; font-weight: 400; color: var(--text-3); }
+
+/* 오타 알림 (미리보기에만) */
+.page-wrap .typo-hint { text-decoration: underline wavy #e5484d; text-decoration-thickness: 1.5px; text-underline-offset: .18em; text-decoration-skip-ink: none; cursor: pointer; border-radius: 2px; }
+.page-wrap .typo-hint:hover { background: rgba(229, 72, 77, .12); }
+.typo-pop .typo-fix { margin: 2px 2px 10px; font-size: 16px; }
+.typo-pop .typo-fix s { color: var(--text-3); }
+.typo-pop .typo-fix b { color: #2f9e44; }

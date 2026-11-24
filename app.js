@@ -159,6 +159,8 @@ const DEFAULTS = {
   overrides: {},
   memoStyle: {}, // 메모마다 모양: { 'w:메모' | 'b:메모': { color, scale, mark } }
   memoPos: {}, // 메모마다 직접 옮긴 자리 · 폭: { key: { dx, dy, w } }
+  typoCheck: true, // 미리보기에서 남은 서식 기호 · 흔한 맞춤법 실수를 물결 밑줄로 (저장 이미지에는 안 나옴)
+  typoIgnore: [], // '이대로 둘게요'를 누른 글자
   palette: [], // 내 팔레트: 자주 쓰는 색 (모든 색 고르기 창에서 꺼내 씀)
   skin: '',
   bgHtml: '',
@@ -2007,6 +2009,93 @@ function clampHangulTracking(card) {
     if ([...el.childNodes].some((n) => n.nodeType === 3 && HANGUL.test(n.data))) cap(el, 0.1);
   });
 }
+/* =========================================================
+   오타 알림: 미리보기에만 물결 밑줄 (저장 이미지에는 안 나옴)
+   - 서식 기호가 글자로 남은 곳(* ** == ~~ __ [[ ]] {{ }})
+   - 흔한 맞춤법 실수 (말투로 일부러 쓴 경우는 '이대로 둘게요')
+   ========================================================= */
+const TYPO_WORDS = [
+  ['됬', '됐'], ['몇일', '며칠'], ['몇 일', '며칠'], ['금새', '금세'], ['어떻해', '어떡해'], ['왠일', '웬일'], ['웬지', '왠지'],
+  ['설겆이', '설거지'], ['일일히', '일일이'], ['깨끗히', '깨끗이'], ['곰곰히', '곰곰이'], ['오랫만', '오랜만'], ['희안', '희한'],
+  ['어의없', '어이없'], ['역활', '역할'], ['되요', '돼요'], ['되서', '돼서'], ['안되요', '안 돼요'], ['뵈요', '봬요'], ['구지', '굳이'],
+  ['어짜피', '어차피'], ['왠만', '웬만'], ['걸맞는', '걸맞은'], ['알맞는', '알맞은'], ['않되', '안 되'],
+];
+const hasRieul = (ch) => { const c = ch.charCodeAt(0) - 0xac00; return c >= 0 && c < 11172 && c % 28 === 8; };
+function typoMatches(text) {
+  const out = [];
+  const ign = new Set(state.typoIgnore || []);
+  const add = (i, len, fix, kind, note) => { const w = text.slice(i, i + len); if (!ign.has(w)) out.push({ i, len, w, fix, kind, note }); };
+  // 남은 서식 기호
+  for (const m of text.matchAll(/\*{1,3}|={2,}|~{2,}|_{2,}|\[\[|\]\]|\{\{|\}\}/g)) add(m.index, m[0].length, '', 'mark');
+  // ㄹ께 → ㄹ게 (할께 · 갈께요)
+  for (const m of text.matchAll(/([가-힣])께(?=요|[\s.,!?~…'"’”」』)]|$)/g)) if (hasRieul(m[1])) add(m.index, 2, m[1] + '게', 'word');
+  for (const [w, fix, note] of TYPO_WORDS) {
+    let i = text.indexOf(w);
+    while (i !== -1) { add(i, w.length, fix, 'word', note); i = text.indexOf(w, i + w.length); }
+  }
+  // 겹치는 것은 앞의 하나만
+  out.sort((a, b) => a.i - b.i);
+  return out.filter((m, k) => !out.slice(0, k).some((x) => m.i < x.i + x.len));
+}
+function markTypos(card) {
+  if (state.typoCheck === false) return;
+  const roots = card.querySelectorAll('.card-title, .narr, .bubble, .tbl-wrap, .fn-list');
+  roots.forEach((root) => {
+    const tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (tw.nextNode()) nodes.push(tw.currentNode);
+    nodes.forEach((n) => {
+      const ms = typoMatches(n.data);
+      if (!ms.length) return;
+      const frag = document.createDocumentFragment();
+      let at = 0;
+      ms.forEach((m) => {
+        if (m.i > at) frag.append(n.data.slice(at, m.i));
+        frag.append(h('span', { class: 'typo-hint', 'data-w': m.w, 'data-fix': m.fix, 'data-kind': m.kind, 'data-note': m.note || '' }, m.w));
+        at = m.i + m.len;
+      });
+      if (at < n.data.length) frag.append(n.data.slice(at));
+      n.replaceWith(frag);
+    });
+  });
+}
+function unmarkTypos(card) {
+  card.querySelectorAll('.typo-hint').forEach((el) => el.replaceWith(el.textContent));
+  card.normalize();
+}
+// 입력창에서 그 글자를 찾아 고르기 (미리보기 글자 주변으로 가장 가까운 자리)
+function selectInSource(word, ctx) {
+  const t = src.value;
+  let at = ctx ? t.indexOf(ctx) : -1;
+  at = at >= 0 ? t.indexOf(word, at) : t.indexOf(word);
+  if (at < 0) return false;
+  setPane('text', true);
+  src.focus(); src.setSelectionRange(at, at + word.length);
+  const lh = parseFloat(getComputedStyle(src).lineHeight) || 20;
+  src.scrollTop = Math.max(0, t.slice(0, at).split('\n').length * lh - src.clientHeight / 2);
+  return true;
+}
+function openTypoPop(el) {
+  const w = el.dataset.w, fix = el.dataset.fix, kind = el.dataset.kind, note = el.dataset.note;
+  const prev = (el.previousSibling && el.previousSibling.textContent || '').slice(-8);
+  const ignore = () => { state.typoIgnore = [...new Set([...(state.typoIgnore || []), w])]; closePop(); changed(); toast(`‘${w}’은(는) 이제 표시하지 않아요`, { label: '되돌리기', fn: undo }); };
+  const body = kind === 'mark'
+    ? [h('p', { class: 'pop-note', style: 'margin:0 2px 10px' }, `‘${w}’ 기호가 글자 그대로 보여요. 짝이 빠졌거나 하나 더 들어갔는지 확인해 주세요.`),
+      h('div', { class: 'pop-foot' },
+        h('button', { type: 'button', class: 'link-btn muted', onclick: ignore }, '이대로 둘게요'),
+        h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: () => { closePop(); if (!selectInSource(w, prev)) toast('입력창에서 찾지 못했어요'); } }, '입력창에서 보기'))]
+    : [h('p', { class: 'typo-fix' }, h('s', {}, w), ' → ', h('b', {}, fix)),
+      note ? h('p', { class: 'pop-note', style: 'margin:0 2px 8px' }, `${note} ‘${fix}’가 맞아요.`) : null,
+      h('div', { class: 'pop-foot' },
+        h('button', { type: 'button', class: 'link-btn muted', onclick: ignore }, '이대로 둘게요'),
+        h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: () => {
+          const n = src.value.split(w).length - 1;
+          commit(); src.value = src.value.split(w).join(fix); state.text = src.value; changed(); commit(); closePop();
+          toast(n > 1 ? `‘${w}’ ${n}곳을 ‘${fix}’로 고쳤어요` : `‘${fix}’로 고쳤어요`, { label: '되돌리기', fn: undo });
+        } }, src.value.split(w).length > 2 ? '모두 고치기' : '고치기'))];
+  openPop(h('div', { class: 'typo-pop' }, h('div', { class: 'pop-title' }, '오타인가요?'), ...body), el);
+}
+
 function ratioHeight(W) {
   const r = state.canvas.ratio;
   if (r === 'auto') return 0;
@@ -2826,6 +2915,7 @@ function render() {
   if (state.bubble.nameAlign === 'text') pages.forEach((p) => alignNames(p.card));
   if (state.bubble.showName && state.bubble.namePos === 'side') pages.forEach((p) => alignSideNames(p.card));
   pages.forEach((p) => layoutMemos(p.card));
+  pages.forEach((p) => markTypos(p.card));
   requestAnimationFrame(paintMemoSel);
   renderStickers(pages);
   htmlBgReady = applyHtmlBg(pages);
@@ -3005,6 +3095,7 @@ const SCHEMA = {
       { t: 'switch', p: 'parse.mergeTl', l: '아랫줄 번역은 같은 말풍선에', sub: '대사 바로 아래 ( ) 줄이나, 외국어 대사 바로 아래 한국어 대사를 번역처럼 작게 붙여요' },
       { t: 'seg', p: 'parse.tlShow', l: '원문 · 번역이 함께 있는 대사', o: [['both', '둘 다'], ['tl', '번역만'], ['orig', '원문만']], block: true },
       { t: 'switch', p: 'parse.autoChars', l: '인식된 이름을 캐릭터에 자동 등록', sub: '새 이름이 나오면 캐릭터 탭에 알아서 추가해요' },
+      { t: 'switch', p: 'typoCheck', l: '미리보기에서 오타 알려 주기', sub: '남은 서식 기호(* == 등)와 흔한 맞춤법 실수에 물결 밑줄 · 눌러서 고쳐요 · 저장 이미지에는 안 나와요' },
       { t: 'select', p: 'parse.nameless', l: '이름 없는 대사의 화자', o: () => namelessOptions() },
     ] },
     { sec: '문단', rows: [
@@ -3903,6 +3994,8 @@ function openBubbleEditor(key, anchor) {
 
 $('#stage').addEventListener('click', (e) => {
   if (e.target.closest('.sticker') || e.target.closest('.rs-handle')) return;
+  const th = e.target.closest('.typo-hint');
+  if (th) { e.stopPropagation(); openTypoPop(th); return; }
   const fig = e.target.closest('.inline-img');
   if (fig) { selectImage('inline', fig.dataset.img); return; }
   if (e.target.closest('.memo-note')) return; // 메모 고르기 · 옮기기는 memoMove에서
@@ -6728,6 +6821,7 @@ async function makeImages(indices, onProgress) {
     const all = $$('#stage .card');
     const cards = indices ? indices.map((i) => all[i]).filter(Boolean) : all;
     await ensureHtmlBg(cards);
+    cards.forEach(unmarkTypos);
     const fontCSS = await buildFontEmbedCSS(cards);
     for (const card of cards) await rasterizeHtmlLayers(card);
     return await makeImagesOf(cards, fontCSS, onProgress);
