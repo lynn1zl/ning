@@ -160,7 +160,7 @@ const DEFAULTS = {
   memoStyle: {}, // 메모마다 모양: { 'w:메모' | 'b:메모': { color, scale, mark } }
   memoPos: {}, // 메모마다 직접 옮긴 자리 · 폭: { key: { dx, dy, w } }
   mySkins: [], // 내 스킨: { id, name, html, css }
-  bgOwnText: false, // HTML 배경 안의 제목 · 출처 대신 발췌기가 직접 (서체 탭 글꼴 · 정렬 적용)
+  bgOwnText: false, // HTML 배경 안의 제목 · 출처 대신 발췌기가 직접 (꾸미기 › 서체 글꼴 · 정렬 적용)
   bgPad: { on: false, t: 40, r: 40, b: 40, l: 40 }, // HTML 배경의 글 자리를 직접 맞춤 (px)
   typoCheck: true, // 미리보기에서 남은 서식 기호 · 흔한 맞춤법 실수를 물결 밑줄로 (저장 이미지에는 안 나옴)
   typoIgnore: [], // '이대로 둘게요'를 누른 글자
@@ -498,14 +498,23 @@ const BASE_DESIGN = Object.fromEntries(DESIGN_KEYS.map((k) => [k, copyState(DEFA
   for (const d of [DEFAULTS, BASE_DESIGN]) { d.bubble.avatar = false; d.canvas.pageNum = false; }
 })();
 
+// 위쪽 큰 탭 5개 → 안의 하위 화면(pane)들
+const TABS = [
+  { id: 'write', label: '글', icon: 'text', subs: ['text'] },
+  { id: 'people', label: '사람', icon: 'person', subs: ['chars'] },
+  { id: 'style', label: '꾸미기', icon: 'bubble', subs: ['tpl', 'bubble', 'typo', 'skin'] },
+  { id: 'format', label: '판형', icon: 'frame', subs: ['canvas'] },
+  { id: 'keep', label: '보관', icon: 'folder', subs: ['template'] },
+];
 const PANES = [
-  { id: 'text', label: '텍스트', icon: 'text', desc: '' },
+  { id: 'text', label: '글', icon: 'text', desc: '발췌할 글을 넣고, 대사 인식 · 제목 · 출처를 정해요.' },
+  { id: 'tpl', label: '템플릿', icon: 'grid', desc: '색 · 말풍선 모양 · 스킨을 한 번에 바꿔요. 서체 · 글자 크기 · 판형은 지금 설정 그대로예요.' },
   { id: 'bubble', label: '말풍선', icon: 'bubble', desc: '말풍선 모양과 색, 프로필 표시 방식을 정해요.' },
-  { id: 'chars', label: '캐릭터', icon: 'person', desc: '본문에 쓴 이름이 캐릭터 이름이나 별명과 똑같아야(띄어쓰기까지) 말풍선에 사진과 색이 자동으로 연결돼요.' },
+  { id: 'chars', label: '사람', icon: 'person', desc: '본문에 쓴 이름이 캐릭터 이름이나 별명과 똑같아야(띄어쓰기까지) 말풍선에 사진과 색이 자동으로 연결돼요.' },
   { id: 'typo', label: '서체', icon: 'type', desc: '나레이션, 말풍선, 제목의 글꼴과 간격을 다듬어요.' },
-  { id: 'canvas', label: '화면', icon: 'frame', desc: '비율과 크기, 배경을 정해요.' },
-  { id: 'skin', label: '스킨', icon: 'code', desc: '배경과 말풍선 모양을 고르거나, AI로 나만의 스킨을 만들어요.' },
-  { id: 'template', label: '프리셋', icon: 'grid', desc: '자주 쓰는 설정을 프리셋으로 저장해 두고 불러오거나, 템플릿으로 디자인을 한 번에 바꿔요.' },
+  { id: 'canvas', label: '판형', icon: 'frame', desc: '카드 비율 · 크기 · 여백을 정해요.' },
+  { id: 'skin', label: '배경 · 스킨', icon: 'code', desc: '바탕 색 · 배경 그림을 고르거나, AI로 나만의 스킨을 만들어요.' },
+  { id: 'template', label: '보관', icon: 'folder', desc: '지금 설정을 프리셋으로 저장 · 불러오고, 저장할 파일 이름과 폴더를 정해요.' },
 ];
 
 /* =========================================================
@@ -1684,7 +1693,7 @@ const bgHasTitle = () => { if (bgOwnText()) return false; TITLE_TOKEN.lastIndex 
 const bgUsesScene = () => /\{\{\s*(장소|생존|전체|place|alive|total)\s*\}\}/i.test(bgCode());
 const bgUsesHompy = () => /\{\{\s*(마이룸|톡톡|프레임색)\s*\}\}/.test(bgCode());
 const bgUsesDiary = () => /\{\{\s*(다이어리색|날짜|날씨)\s*\}\}/.test(bgCode());
-// 직접 붙여넣은 HTML도 {{메모제목}} · {{할일}} · {{키링}}만 쓰면 그 칸만 텍스트 탭에 보여 줌
+// 직접 붙여넣은 HTML도 {{메모제목}} · {{할일}} · {{키링}}만 쓰면 그 칸만 글 탭에 보여 줌
 const bgUsesMemo = () => /\{\{\s*(메모제목|할일)\s*\}\}/.test(bgCode());
 const bgHidesSub = () => !!(bgCode() && bgHasTitle() && !/\{\{\s*소제목\s*\}\}/.test(bgCode()));
 const bgUsesAccord = () => /\{\{\s*(소제목|캐릭터명)\s*\}\}/.test(bgCode());
@@ -1747,7 +1756,7 @@ function fillBgTokens(html) {
     .replace(/\{\{\s*소제목\s*\}\}/g, () => (bgOwnText() ? '' : e(state.subtitle)))
     // 제목 · 소제목 · 크레딧이 비면 그 자리만큼 상자를 끌어올림 (값은 카드 폭 600 기준 단위)
     .replace(/\{\{(AC|MG|WD|XM)(박스위|머리아래|안전위|박스아래|안전아래|최소)\}\}/g, (m, k, w) => String(bgLayout(k)[w]))
-    // 서체 탭 '제목 크기'를 배경 속 제목에도 반영 (기본 19px = 1배)
+    // 꾸미기 › 서체 '제목 크기'를 배경 속 제목에도 반영 (기본 19px = 1배)
     .replace(/\{\{\s*제목배율\s*\}\}/g, () => String(Math.max(0.3, Math.min(4, (+state.head.size || 19) / 19)).toFixed(3)))
     // ACCORD 색: 밝은 모드 · 다크 모드
     .replace(/\{\{AC블루\}\}/g, () => (ac.dark ? '5b6dff' : '2438c8'))
@@ -3263,7 +3272,7 @@ const SCHEMA = {
       { t: 'switch', p: 'parse.strip', l: '말풍선에서 기호 숨기기' },
       { t: 'switch', p: 'parse.mergeTl', l: '아랫줄 번역은 같은 말풍선에', sub: '대사 바로 아래 ( ) 줄이나, 외국어 대사 바로 아래 한국어 대사를 번역처럼 작게 붙여요' },
       { t: 'seg', p: 'parse.tlShow', l: '원문 · 번역이 함께 있는 대사', o: [['both', '둘 다'], ['tl', '번역만'], ['orig', '원문만']], block: true },
-      { t: 'switch', p: 'parse.autoChars', l: '인식된 이름을 캐릭터에 자동 등록', sub: '새 이름이 나오면 캐릭터 탭에 알아서 추가해요' },
+      { t: 'switch', p: 'parse.autoChars', l: '인식된 이름을 캐릭터에 자동 등록', sub: '새 이름이 나오면 사람 탭에 알아서 추가해요' },
       { t: 'switch', p: 'typoCheck', l: '미리보기에서 오타 알려 주기', sub: '남은 서식 기호(* == 등)와 흔한 맞춤법 실수에 물결 밑줄 · 눌러서 고쳐요 · 저장 이미지에는 안 나와요' },
       { t: 'select', p: 'parse.nameless', l: '이름 없는 대사의 화자', o: () => namelessOptions() },
     ] },
@@ -3327,7 +3336,7 @@ const SCHEMA = {
       { t: 'slider', p: 'bubble.py', l: '안쪽 여백 · 위아래', min: 0, max: 30, step: 1, u: 'px' },
       { t: 'slider', p: 'bubble.gap', l: '말풍선 사이 간격', sub: '말풍선과 나레이션 사이는 이 값과 문단 간격 중 큰 값', min: 0, max: 48, step: 1, u: 'px' },
     ] },
-    { sec: '색상', note: '캐릭터 탭에서 ‘개별 색상’을 켠 캐릭터는 그 색이 우선 적용돼요.', rows: [
+    { sec: '색상', note: '사람 탭에서 ‘개별 색상’을 켠 캐릭터는 그 색이 우선 적용돼요.', rows: [
       { t: 'color', p: 'bubble.bg', l: '배경' },
       { t: 'color', p: 'bubble.color', l: '글자' },
       { t: 'color', p: 'bubble.border', l: '테두리' },
@@ -3460,15 +3469,9 @@ const SCHEMA = {
       { t: 'seg', p: 'canvas.valign', l: '세로 정렬', o: [['flex-start', '위'], ['center', '가운데'], ['flex-end', '아래']], when: fixedRatio },
       { t: 'slider', p: 'canvas.pad', l: '바깥 여백', min: 0, max: 300, step: 2, u: 'px' },
     ] },
-    { sec: '파일 이름', note: '로그 제목을 비우면 텍스트 탭의 제목을 써요. 여러 장일 때는 번호가 자동으로 붙어요.', rows: [
-      { t: 'filePreview' },
-      { t: 'switch', p: 'file.date', l: '저장 날짜', sub: '예) 20261101' },
-      { t: 'text', p: 'file.pair', l: '페어명', ph: '예) 닝닝' },
-      { t: 'text', p: 'file.title', l: '로그 제목', ph: '비우면 카드 제목을 써요' },
-      { t: 'switch', p: 'file.number', l: '한 장이어도 번호 붙이기', sub: '예) _01' },
-    ] },
-    { sec: '저장 폴더', rows: [{ t: 'folder' }] },
-    { sec: '배경', rows: [
+  ],
+  canvasbg: [
+    { sec: '바탕 색 · 무늬 · 이미지', rows: [
       { t: 'seg', p: 'canvas.bgType', l: '종류', o: [['solid', '단색'], ['gradient', '그라데이션'], ['pattern', '패턴'], ['image', '이미지']], block: true, rebuild: true },
       { t: 'gradients', show: () => state.canvas.bgType === 'gradient' },
       { t: 'patterns', p: 'canvas.pattern', show: () => state.canvas.bgType === 'pattern' },
@@ -3484,6 +3487,16 @@ const SCHEMA = {
       { t: 'slider', p: 'canvas.overlay', l: '덮개 진하기', min: 0, max: 0.9, step: 0.05, u: '', show: () => state.canvas.bgType === 'image', when: () => !!state.canvas.bgImage },
       { t: 'color', p: 'canvas.overlayColor', l: '덮개 색', show: () => state.canvas.bgType === 'image', when: () => !!state.canvas.bgImage },
     ] },
+  ],
+  save: [
+    { sec: '파일 이름', note: '로그 제목을 비우면 글 탭의 제목을 써요. 여러 장일 때는 번호가 자동으로 붙어요.', rows: [
+      { t: 'filePreview' },
+      { t: 'switch', p: 'file.date', l: '저장 날짜', sub: '예) 20261101' },
+      { t: 'text', p: 'file.pair', l: '페어명', ph: '예) 닝닝' },
+      { t: 'text', p: 'file.title', l: '로그 제목', ph: '비우면 카드 제목을 써요' },
+      { t: 'switch', p: 'file.number', l: '한 장이어도 번호 붙이기', sub: '예) _01' },
+    ] },
+    { sec: '저장 폴더', rows: [{ t: 'folder' }] },
   ],
 };
 
@@ -4207,23 +4220,143 @@ $('#stage').addEventListener('click', (e) => {
    ========================================================= */
 let activePane = 'text';
 
+const tabOf = (paneId) => TABS.find((t) => t.id === paneId || t.subs.includes(paneId)) || TABS[0];
+let activeTab = 'write';
 function buildRail() {
   const rail = $('#rail');
   rail.innerHTML = '';
-  PANES.forEach((p) => {
-    rail.append(h('button', { type: 'button', class: 'rail-item', 'data-pane': p.id, html: icon(p.icon) + `<span>${p.label}</span>`, onclick: () => setPane(p.id, true) }));
-    const pane = $(`[data-pane="${p.id}"].pane`);
-    pane.prepend(h('header', { class: 'pane-head' }, h('h2', {}, p.label), p.desc ? h('p', {}, p.desc) : null));
-  });
+  TABS.forEach((t) => rail.append(h('button', { type: 'button', class: 'rail-item', 'data-pane': t.id, html: icon(t.icon) + `<span>${t.label}</span>`, onclick: () => setPane(t.id, true) })));
+  // 패널 맨 위: 설정 찾기 + 탭 이름 + 하위 탭
+  if (!$('#tab-head')) $('#panel-scroll').prepend(h('div', { id: 'tab-head', class: 'tab-head' }));
+  buildSettingSearch();
+}
+function paintTabHead() {
+  const head = $('#tab-head');
+  if (!head) return;
+  const t = tabOf(activePane);
+  const pane = PANES.find((x) => x.id === activePane) || {};
+  let box = $('.tab-title', head);
+  if (!box) { box = h('div', { class: 'tab-title' }); head.append(box); }
+  box.replaceChildren(...[
+    h('h2', {}, t.label),
+    t.subs.length > 1 ? h('div', { class: 'sub-tabs', role: 'tablist' }, ...t.subs.map((id) => h('button', { type: 'button', role: 'tab', class: id === activePane ? 'on' : '', 'aria-selected': id === activePane ? 'true' : 'false', onclick: () => setPane(id, false) }, (PANES.find((x) => x.id === id) || {}).label))) : null,
+    pane.desc ? h('p', {}, pane.desc) : null].filter(Boolean));
 }
 
 function setPane(id, fromUser) {
-  const same = id === activePane;
-  activePane = id;
-  $$('.rail-item').forEach((b) => b.classList.toggle('on', b.dataset.pane === id));
+  // 큰 탭 id면 그 탭에서 마지막으로 본 하위 화면으로
+  const tab = tabOf(id);
+  if (id === tab.id) id = (uiState.lastSub || {})[tab.id] && tab.subs.includes(uiState.lastSub[tab.id]) ? uiState.lastSub[tab.id] : tab.subs[0];
+  const same = id === activePane && tab.id === activeTab;
+  activePane = id; activeTab = tab.id;
+  uiState.lastSub = { ...(uiState.lastSub || {}), [tab.id]: id }; saveUi();
+  $$('.rail-item').forEach((b) => b.classList.toggle('on', b.dataset.pane === tab.id));
   $$('.pane').forEach((p) => p.classList.toggle('on', p.dataset.pane === id));
+  paintTabHead();
   if (!same) $('#panel-scroll').scrollTop = 0;
   if (fromUser && isMobile()) setSheet(!(same && sheetOpen()));
+}
+
+/* ---------- 설정 찾기: 이름 · 묶음 · 비슷한 말로 찾아 그 자리로 ---------- */
+const FIND_SYN = [
+  ['행간', '줄 간격 줄간격 줄높이'], ['자간', '글자 간격 글자간격'], ['크기', '글자 크기 사이즈'], ['굵기', '볼드 두께'],
+  ['글꼴', '서체 폰트'], ['색', '컬러 색깔'], ['정렬', '가운데 왼쪽 오른쪽'], ['여백', '패딩 간격 마진'], ['배경', '바탕'], ['바탕', '배경'],
+  ['비율', '사이즈 판형 크기'], ['말풍선', '버블 대사'], ['사진', '프로필 아바타 얼굴'], ['형광펜', '하이라이트 강조'], ['그림자', '쉐도우'],
+];
+const FIND_PANE = { text: 'text', bubble: 'bubble', typo: 'typo', canvas: 'canvas', canvasbg: 'skin', save: 'template' };
+// 설정 칸 말고도 찾을 수 있는 곳
+const FIND_EXTRA = [
+  ['템플릿', 'tpl', '#template-grid', '디자인 한 번에 바꾸기 테마'],
+  ['캐릭터 추가', 'chars', '#btn-add-char', '사람 인물 등장인물'],
+  ['캐릭터 한 번에 여러 명', 'chars', '#bulk-names', '사람 이름 쉼표'],
+  ['캐릭터 별명 · 보일 이름', 'chars', '#chars-list', '닉네임 다른 이름 설명'],
+  ['등록 배경 (웨딩 · 크리스마스 · 장르)', 'skin', '#html-presets', 'HTML 배경 스킨 테마'],
+  ['HTML 배경 코드', 'skin', '#html-bg', '배경 코드 직접'],
+  ['CSS 스킨', 'skin', '#skin-css', '스킨 코드 모양'],
+  ['내 스킨 만들기 (AI)', 'skin', '#ai-skin-help', 'AI 프롬프트 스킨 만들기 저장'],
+  ['글 자리 여백', 'skin', '#bg-pad', '테두리 겹침 여백'],
+  ['프리셋 저장 · 불러오기', 'template', '#style-name', '내 양식 설정 저장'],
+  ['설정 파일 내려받기', 'template', '#btn-style-file', '백업 내보내기'],
+  ['정밀 검사 (맞춤법)', 'text', '.ft-spell', '오타 맞춤법 사전'],
+  ['찾아 바꾸기', 'text', '#fmt-bar', '찾기 바꾸기'],
+];
+function settingIndex() {
+  const out = [];
+  for (const [key, secs] of Object.entries(SCHEMA)) {
+    const pane = FIND_PANE[key];
+    if (!pane) continue;
+    secs.forEach((sc) => {
+      // 지금 배경 · 글에서 보이지 않는 묶음 · 칸은 빼고 찾음
+      if (sc.show && !sc.show()) return;
+      out.push({ label: sc.sec, where: sc.sec, pane, key, sec: sc.sec, kind: 'sec' });
+      sc.rows.forEach((d) => {
+        if (d.show && !d.show()) return;
+        const label = d.l || (d.t === 'font' ? '글꼴' : d.t === 'shapes' ? '말풍선 모양' : d.t === 'ratio' ? '비율' : '');
+        if (label) out.push({ label, sub: d.sub || '', where: sc.sec, pane, key, sec: sc.sec, kind: 'row', find: label });
+      });
+    });
+  }
+  FIND_EXTRA.forEach(([label, pane, sel, words]) => out.push({ label, sub: '', where: '', pane, sel, words, kind: 'extra' }));
+  return out;
+}
+const normFind = (t) => (t || '').toLowerCase().replace(/[\s·.,()]/g, '');
+function findSettings(q) {
+  const n = normFind(q);
+  if (!n) return [];
+  return settingIndex().map((it) => {
+    let hay = `${it.label} ${it.where} ${it.sub || ''} ${it.words || ''}`;
+    FIND_SYN.forEach(([w, syn]) => { if (hay.includes(w)) hay += ` ${syn}`; });
+    const h0 = normFind(hay), l0 = normFind(it.label);
+    const score = l0.startsWith(n) ? 3 : l0.includes(n) ? 2 : h0.includes(n) ? 1 : 0;
+    return { it, score };
+  }).filter((x) => x.score).sort((a, b) => b.score - a.score || (a.it.kind === 'sec' ? -1 : 1)).slice(0, 12).map((x) => x.it);
+}
+function goSetting(it) {
+  setPane(it.pane, false);
+  if (isMobile()) setSheet(true);
+  requestAnimationFrame(() => {
+    let el = null;
+    if (it.sel) el = $(it.sel);
+    else {
+      const box = $(`[data-fields="${it.key}"]`);
+      // 접힌 묶음이면 펼침
+      const btn = [...box.querySelectorAll('.sec-toggle')].find((b) => b.firstElementChild && b.firstElementChild.firstChild && b.firstElementChild.firstChild.textContent === it.sec);
+      if (btn && !btn.classList.contains('open')) btn.click();
+      if (it.kind === 'row') el = [...box.querySelectorAll('.row-label, .pop-label, .row > label')].find((x) => (x.firstChild && x.firstChild.textContent || '').trim() === it.find);
+      if (!el) el = btn || [...box.querySelectorAll('.section-title')].find((x) => x.textContent.trim() === it.sec);
+    }
+    if (!el) return;
+    if (el.closest('[hidden]') || getComputedStyle(el).display === 'none') { toast('지금 설정에서는 보이지 않는 항목이에요'); return; }
+    const row = el.closest('.row, .section, details, .sec-toggle') || el;
+    if (row.tagName === 'DETAILS') row.open = true;
+    row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    row.classList.remove('find-flash'); void row.offsetWidth; row.classList.add('find-flash');
+  });
+}
+function buildSettingSearch() {
+  const head = $('#tab-head');
+  if (!head || $('.set-find', head)) return;
+  const input = h('input', { type: 'search', class: 'input set-find-in', placeholder: '설정 찾기 (예: 줄 간격, 이름 색, 배경)', 'aria-label': '설정 찾기', autocomplete: 'off' });
+  const list = h('div', { class: 'set-find-list', role: 'listbox', hidden: true });
+  let items = [], sel = 0;
+  const TAB_NAME = (pane) => { const t = tabOf(pane); const sub = PANES.find((x) => x.id === pane); return t.subs.length > 1 ? `${t.label} › ${sub ? sub.label : ''}` : t.label; };
+  const paint = () => {
+    items = findSettings(input.value);
+    list.hidden = !input.value.trim();
+    list.replaceChildren(...(items.length ? items.map((it, i) => h('button', { type: 'button', role: 'option', class: 'set-find-item' + (i === sel ? ' on' : ''), onmousedown: (e) => e.preventDefault(), onclick: () => pick(it) },
+      h('b', {}, it.label), h('small', {}, [TAB_NAME(it.pane), it.where && it.where !== it.label ? it.where : null].filter(Boolean).join(' › ')))) : [h('div', { class: 'set-find-none' }, '찾는 설정이 없어요')]));
+  };
+  const pick = (it) => { input.value = ''; list.hidden = true; input.blur(); goSetting(it); };
+  input.addEventListener('input', () => { sel = 0; paint(); });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); sel = Math.min(items.length - 1, sel + 1); paint(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); sel = Math.max(0, sel - 1); paint(); }
+    else if (e.key === 'Enter' && items[sel]) { e.preventDefault(); pick(items[sel]); }
+    else if (e.key === 'Escape') { input.value = ''; list.hidden = true; }
+  });
+  input.addEventListener('blur', () => setTimeout(() => { list.hidden = true; }, 120));
+  input.addEventListener('focus', () => { if (input.value.trim()) paint(); });
+  head.prepend(h('div', { class: 'set-find' }, h('span', { class: 'set-find-ico', html: icon('search') }), input, list));
 }
 
 const sheetOpen = () => $('#app').classList.contains('sheet-open');
@@ -4432,7 +4565,7 @@ function openFootnotePop(anchor) {
   openPop(h('div', { class: 'memo-pop' },
     h('div', { class: 'pop-title' }, '각주 달기'),
     inp,
-    h('p', { class: 'memo-tip', style: 'margin:8px 2px 0' }, '커서 자리에 번호가 붙고, 내용은 장 아래(각주)나 글 끝(미주)에 모여요. 위치는 서체 탭 ‘표 · 각주’에서 골라요.'),
+    h('p', { class: 'memo-tip', style: 'margin:8px 2px 0' }, '커서 자리에 번호가 붙고, 내용은 장 아래(각주)나 글 끝(미주)에 모여요. 위치는 꾸미기 › 서체 ‘표 · 각주’에서 골라요.'),
     h('div', { class: 'pop-foot' }, h('span'), h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: ok }, '달기'))), anchor);
   inp.focus();
 }
@@ -5677,7 +5810,7 @@ function openTextColorPop(anchor) {
   native.addEventListener('change', () => pick(native.value));
   openPop(h('div', {},
     h('div', { class: 'pop-title' }, '글자색'),
-    h('p', { class: 'pop-note', style: 'margin:0 2px 10px' }, '입력창에서 고른 글자에 색을 칠해요. 서체 탭의 기본 글자 색과 따로 쓸 수 있어요.'),
+    h('p', { class: 'pop-note', style: 'margin:0 2px 10px' }, '입력창에서 고른 글자에 색을 칠해요. 꾸미기 › 서체의 기본 글자 색과 따로 쓸 수 있어요.'),
     h('div', { class: 'hl-row' }, grid, h('label', { class: 'native-color sm', title: '직접 고르기' }, native)),
     myPaletteRow(() => native.value, (c) => pick(c)),
     h('div', { class: 'pop-foot' },
@@ -5938,7 +6071,7 @@ function applyTemplate(t) {
 
 /* 캐릭터 */
 const namelessOptions = () => [['none', '지정 안 함'], ['alt', '번갈아 가며'], ...state.chars.map((c) => [c.id, c.name || '(이름 없음)'])];
-// 텍스트 탭과 캐릭터 탭의 '이름 없는 대사의 화자'를 같은 값으로 맞춤
+// 글 탭과 사람 탭의 '이름 없는 대사의 화자'를 같은 값으로 맞춤
 function syncNameless() {
   $$('select[data-nameless], [data-fields="text"] select[aria-label="이름 없는 대사의 화자"]').forEach((sel) => {
     if (sel.value !== state.parse.nameless) sel.value = state.parse.nameless;
@@ -5948,7 +6081,7 @@ function syncNameless() {
 /* ── 캐릭터 폴더 ── */
 const folderList = () => (state.charFolders = state.charFolders || []);
 const charFolderIds = (ch) => (ch.folders = (ch.folders || []).filter((id) => folderList().some((f) => f.id === id)));
-let charFolderView = (uiState && uiState.charFolder) || ''; // 캐릭터 탭에서 지금 보는 폴더 ('' = 전체)
+let charFolderView = (uiState && uiState.charFolder) || ''; // 사람 탭에서 지금 보는 폴더 ('' = 전체)
 function setFolderView(id) { charFolderView = id; uiState.charFolder = id; saveUi(); buildChars(); }
 function newFolder(name) {
   const f = { id: 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name: name.trim() || '새 폴더' };
@@ -5980,7 +6113,7 @@ function openFolderMenu(anchor, f) {
       } }, '폴더 지우기'),
       h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: closePop }, '닫기'))), anchor);
 }
-/** 캐릭터 탭 위 폴더 줄: 전체 · 폴더들 · + 새 폴더 (지금 보는 폴더를 다시 누르면 이름 바꾸기 · 지우기) */
+/** 사람 탭 위 폴더 줄: 전체 · 폴더들 · + 새 폴더 (지금 보는 폴더를 다시 누르면 이름 바꾸기 · 지우기) */
 function folderBar() {
   const fs = folderList();
   if (charFolderView && !fs.some((f) => f.id === charFolderView)) charFolderView = '';
@@ -6560,13 +6693,13 @@ function aiSkinPrompt(o) {
     '   .card-footer 아래 출처 줄 · mark 형광펜 · .divider 구분선',
     '3. 색은 변수로 바꿔 주세요: .card { --card-bg: 바탕색; --text-color: 글자색; --title-color: 제목색; } (바탕을 어둡게 하면 글자 · 제목 색도 꼭 밝게)',
     '   말풍선은 .msg-left .bubble { --b-bg: 바탕; --b-color: 글자; --b-border: 테두리; } (오른쪽은 .msg-right)',
-    '4. 글꼴 · 글자 크기 · 줄 간격 · 정렬(text-align)은 정하지 마세요. 사용자가 발췌기 서체 탭에서 직접 바꿔요. 색과 꾸밈만 바꿔 주세요.',
+    '4. 글꼴 · 글자 크기 · 줄 간격 · 정렬(text-align)은 정하지 마세요. 사용자가 발췌기 꾸미기 › 서체에서 직접 바꿔요. 색과 꾸밈만 바꿔 주세요.',
     '5. 카드 장식은 .card::before / .card::after(pointer-events: none)와 배경 이미지(인라인 SVG data URI 가능)로 만들어 주세요.',
   ].join('\n');
   // 제목 · 출처: 글자는 발췌기가 넣고(글꼴 · 크기 · 정렬은 사용자가), 모양은 장르 표지처럼 CSS로 꾸밈
   const title = [
     '■ 제목 · 출처 꾸밈 규칙 (CSS)',
-    '1. 제목 · 소제목 · 출처 · 제작자 글자는 발췌기가 넣고, 사용자가 서체 탭에서 글꼴 · 크기 · 정렬을 바꿔요. 그 모양을 테마에 맞게 CSS로 개성 있게 꾸며 주세요. (장르물 표지 · 게임 화면의 제목 판처럼)',
+    '1. 제목 · 소제목 · 출처 · 제작자 글자는 발췌기가 넣고, 사용자가 꾸미기 › 서체에서 글꼴 · 크기 · 정렬을 바꿔요. 그 모양을 테마에 맞게 CSS로 개성 있게 꾸며 주세요. (장르물 표지 · 게임 화면의 제목 판처럼)',
     '2. 쓸 요소: .card-title 제목 · .card-title .card-sub 소제목(제목 아래 작은 줄) · .card-footer 아래 출처 줄 · .card-footer .credit-work 작품명 · .card-footer .credit-author 제작자',
     '3. 할 수 있는 것: 색(.card { --title-color; --credit-color; --creator-color; } 또는 color), 글자 그림자, 자간, 대문자, 제목 위 · 아래 장식선이나 굵은 바, 제목 뒤 판(배경 · 테두리), ::before / ::after로 작은 라벨 · 아이콘 · 문양(인라인 SVG data URI 가능), 소제목을 태그 · 배지처럼, 출처 줄 위 구분선이나 배지',
     '4. 하지 말 것: font-family · font-size · text-align · width 고정 (사용자 설정이 먹지 않게 돼요). 제목 정렬이 왼쪽 · 가운데 · 오른쪽 어느 쪽이어도 어울리게 해 주세요.',
@@ -6746,7 +6879,7 @@ function buildBgPad() {
   };
   const ownSw = h('input', { type: 'checkbox', class: 'switch', role: 'switch', checked: !!state.bgOwnText, onchange: (e) => { state.bgOwnText = e.target.checked; htmlBg.cache.clear(); changed(); } });
   wrap.replaceChildren(...[
-    h('label', { class: 'row', id: 'bg-own-row', hidden: !bgOwnTextNeeded() }, labelEl('제목 · 출처는 발췌기에서 넣기', '이 배경 코드에 제목 · 출처가 그려져 있어요. 켜면 서체 탭의 글꼴 · 크기 · 정렬로 바꿔 보여요'), ownSw),
+    h('label', { class: 'row', id: 'bg-own-row', hidden: !bgOwnTextNeeded() }, labelEl('제목 · 출처는 발췌기에서 넣기', '이 배경 코드에 제목 · 출처가 그려져 있어요. 켜면 꾸미기 › 서체의 글꼴 · 크기 · 정렬로 바꿔 보여요'), ownSw),
     h('label', { class: 'row' }, labelEl('글 자리 여백 직접 맞추기', '글이 테두리 · 장식과 겹칠 때 위 · 아래 · 양옆 여백을 따로 맞춰요'), sw),
     P.on ? h('div', { class: 'bg-pad-grid' }, slider('t', '위'), slider('b', '아래'), slider('l', '왼쪽'), slider('r', '오른쪽')) : null].filter(Boolean));
 }
@@ -6838,7 +6971,7 @@ function buildSkin() {
         changed(); commit();
         buildChars(); buildFields(); buildQuickInsert(); syncHtmlEditor();
         { const hs = $('#fmt-bar .hl-sw'); if (hs) hs.style.background = state.typo.hl; }
-        toast(`‘${bp.name}’ 배경을 적용했어요${added.length ? ` · 캐릭터 ${added.length}명 등록` : ''}${bp.scene ? ' · 장소 · 생존 인원은 텍스트 탭 ‘상황판’에서' : ''}${bp.hompy ? ' · 색 · 마이룸 · 한마디는 텍스트 탭에서' : ''}${bp.file === 'bg/diary.html' ? ' · 색 · 날짜 · 날씨 · 메모는 텍스트 탭에서' : ''}${bp.sub != null ? ` · 소제목 · 캐릭터명 · 제작자는 텍스트 탭에서${bp.set ? ' · 글 · 말풍선 색도 어둡게 맞췄어요' : ''}` : ''}`, { label: '되돌리기', fn: undo }, 4200);
+        toast(`‘${bp.name}’ 배경을 적용했어요${added.length ? ` · 캐릭터 ${added.length}명 등록` : ''}${bp.scene ? ' · 장소 · 생존 인원은 글 탭 ‘상황판’에서' : ''}${bp.hompy ? ' · 색 · 마이룸 · 한마디는 글 탭에서' : ''}${bp.file === 'bg/diary.html' ? ' · 색 · 날짜 · 날씨 · 메모는 글 탭에서' : ''}${bp.sub != null ? ` · 소제목 · 캐릭터명 · 제작자는 글 탭에서${bp.set ? ' · 글 · 말풍선 색도 어둡게 맞췄어요' : ''}` : ''}`, { label: '되돌리기', fn: undo }, 4200);
       } catch (e) { toast('배경을 불러오지 못했어요'); }
     },
   }, bp.name, bp.genre ? h('small', { class: 'chip-tag' }, '장르') : null)));
@@ -7485,10 +7618,10 @@ $('#btn-dl-all').addEventListener('click', async () => {
 $('#btn-share-all').addEventListener('click', () => shareImages(lastImages));
 $('#btn-filename-edit').addEventListener('click', () => {
   closeModals();
-  setPane('canvas', true);
+  setPane('template', true);
   uiState.open = uiState.open || {};
   setTimeout(() => {
-    const t = [...$$('[data-fields="canvas"] .section-title')].find((x) => x.textContent === '파일 이름');
+    const t = [...$$('[data-fields="save"] .section-title')].find((x) => x.textContent === '파일 이름');
     if (t) t.scrollIntoView({ block: 'start', behavior: 'smooth' });
   }, 60);
 });
@@ -7974,13 +8107,11 @@ if (state.bgRef) loadBgRef(state.bgRef).then(() => { htmlBg.cache.clear(); rende
 
 /* ── 첫 방문 튜토리얼: 메뉴를 하나씩 강조하며 설명 ── */
 const TOUR = [
-  { pane: 'text', title: '텍스트', body: '발췌할 글을 붙여넣고 편집해요. 제목 · 출처(작품명 · 제작자)도 여기서 입력해요.' },
-  { pane: 'bubble', title: '말풍선', body: '말풍선 모양 · 크기 · 색을 바꾸고, 말풍선 옆 사진과 이름 표시를 정해요.' },
-  { pane: 'chars', title: '캐릭터', body: '말풍선 캐릭터를 설정해요. 따로 입력하지 않아도 로그에서 인식된 캐릭터는 자동으로 추가돼요.' },
-  { pane: 'typo', title: '서체', body: '글꼴 · 크기 · 행간 · 자간부터 줄바꿈 · 드롭캡 같은 세세한 조판까지 다듬어요.' },
-  { pane: 'canvas', title: '화면', body: '배경색과 화면 비율을 정해요. ‘자유’(기본)는 길이 상관없이 한 장으로, 비율을 고르면 넘치는 글은 다음 장으로 넘어가요. 저장할 이미지의 파일 이름도 여기서 정해요.' },
-  { pane: 'skin', title: '스킨', body: 'HTML · CSS를 넣어 자유롭게 꾸밀 수 있어요.' },
-  { pane: 'template', title: '프리셋', body: '지금 쓰는 설정을 저장해 두고 불러와요. 바로 입혀 볼 수 있는 기본 템플릿 테마도 있어요.' },
+  { pane: 'write', title: '글', body: '발췌할 글을 붙여넣고 편집해요. 제목 · 출처(작품명 · 제작자)와 대사 인식도 여기서 정해요.' },
+  { pane: 'people', title: '사람', body: '말풍선 캐릭터를 설정해요. 따로 입력하지 않아도 로그에서 인식된 캐릭터는 자동으로 추가돼요.' },
+  { pane: 'style', title: '꾸미기', body: '템플릿으로 한 번에 바꾸거나, 말풍선 · 서체 · 배경 · 스킨을 하나씩 꾸며요.' },
+  { pane: 'format', title: '판형', body: '카드 비율 · 크기 · 여백을 정해요. ‘자유’(기본)는 길이 상관없이 한 장으로, 비율을 고르면 넘치는 글은 다음 장으로 넘어가요.' },
+  { pane: 'keep', title: '보관', body: '지금 설정을 프리셋으로 저장해 두고 불러와요. 저장할 파일 이름과 폴더도 여기서 정해요.' },
   { target: '#btn-save', title: '저장 · 복사', body: '다 꾸몄다면 이미지로 저장하거나 복사해서 바로 붙여넣으세요.' },
 ];
 let tourIdx = -1;

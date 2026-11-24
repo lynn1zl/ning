@@ -2120,3 +2120,24 @@ img[src^="nnimg:"] { visibility: hidden; }
 .my-found:empty { display: none; }
 .my-found.bad { color: #e5484d; }
 .btn:disabled { opacity: .45; cursor: default; }
+
+/* 큰 탭 머리: 설정 찾기 · 탭 이름 · 하위 탭 */
+.tab-head { position: sticky; top: 0; z-index: 5; padding: 12px 16px 10px; background: var(--bg, #f2f3f5); }
+.tab-title h2 { margin: 10px 2px 8px; font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+.tab-title p { margin: 8px 2px 0; font-size: 13px; line-height: 1.55; color: var(--text-3); }
+.sub-tabs { display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: var(--fill, rgba(0,0,0,.05)); overflow-x: auto; }
+.sub-tabs button { flex: 1; min-width: max-content; padding: 8px 10px; border: 0; border-radius: 9px; background: none; color: var(--text-2, var(--text)); font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.sub-tabs button.on { background: var(--surface, #fff); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.set-find { position: relative; }
+.set-find-ico { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); display: grid; color: var(--text-3); pointer-events: none; }
+.set-find-ico svg { width: 16px; height: 16px; }
+.set-find-in { width: 100%; padding-left: 36px !important; }
+.set-find-list { position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 20; max-height: 340px; overflow: auto; padding: 6px; border-radius: 12px; background: var(--surface, #fff); box-shadow: 0 10px 30px rgba(0,0,0,.14), 0 0 0 1px var(--hair); }
+.set-find-list[hidden] { display: none; }
+.set-find-item { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; padding: 8px 10px; border: 0; border-radius: 8px; background: none; text-align: left; font: inherit; cursor: pointer; color: var(--text); }
+.set-find-item b { font-size: 14px; font-weight: 600; }
+.set-find-item small { font-size: 12px; color: var(--text-3); }
+.set-find-item.on, .set-find-item:hover { background: var(--fill, rgba(0,0,0,.05)); }
+.set-find-none { padding: 10px; font-size: 13px; color: var(--text-3); }
+@keyframes findFlash { 0%, 60% { box-shadow: 0 0 0 2px var(--accent, #3182f6); background-color: rgba(49,130,246,.08); } 100% { box-shadow: 0 0 0 2px transparent; } }
+.find-flash { animation: findFlash 1.6s ease-out; border-radius: 10px; }
