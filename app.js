@@ -2007,7 +2007,7 @@ function clampHangulTracking(card) {
     if (pl > 0 && Math.abs(pl - ls) < 0.03) el.style.paddingLeft = `${max}em`;
   };
   cap(card.querySelector(':scope > .card-title'), 0.1);
-  cap(card.querySelector(':scope > .card-title > .card-sub'), 0.06);
+  cap(card.querySelector(':scope > .card-title .card-sub'), 0.06);
   card.querySelectorAll('.msg .name').forEach((el) => cap(el, 0.06));
   card.querySelectorAll('.card-footer .credit-work, .card-footer .credit-author').forEach((el) => cap(el, 0.1));
   card.querySelectorAll('.hbox .hb-root *').forEach((el) => {
@@ -2276,7 +2276,8 @@ function newPage(idx, W, H) {
   const subT = (state.subtitle || '').trim();
   if (idx === 0 && (state.title.trim() || subT) && !(bgCode() && bgHasTitle())) {
     const t = h('h2', { class: 'card-title' + (state.title.trim() ? '' : ' sub-only'), html: state.title.trim() ? fmt(state.title) : '' });
-    if (subT) t.append(h('span', { class: 'card-sub', html: fmt(subT) }));
+    // 소제목은 늘 제목 아래 줄 (스킨이 배지처럼 inline-block으로 꾸며도 제목 옆에 붙지 않게)
+    if (subT) t.append(h('span', { class: 'card-sub-line' }, h('span', { class: 'card-sub', html: fmt(subT) })));
     card.append(t);
   }
   const safe = bgCode() ? bgSafeArea() : null;
@@ -6521,7 +6522,7 @@ $('#btn-add-char').addEventListener('click', () => {
 
 /* AI로 스킨 만들기: 테마 · 색 · 넣고 싶은 아이콘만 적으면 AI에게 줄 프롬프트를 만들어 줌 */
 function aiSkinPrompt(o) {
-  const kindLabel = { bg: 'HTML 배경 코드', css: 'CSS 스킨', both: 'HTML 배경 코드와 CSS 스킨' }[o.kind];
+  const kindLabel = { bg: 'HTML 배경 코드와 제목 · 출처 꾸밈 CSS', css: 'CSS 스킨', both: 'HTML 배경 코드와 CSS 스킨' }[o.kind];
   const want = [
     '■ 원하는 디자인',
     `- 테마 · 분위기: ${o.theme.trim() || '(자유롭게 제안해 주세요)'}`,
@@ -6556,14 +6557,24 @@ function aiSkinPrompt(o) {
     '3. 색은 변수로 바꿔 주세요: .card { --card-bg: 바탕색; --text-color: 글자색; --title-color: 제목색; } (바탕을 어둡게 하면 글자 · 제목 색도 꼭 밝게)',
     '   말풍선은 .msg-left .bubble { --b-bg: 바탕; --b-color: 글자; --b-border: 테두리; } (오른쪽은 .msg-right)',
     '4. 글꼴 · 글자 크기 · 줄 간격 · 정렬(text-align)은 정하지 마세요. 사용자가 발췌기 서체 탭에서 직접 바꿔요. 색과 꾸밈만 바꿔 주세요.',
-    '5. 제목(.card-title)은 위 · 아래 장식선, 배경, 테두리 같은 꾸밈만 넣고 글꼴 · 크기 · 정렬은 그대로 두세요.',
-    '6. 카드 장식은 .card::before / .card::after(pointer-events: none)와 배경 이미지(인라인 SVG data URI 가능)로 만들어 주세요.',
+    '5. 카드 장식은 .card::before / .card::after(pointer-events: none)와 배경 이미지(인라인 SVG data URI 가능)로 만들어 주세요.',
+  ].join('\n');
+  // 제목 · 출처: 글자는 발췌기가 넣고(글꼴 · 크기 · 정렬은 사용자가), 모양은 장르 표지처럼 CSS로 꾸밈
+  const title = [
+    '■ 제목 · 출처 꾸밈 규칙 (CSS)',
+    '1. 제목 · 소제목 · 출처 · 제작자 글자는 발췌기가 넣고, 사용자가 서체 탭에서 글꼴 · 크기 · 정렬을 바꿔요. 그 모양을 테마에 맞게 CSS로 개성 있게 꾸며 주세요. (장르물 표지 · 게임 화면의 제목 판처럼)',
+    '2. 쓸 요소: .card-title 제목 · .card-title .card-sub 소제목(제목 아래 작은 줄) · .card-footer 아래 출처 줄 · .card-footer .credit-work 작품명 · .card-footer .credit-author 제작자',
+    '3. 할 수 있는 것: 색(.card { --title-color; --credit-color; --creator-color; } 또는 color), 글자 그림자, 자간, 대문자, 제목 위 · 아래 장식선이나 굵은 바, 제목 뒤 판(배경 · 테두리), ::before / ::after로 작은 라벨 · 아이콘 · 문양(인라인 SVG data URI 가능), 소제목을 태그 · 배지처럼, 출처 줄 위 구분선이나 배지',
+    '4. 하지 말 것: font-family · font-size · text-align · width 고정 (사용자 설정이 먹지 않게 돼요). 제목 정렬이 왼쪽 · 가운데 · 오른쪽 어느 쪽이어도 어울리게 해 주세요.',
+    '5. 제목 · 소제목 · 출처가 비면 그 요소가 통째로 사라져요. 비어 있어도 어색하지 않게 해 주세요.',
   ].join('\n');
   const head = `웹 도구 '발췌기'에 넣을 ${kindLabel}를 만들어 주세요.`;
-  const tail = o.kind === 'both'
-    ? '■ 답변 형식\n코드 블록 두 개로만 답해 주세요. 첫 번째는 "HTML 배경", 두 번째는 "CSS 스킨"이에요. 둘의 색 · 분위기를 맞춰 주세요.'
-    : '■ 답변 형식\n설명 없이 코드 블록 하나로만 답해 주세요.';
-  return [head, want, o.kind !== 'css' ? bg : null, o.kind !== 'bg' ? css : null, tail].filter(Boolean).join('\n\n');
+  const tail = {
+    bg: '■ 답변 형식\n코드 블록 두 개로만 답해 주세요. 첫 번째는 "HTML 배경", 두 번째는 "제목 · 출처 꾸밈 CSS"(<style> 태그 없이)예요. 둘의 색 · 분위기를 맞춰 주세요.',
+    css: '■ 답변 형식\n설명 없이 코드 블록 하나로만 답해 주세요. 말풍선 · 글 모양과 제목 · 출처 꾸밈을 한 CSS에 함께 넣어 주세요.',
+    both: '■ 답변 형식\n코드 블록 두 개로만 답해 주세요. 첫 번째는 "HTML 배경", 두 번째는 "CSS 스킨"(말풍선 · 글 모양 + 제목 · 출처 꾸밈)이에요. 둘의 색 · 분위기를 맞춰 주세요.',
+  }[o.kind];
+  return [head, want, o.kind !== 'css' ? bg : null, o.kind !== 'bg' ? css : null, title, tail].filter(Boolean).join('\n\n');
 }
 /* 붙여 넣은 코드를 배경(HTML) · 모양(CSS)으로 나눔: ``` 코드 블록이 여러 개여도, 그냥 붙여 넣어도 */
 function splitSkinCode(text) {
@@ -7187,7 +7198,11 @@ async function makeImagesOf(cards, fontCSS, onProgress) {
   for (const card of cards) {
     card.querySelectorAll('.narr, .bubble, .card-title, .credit').forEach((el) => {
       if (el.querySelector('.wrap-float, .bimg-box, .tok-img')) return; // 이미지가 들어간 문단은 브라우저 배치 그대로
+      // 제목의 소제목 줄은 따로 둠 (스킨이 배지처럼 꾸민 소제목이 줄 나누기에 잘려 빈 조각이 남지 않게)
+      const sub = el.classList.contains('card-title') ? el.querySelector(':scope > .card-sub-line') : null;
+      if (sub) sub.remove();
       try { freezeLines(el, currentScale); } catch (e) { /* 원래 상태로 둠 */ }
+      if (sub) el.append(sub);
     });
   }
   const out = [];

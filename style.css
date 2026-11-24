@@ -2107,3 +2107,5 @@ img[src^="nnimg:"] { visibility: hidden; }
 .my-fold svg { width: 14px; height: 14px; }
 .my-step-fold[open] .my-fold { transform: rotate(180deg); }
 .my-step-fold > .ai-body { padding: 4px 0 0; }
+
+.card-title .card-sub-line { display: block; }
