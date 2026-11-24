@@ -6642,9 +6642,11 @@ function buildAiHelp() {
     h('div', { class: 'my-step-head' }, h('span', { class: 'my-num' }, n), h('div', {}, h('b', {}, title), sub ? h('small', {}, sub) : null)), ...kids);
   const box = h('section', { class: 'my-skin', id: 'ai-skin-help' },
     h('div', { class: 'my-title' }, h('b', {}, '내 스킨 만들기'), h('small', {}, 'AI에게 부탁해서 나만의 배경 · 말풍선 모양을 만들어요')),
-    step('1', 'AI로 만들기', '테마랑 넣고 싶은 아이콘만 적으면 돼요',
-      h('details', { class: 'my-ai' },
-        h('summary', {}, '부탁 글 만들기'),
+    // 1단계는 제목 줄을 눌러 접고 펼침
+    h('details', { class: 'my-step my-step-fold' },
+      h('summary', { class: 'my-step-head' }, h('span', { class: 'my-num' }, '1'),
+        h('div', {}, h('b', {}, '테마 입력하기'), h('small', {}, '테마랑 넣고 싶은 아이콘을 적고 프롬프트를 복사해요')),
+        h('span', { class: 'my-fold', 'aria-hidden': 'true', html: icon('down') })),
         h('div', { class: 'ai-body' },
           h('div', { class: 'ai-label' }, '무엇을 만들까요?'),
           segEl([['bg', '배경 · 테두리'], ['css', '말풍선 · 글 모양'], ['both', '둘 다']], o.kind, (v) => { o.kind = v; }, true),
@@ -6653,7 +6655,7 @@ function buildAiHelp() {
           field('objects', '넣고 싶은 오브제 · 아이콘', '예) 눈송이, 기차표, 작은 별 — 모서리에만 작게', true),
           field('links', '이미지 링크 (선택)', '쓰고 싶은 아이콘 · 사진 주소를 한 줄에 하나씩 · 없으면 AI가 직접 그려요', true),
           copy,
-          h('p', { class: 'ai-tip' }, 'ChatGPT · Claude 같은 AI 채팅에 붙여 넣어요. 참고 이미지가 있으면 같이 올려요.')))),
+          h('p', { class: 'ai-tip' }, 'ChatGPT · Claude 같은 AI 채팅에 붙여 넣어요. 참고 이미지가 있으면 같이 올려요.'))),
     step('2', '붙여 넣기', '배경인지 모양인지 알아서 나눠 넣어요', paste, applyBtn, result,
       h('p', { class: 'ai-tip' }, '글이 테두리와 겹치면 아래 ‘글 자리 여백 직접 맞추기’로 맞추거나, AI에게 “글 자리를 더 넉넉하게”라고 이어서 부탁해요.')),
     step('3', '저장', '저장하면 배경 · 모양 목록에도 ‘내 스킨’으로 나와요', h('div', { class: 'my-save' }, nameIn, saveBtn), list));
