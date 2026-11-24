@@ -2030,3 +2030,9 @@ img[src^="nnimg:"] { visibility: hidden; }
 .typo-pop .typo-fix { margin: 2px 2px 10px; font-size: 16px; }
 .typo-pop .typo-fix s { color: var(--text-3); }
 .typo-pop .typo-fix b { color: #2f9e44; }
+.page-wrap .typo-hint.typo-sym { background: rgba(229, 72, 77, .2); box-shadow: 0 0 0 1px rgba(229, 72, 77, .45); text-decoration: none; padding: 0 1px; }
+.typo-pop .typo-fix { line-height: 1.6; }
+.typo-pop .typo-fix mark { background: rgba(229, 72, 77, .2); color: inherit; padding: 0 2px; border-radius: 2px; }
+.typo-pop .typo-fix s { text-decoration-color: #e5484d; }
+.typo-pop .typo-arrow { color: var(--text-3); }
+.typo-pop .typo-btns { display: flex; gap: 6px; }

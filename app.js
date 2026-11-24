@@ -2011,48 +2011,94 @@ function clampHangulTracking(card) {
 }
 /* =========================================================
    오타 알림: 미리보기에만 물결 밑줄 (저장 이미지에는 안 나옴)
-   - 서식 기호가 글자로 남은 곳(* ** == ~~ __ [[ ]] {{ }})
+   - 서식 기호가 글자로 남은 곳(* ** == __ [[ ]] {{ }})
+   - 문장 부호 · 띄어쓰기 실수 (., · 두 칸 띄움 · 쉼표 뒤 붙여 씀 …)
+   - 짝이 안 맞는 괄호 · 따옴표
    - 흔한 맞춤법 실수 (말투로 일부러 쓴 경우는 '이대로 둘게요')
    ========================================================= */
 const TYPO_WORDS = [
-  ['됬', '됐'], ['몇일', '며칠'], ['몇 일', '며칠'], ['금새', '금세'], ['어떻해', '어떡해'], ['왠일', '웬일'], ['웬지', '왠지'],
-  ['설겆이', '설거지'], ['일일히', '일일이'], ['깨끗히', '깨끗이'], ['곰곰히', '곰곰이'], ['오랫만', '오랜만'], ['희안', '희한'],
+  ['됬', '됐'], ['됀', '된'], ['됄', '될'], ['돼었', '되었'], ['돼어', '되어'], ['몇일', '며칠'], ['몇 일', '며칠'], ['금새', '금세'],
+  ['어떻해', '어떡해'], ['어떻할', '어떡할'], ['왠일', '웬일'], ['왠걸', '웬걸'], ['웬지', '왠지'], ['왠만', '웬만'],
+  ['설겆이', '설거지'], ['일일히', '일일이'], ['깨끗히', '깨끗이'], ['곰곰히', '곰곰이'], ['오랫만', '오랜만'], ['오랜동안', '오랫동안'], ['희안', '희한'],
   ['어의없', '어이없'], ['역활', '역할'], ['되요', '돼요'], ['되서', '돼서'], ['안되요', '안 돼요'], ['뵈요', '봬요'], ['구지', '굳이'],
-  ['어짜피', '어차피'], ['왠만', '웬만'], ['걸맞는', '걸맞은'], ['알맞는', '알맞은'], ['않되', '안 되'],
+  ['어짜피', '어차피'], ['걸맞는', '걸맞은'], ['알맞는', '알맞은'], ['않되', '안 되'], ['않돼', '안 돼'], ['않해', '안 해'], ['않하', '안 하'],
+  ['닥달', '닦달'], ['애띤', '앳된'], ['얼만큼', '얼마큼'], ['눈쌀', '눈살'], ['뒤치닥거리', '뒤치다꺼리'], ['귀뜸', '귀띔'], ['바꼈', '바뀌었'],
+  ['내노라', '내로라'], ['단언컨데', '단언컨대'], ['요컨데', '요컨대'], ['숫가락', '숟가락'], ['그리고나서', '그러고 나서'], ['갯수', '개수'],
+  ['촛점', '초점'], ['윗층', '위층'], ['윗쪽', '위쪽'], ['아랫쪽', '아래쪽'], ['설레임', '설렘'], ['헤메', '헤매'], ['메세지', '메시지'],
+  ['어줍잖', '어쭙잖'], ['들어나', '드러나'],
 ];
+// 문장 부호 · 띄어쓰기 [정규식, 고칠 말(함수 · 없으면 직접 확인), 설명]
+const TYPO_PUNCT = [
+  [/[.,?!][.,](?<!\.\.)|,[?!]|(?<!\.)\.[?!]/g, null, '문장 부호가 겹쳤어요. 하나만 남겨 주세요.'],
+  [/(?<!\.)\.\.(?!\.)/g, () => '...', '말줄임표는 ‘...’이나 ‘…’로 써요.'],
+  [/ {2,}/g, () => ' ', '두 칸 이상 띄어 썼어요.'],
+  [/(?<=\S) (?=[,.?!](?!\.))/g, () => '', '문장 부호 앞에는 띄어 쓰지 않아요.'],
+  [/,(?=[가-힣A-Za-z])/g, () => ', ', '쉼표 뒤는 한 칸 띄어 써요.'],
+  [/(?<=[가-힣])[.?!](?=[가-힣])/g, (w) => w + ' ', '문장이 끝난 뒤는 한 칸 띄어 써요.'],
+  [/(?<=^|\s)([가-힣]{2,})\s+\1(?=[\s.,!?…]|$)/g, (w) => w.split(/\s+/)[0], '같은 낱말이 두 번 이어졌어요.'],
+  [/되(?=[.!?…"”'’]|$)/g, () => '돼', '문장 끝의 ‘되’는 ‘돼’로 써요. (예: 안 돼.)'],
+  [/왠(?= )/g, () => '웬', '‘어찌 된’이라는 뜻이면 ‘웬’이에요. (예: 웬 사람)'],
+];
+const PAIRS = [['“', '”'], ['‘', '’'], ['(', ')'], ['（', '）'], ['「', '」'], ['『', '』'], ['[', ']'], ['《', '》'], ['〈', '〉']];
 const hasRieul = (ch) => { const c = ch.charCodeAt(0) - 0xac00; return c >= 0 && c < 11172 && c % 28 === 8; };
 function typoMatches(text) {
   const out = [];
   const ign = new Set(state.typoIgnore || []);
-  const add = (i, len, fix, kind, note) => { const w = text.slice(i, i + len); if (!ign.has(w)) out.push({ i, len, w, fix, kind, note }); };
-  // 남은 서식 기호
-  for (const m of text.matchAll(/\*{1,3}|={2,}|~{2,}|_{2,}|\[\[|\]\]|\{\{|\}\}/g)) add(m.index, m[0].length, '', 'mark');
-  // ㄹ께 → ㄹ게 (할께 · 갈께요)
+  const add = (i, len, fix, kind, note, rule) => { const w = text.slice(i, i + len); if (!ign.has(w)) out.push({ i, len, w, fix, kind, note, rule }); };
+  // 남은 서식 기호 (물결 '~~'은 말끝 늘임으로 흔히 써서 뺌)
+  for (const m of text.matchAll(/\*{1,3}|={2,}|_{2,}|\[\[|\]\]|\{\{|\}\}/g)) add(m.index, m[0].length, '', 'mark', `‘${m[0]}’ 기호가 글자 그대로 보여요. 짝이 빠졌거나 하나 더 들어갔는지 확인해 주세요.`);
+  // ㄹ께 → ㄹ게 (할께 · 갈께요), ㄹ꺼 → ㄹ 거 (할꺼야)
   for (const m of text.matchAll(/([가-힣])께(?=요|[\s.,!?~…'"’”」』)]|$)/g)) if (hasRieul(m[1])) add(m.index, 2, m[1] + '게', 'word');
+  for (const m of text.matchAll(/([가-힣])꺼(?=야|예요|에요|다|지|라|면|든|니|[\s.,!?~…'"’”」』)]|$)/g)) if (hasRieul(m[1])) add(m.index, 2, m[1] + ' 거', 'word');
   for (const [w, fix, note] of TYPO_WORDS) {
     let i = text.indexOf(w);
     while (i !== -1) { add(i, w.length, fix, 'word', note); i = text.indexOf(w, i + w.length); }
   }
+  TYPO_PUNCT.forEach(([re, fixFn, note], ri) => {
+    for (const m of text.matchAll(re)) add(m.index, m[0].length, fixFn ? fixFn(m[0]) : '', fixFn ? 'word' : 'mark', note, ri);
+  });
+  // 짝이 안 맞는 괄호 · 따옴표
+  const stack = [];
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    const op = PAIRS.findIndex(([o]) => o === ch), cl = PAIRS.findIndex(([, c]) => c === ch);
+    if (op >= 0 && !(ch === '‘' && /\w/.test(text[i - 1] || ''))) stack.push([op, i]);
+    else if (cl >= 0) {
+      const top = stack[stack.length - 1];
+      if (top && top[0] === cl) stack.pop();
+      // 짝 없는 닫는 기호 (영어 축약 Desmond’s · 번호 1) · 이모티콘 :) 은 뺌)
+      else if (!(ch === '’' && /\w/.test(text[i - 1] || '')) && !(ch === ')' && /[\d:;^>ㅅ]/.test(text[i - 1] || ''))) add(i, 1, '', 'mark', `‘${ch}’의 여는 짝이 없어요.`);
+    }
+  }
+  stack.forEach(([k, i]) => add(i, 1, '', 'mark', `‘${PAIRS[k][0]}’의 닫는 짝 ‘${PAIRS[k][1]}’이 없어요.`));
+  const dq = [...text.matchAll(/"/g)];
+  if (dq.length % 2) add(dq[dq.length - 1].index, 1, '', 'mark', '큰따옴표(")의 짝이 맞지 않아요.');
   // 겹치는 것은 앞의 하나만
-  out.sort((a, b) => a.i - b.i);
-  return out.filter((m, k) => !out.slice(0, k).some((x) => m.i < x.i + x.len));
+  out.sort((a, b) => a.i - b.i || b.len - a.len);
+  return out.filter((m, k) => !out.slice(0, k).some((x) => m.i < x.i + x.len && x.i < m.i + m.len));
 }
+// 덩어리(문단 · 말풍선) 글 전체로 찾고, 한 글자 조각 안에 든 것만 밑줄 (굵게 · 기울임을 넘나드는 것은 건너뜀)
 function markTypos(card) {
   if (state.typoCheck === false) return;
-  const roots = card.querySelectorAll('.card-title, .narr, .bubble, .tbl-wrap, .fn-list');
-  roots.forEach((root) => {
+  card.querySelectorAll('.card-title, .narr, .bubble, .tbl-wrap td, .tbl-wrap th, .fn-list li').forEach((root) => {
     const tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-    const nodes = [];
-    while (tw.nextNode()) nodes.push(tw.currentNode);
-    nodes.forEach((n) => {
-      const ms = typoMatches(n.data);
-      if (!ms.length) return;
+    const nodes = []; let full = '';
+    while (tw.nextNode()) { nodes.push([tw.currentNode, full.length]); full += tw.currentNode.data; }
+    const ms = typoMatches(full);
+    if (!ms.length) return;
+    nodes.forEach(([n, start]) => {
+      const end = start + n.data.length;
+      const mine = ms.filter((m) => m.i >= start && m.i + m.len <= end);
+      if (!mine.length) return;
       const frag = document.createDocumentFragment();
       let at = 0;
-      ms.forEach((m) => {
-        if (m.i > at) frag.append(n.data.slice(at, m.i));
-        frag.append(h('span', { class: 'typo-hint', 'data-w': m.w, 'data-fix': m.fix, 'data-kind': m.kind, 'data-note': m.note || '' }, m.w));
-        at = m.i + m.len;
+      mine.forEach((m) => {
+        const a = m.i - start;
+        if (a > at) frag.append(n.data.slice(at, a));
+        // 앞뒤 몇 글자를 같이 넣어 창에서 '요,가자 → 요, 가자'처럼 보여 줌 · 한두 글자 기호는 칸으로 눈에 띄게
+        frag.append(h('span', { class: 'typo-hint' + (m.len <= 2 && !/[가-힣]/.test(m.w) ? ' typo-sym' : ''), 'data-w': m.w, 'data-fix': m.fix, 'data-kind': m.kind, 'data-note': m.note || '',
+          'data-rule': m.rule ?? '', 'data-pre': full.slice(Math.max(0, m.i - 4), m.i), 'data-post': full.slice(m.i + m.len, m.i + m.len + 4) }, m.w));
+        at = a + m.len;
       });
       if (at < n.data.length) frag.append(n.data.slice(at));
       n.replaceWith(frag);
@@ -2063,7 +2109,7 @@ function unmarkTypos(card) {
   card.querySelectorAll('.typo-hint').forEach((el) => el.replaceWith(el.textContent));
   card.normalize();
 }
-// 입력창에서 그 글자를 찾아 고르기 (미리보기 글자 주변으로 가장 가까운 자리)
+// 입력창에서 그 글자를 찾아 고르기 (미리보기 글자 앞 몇 글자로 가장 가까운 자리)
 function selectInSource(word, ctx) {
   const t = src.value;
   let at = ctx ? t.indexOf(ctx) : -1;
@@ -2075,24 +2121,51 @@ function selectInSource(word, ctx) {
   src.scrollTop = Math.max(0, t.slice(0, at).split('\n').length * lh - src.clientHeight / 2);
   return true;
 }
+const showWs = (t) => t.replace(/ /g, '␣');
 function openTypoPop(el) {
-  const w = el.dataset.w, fix = el.dataset.fix, kind = el.dataset.kind, note = el.dataset.note;
-  const prev = (el.previousSibling && el.previousSibling.textContent || '').slice(-8);
-  const ignore = () => { state.typoIgnore = [...new Set([...(state.typoIgnore || []), w])]; closePop(); changed(); toast(`‘${w}’은(는) 이제 표시하지 않아요`, { label: '되돌리기', fn: undo }); };
+  const { w, fix, kind, note } = el.dataset;
+  const pre = el.dataset.pre || '', post = el.dataset.post || '';
+  const rule = el.dataset.rule === '' || el.dataset.rule == null ? null : TYPO_PUNCT[+el.dataset.rule];
+  const ignore = () => { state.typoIgnore = [...new Set([...(state.typoIgnore || []), w])]; closePop(); changed(); toast(`‘${showWs(w)}’은(는) 이제 표시하지 않아요`, { label: '되돌리기', fn: undo }); };
+  // 입력창에서 이 자리: 앞 글자 + 오타, 없으면 오타 + 뒤 글자, 그래도 없으면 첫 자리
+  const findHere = (t) => {
+    let at = pre ? t.indexOf(pre + w) : -1;
+    if (at >= 0) return at + pre.length;
+    at = post ? t.indexOf(w + post) : -1;
+    return at >= 0 ? at : t.indexOf(w);
+  };
+  const look = h('button', { type: 'button', class: kind === 'mark' ? 'btn btn-primary btn-sm' : 'link-btn', onclick: () => {
+    closePop();
+    const at = findHere(src.value);
+    if (at < 0) { toast('입력창에서 찾지 못했어요'); return; }
+    setPane('text', true); src.focus(); src.setSelectionRange(at, at + w.length);
+    const lh = parseFloat(getComputedStyle(src).lineHeight) || 20;
+    src.scrollTop = Math.max(0, src.value.slice(0, at).split('\n').length * lh - src.clientHeight / 2);
+  } }, '입력창에서 보기');
+  const apply = (next, msg) => { commit(); src.value = next; state.text = src.value; changed(); commit(); closePop(); toast(msg, { label: '되돌리기', fn: undo }); };
+  const fixHere = () => {
+    const t = src.value, at = findHere(t);
+    if (at < 0) { toast('입력창에서 찾지 못했어요'); return; }
+    apply(t.slice(0, at) + fix + t.slice(at + w.length), '고쳤어요');
+  };
+  // 모두 고치기: 문장 부호 규칙은 같은 종류의 실수만 (쉼표 전체를 바꾸지 않게), 낱말은 같은 낱말 전부
+  const allRe = rule ? new RegExp(rule[0].source, 'gm') : null;
+  const count = rule ? [...src.value.matchAll(allRe)].length : src.value.split(w).length - 1;
+  const fixAll = () => apply(rule ? src.value.replace(allRe, (m) => rule[1](m)) : src.value.split(w).join(fix), `${count}곳을 고쳤어요`);
+  const ctx = (mid, cls) => h('span', {}, pre, h(cls, {}, showWs(mid) || '∅'), post);
   const body = kind === 'mark'
-    ? [h('p', { class: 'pop-note', style: 'margin:0 2px 10px' }, `‘${w}’ 기호가 글자 그대로 보여요. 짝이 빠졌거나 하나 더 들어갔는지 확인해 주세요.`),
+    ? [h('p', { class: 'typo-fix' }, ctx(w, 'mark')),
+      h('p', { class: 'pop-note', style: 'margin:0 2px 10px' }, note || `‘${w}’를 확인해 주세요.`),
+      h('div', { class: 'pop-foot' }, h('button', { type: 'button', class: 'link-btn muted', onclick: ignore }, '이대로 둘게요'), look)]
+    : [h('p', { class: 'typo-fix' }, ctx(w, 's'), h('span', { class: 'typo-arrow' }, ' → '), ctx(fix, 'b')),
+      note ? h('p', { class: 'pop-note', style: 'margin:0 2px 8px' }, note) : null,
       h('div', { class: 'pop-foot' },
-        h('button', { type: 'button', class: 'link-btn muted', onclick: ignore }, '이대로 둘게요'),
-        h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: () => { closePop(); if (!selectInSource(w, prev)) toast('입력창에서 찾지 못했어요'); } }, '입력창에서 보기'))]
-    : [h('p', { class: 'typo-fix' }, h('s', {}, w), ' → ', h('b', {}, fix)),
-      note ? h('p', { class: 'pop-note', style: 'margin:0 2px 8px' }, `${note} ‘${fix}’가 맞아요.`) : null,
-      h('div', { class: 'pop-foot' },
-        h('button', { type: 'button', class: 'link-btn muted', onclick: ignore }, '이대로 둘게요'),
-        h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: () => {
-          const n = src.value.split(w).length - 1;
-          commit(); src.value = src.value.split(w).join(fix); state.text = src.value; changed(); commit(); closePop();
-          toast(n > 1 ? `‘${w}’ ${n}곳을 ‘${fix}’로 고쳤어요` : `‘${fix}’로 고쳤어요`, { label: '되돌리기', fn: undo });
-        } }, src.value.split(w).length > 2 ? '모두 고치기' : '고치기'))];
+        h('div', {}, h('button', { type: 'button', class: 'link-btn muted', onclick: ignore }, '이대로 둘게요'), look),
+        count > 1
+          ? h('div', { class: 'typo-btns' },
+            h('button', { type: 'button', class: 'btn btn-sm', onclick: fixHere }, '여기만'),
+            h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: fixAll }, `${count}곳 모두`))
+          : h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: fixHere }, '고치기'))];
   openPop(h('div', { class: 'typo-pop' }, h('div', { class: 'pop-title' }, '오타인가요?'), ...body), el);
 }
 
