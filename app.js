@@ -6606,14 +6606,6 @@ function applyMySkinParts({ html, css }) {
 }
 // 입력 · 단계 상태는 다시 그려도(되돌리기 등) 남도록 밖에 둠
 const mySkinUi = { kind: 'both', theme: '', colors: '', objects: '', links: '', done: {}, paste: '' };
-// AI에게 이어서 부탁할 때 자주 쓰는 말 (눌러서 복사)
-const MY_FOLLOWUPS = [
-  ['글 자리 넉넉하게', '글이 테두리 · 장식과 겹쳐요. 맨 첫 줄 ninining-safe 숫자를 2~4%씩 더 넉넉하게 고쳐서 코드 전체를 다시 주세요.'],
-  ['장식 더 작게', '장식 · 오브제를 지금의 70% 크기로 줄이고 가장자리 쪽으로 옮겨서 코드 전체를 다시 주세요.'],
-  ['색 더 차분하게', '전체 색을 채도를 낮춰 더 차분하게 바꿔서 코드 전체를 다시 주세요.'],
-  ['제목 꾸밈 더 화려하게', '제목 · 소제목 · 출처 꾸밈(CSS)을 테마에 맞게 더 개성 있고 화려하게 바꿔서 코드 전체를 다시 주세요. 글꼴 · 크기 · 정렬은 그대로 두세요.'],
-  ['말풍선 더 예쁘게', '말풍선 · 이름 꾸밈을 테마에 맞게 더 예쁘게 바꿔서 코드 전체를 다시 주세요. 글꼴 · 크기 · 정렬은 그대로 두세요.'],
-];
 async function copyText(t) {
   try { await navigator.clipboard.writeText(t); return true; } catch (e) { /* 아래 방법으로 */ }
   const ta = h('textarea', { style: 'position:fixed;left:-9999px;top:0' }, t);
@@ -6645,11 +6637,6 @@ function buildAiHelp() {
   const paste = h('textarea', { class: 'input my-paste', rows: 4, placeholder: 'AI가 준 답을 그대로 붙여 넣어요 (설명 · 코드 여러 개가 섞여 있어도 돼요)', spellcheck: 'false' }, o.paste);
   const found = h('p', { class: 'my-found' });
   const result = h('p', { class: 'my-result', hidden: true });
-  const followups = h('div', { class: 'my-follow', hidden: !o.done[2] },
-    h('span', {}, '고칠 곳이 있으면 눌러서 AI에게 이어서 부탁해요'),
-    h('div', { class: 'chip-row' }, ...MY_FOLLOWUPS.map(([label, text]) => h('button', { type: 'button', class: 'chip', onclick: async () => {
-      toast((await copyText(text)) ? `‘${label}’ 부탁을 복사했어요 · AI 채팅에 붙여 넣으세요` : '복사하지 못했어요');
-    } }, label))));
   const applyBtn = h('button', { type: 'button', class: 'btn btn-primary btn-block', disabled: true }, '적용하기');
   const check = () => {
     o.paste = paste.value;
@@ -6670,7 +6657,6 @@ function buildAiHelp() {
     markDone(2);
     result.hidden = false;
     result.textContent = [parts.html ? '✓ 배경 · 테두리를 넣었어요' : null, parts.css ? '✓ 말풍선 · 글 모양을 넣었어요' : null].filter(Boolean).join('   ');
-    followups.hidden = false;
     if (!nameIn.value.trim() && o.theme.trim()) nameIn.value = o.theme.trim().split(/[,，·]/)[0].trim().slice(0, 24);
     toast('적용했어요 · 마음에 들면 3번에서 저장해 두세요', { label: '되돌리기', fn: undo });
   });
@@ -6717,7 +6703,7 @@ function buildAiHelp() {
       h('div', {}, h('b', {}, '내 스킨 만들기'), h('small', {}, 'AI에게 부탁해서 나만의 배경 · 말풍선 모양을 만들어요')),
       h('span', { class: 'my-fold', 'aria-hidden': 'true', html: icon('down') })),
     step1,
-    step('2', '붙여 넣기', '배경인지 모양인지 알아서 나눠 넣어요', paste, found, applyBtn, result, followups,
+    step('2', '붙여 넣기', '배경인지 모양인지 알아서 나눠 넣어요', paste, found, applyBtn, result,
       h('p', { class: 'ai-tip' }, '글이 테두리와 겹치면 아래 ‘글 자리 여백 직접 맞추기’로 바로 맞출 수도 있어요.')),
     step('3', '저장', '저장하면 배경 · 모양 목록에도 ‘내 스킨’으로 나와요', h('div', { class: 'my-save' }, nameIn, saveBtn), list));
   paintList();
