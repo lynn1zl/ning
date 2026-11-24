@@ -2036,3 +2036,11 @@ img[src^="nnimg:"] { visibility: hidden; }
 .typo-pop .typo-fix s { text-decoration-color: #e5484d; }
 .typo-pop .typo-arrow { color: var(--text-3); }
 .typo-pop .typo-btns { display: flex; gap: 6px; }
+
+/* 맞춤법 정밀 검사 (사전): 점선 밑줄 */
+.page-wrap .typo-hint.typo-dict { text-decoration: underline dotted #3b82f6; text-decoration-thickness: 2px; text-underline-offset: .22em; }
+.page-wrap .typo-hint.typo-dict:hover { background: rgba(59, 130, 246, .12); }
+.ft-spell.on { color: var(--accent, #3182f6); background: rgba(49, 130, 246, .1); }
+.ft-spell.loading span { opacity: .7; }
+.typo-pop .typo-sugg { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 2px 10px; }
+.typo-pop .typo-sugg > span { font-size: 12.5px; color: var(--text-3); margin-right: 2px; }

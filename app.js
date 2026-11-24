@@ -2041,7 +2041,7 @@ const TYPO_PUNCT = [
 ];
 const PAIRS = [['“', '”'], ['‘', '’'], ['(', ')'], ['（', '）'], ['「', '」'], ['『', '』'], ['[', ']'], ['《', '》'], ['〈', '〉']];
 const hasRieul = (ch) => { const c = ch.charCodeAt(0) - 0xac00; return c >= 0 && c < 11172 && c % 28 === 8; };
-function typoMatches(text) {
+function typoListMatches(text) {
   const out = [];
   const ign = new Set(state.typoIgnore || []);
   const add = (i, len, fix, kind, note, rule) => { const w = text.slice(i, i + len); if (!ign.has(w)) out.push({ i, len, w, fix, kind, note, rule }); };
@@ -2077,9 +2077,83 @@ function typoMatches(text) {
   out.sort((a, b) => a.i - b.i || b.len - a.len);
   return out.filter((m, k) => !out.slice(0, k).some((x) => m.i < x.i + x.len && x.i < m.i + m.len));
 }
+
+/* ---------- 맞춤법 정밀 검사 (사전) ----------
+   버튼을 누를 때만 워커에서 사전을 불러와 미리보기 글을 검사 · 끄면 워커를 닫아 평소 속도로 */
+const spell = { on: false, ready: false, worker: null, cache: new Map(), pending: new Set(), busy: false, btn: null };
+// 사전에 없어도 흔히 맞게 쓰는 말 · 말투
+const SPELL_OK = /^(어떡|그치|그쵸|뭐래|냅둬|냅두|암튼|근데|걍|첨|맘|뭔|쟤|얘|걔|헐|대박)/;
+function spellSkip(w) {
+  if (SPELL_OK.test(w) || (state.typoIgnore || []).includes(w)) return true;
+  // 캐릭터 이름 · 보일 이름 · 별명 (+ 조사: 닝은 · 데즈먼드에게)
+  for (const c of state.chars) for (const n of [c.name, c.display, ...(c.aliases || [])]) {
+    const t = (n || '').trim();
+    if (t && (w === t || (w.startsWith(t) && w.length - t.length <= 3))) return true;
+  }
+  return false;
+}
+function spellPaint() {
+  const b = spell.btn;
+  if (!b) return;
+  b.classList.toggle('on', spell.on);
+  b.classList.toggle('loading', spell.on && !spell.ready);
+  b.querySelector('span').textContent = !spell.on ? '정밀 검사' : spell.ready ? '정밀 검사 끄기' : '사전 준비 중…';
+  b.title = !spell.on ? '맞춤법 정밀 검사: 사전으로 미리보기 글을 검사해요 (누를 때만 사전을 불러와요)' : '정밀 검사를 끄고 사전을 내려놓아요';
+}
+function spellRefresh() { $$('#stage .card').forEach((c) => { unmarkTypos(c); markTypos(c); }); }
+function spellFlush() {
+  if (!spell.ready || spell.busy || !spell.pending.size) return;
+  const words = [...spell.pending].slice(0, 400);
+  words.forEach((x) => spell.pending.delete(x));
+  spell.busy = true;
+  spell.worker.postMessage({ type: 'check', words });
+}
+function spellStop() {
+  if (spell.worker) spell.worker.terminate();
+  Object.assign(spell, { on: false, ready: false, worker: null, busy: false });
+  spell.cache.clear(); spell.pending.clear();
+  spellPaint(); spellRefresh();
+}
+function spellStart() {
+  if (spell.on) return;
+  let w;
+  try { w = new Worker('vendor/spell-worker.js?v=1'); } catch (e) { toast('이 브라우저에서는 정밀 검사를 쓸 수 없어요'); return; }
+  Object.assign(spell, { on: true, ready: false, worker: w, busy: false });
+  spellPaint();
+  w.onmessage = (e) => {
+    if (w !== spell.worker) return;
+    const m = e.data;
+    if (m.type === 'ready') { spell.ready = true; spellPaint(); spellRefresh(); spellFlush(); toast('맞춤법 사전을 준비했어요 · 점선 밑줄은 사전에 없는 말이에요', null, 3200); }
+    else if (m.type === 'error') { spellStop(); toast('맞춤법 사전을 불러오지 못했어요. 인터넷 연결을 확인해 주세요'); }
+    else if (m.type === 'result') {
+      for (const [k, v] of Object.entries(m.res)) spell.cache.set(k, v);
+      spell.busy = false;
+      if (Object.values(m.res).some(Boolean)) spellRefresh();
+      spellFlush();
+    }
+  };
+  w.onerror = () => { if (w === spell.worker) { spellStop(); toast('맞춤법 사전을 불러오지 못했어요'); } };
+  w.postMessage({ type: 'init' });
+  toast('맞춤법 사전을 불러오고 있어요 · 휴대폰은 몇 초 걸려요', null, 3200);
+}
+// 목록 · 문장 부호 · 짝 검사(늘 켜짐) + 정밀 검사(사전, 켰을 때만) · 겹치면 목록 쪽을 남김
+function typoMatches(text) {
+  const list = state.typoCheck === false ? [] : typoListMatches(text);
+  if (!spell.ready) return list;
+  const ign = new Set(state.typoIgnore || []);
+  const dict = [];
+  for (const m of text.matchAll(/[가-힣]+/g)) {
+    const w = m[0];
+    if (w.length < 2 || spellSkip(w)) continue;
+    if (!spell.cache.has(w)) { spell.pending.add(w); continue; }
+    const r = spell.cache.get(w);
+    if (r && !ign.has(w)) dict.push({ i: m.index, len: w.length, w, fix: r[0] || '', kind: 'dict', sugg: r, note: '사전에 없는 말이에요. 이름이나 일부러 쓴 말투라면 그대로 두세요.' });
+  }
+  return [...list, ...dict.filter((d) => !list.some((x) => d.i < x.i + x.len && x.i < d.i + d.len))].sort((a, b) => a.i - b.i);
+}
 // 덩어리(문단 · 말풍선) 글 전체로 찾고, 한 글자 조각 안에 든 것만 밑줄 (굵게 · 기울임을 넘나드는 것은 건너뜀)
 function markTypos(card) {
-  if (state.typoCheck === false) return;
+  if (state.typoCheck === false && !spell.ready) return;
   card.querySelectorAll('.card-title, .narr, .bubble, .tbl-wrap td, .tbl-wrap th, .fn-list li').forEach((root) => {
     const tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     const nodes = []; let full = '';
@@ -2096,14 +2170,14 @@ function markTypos(card) {
         const a = m.i - start;
         if (a > at) frag.append(n.data.slice(at, a));
         // 앞뒤 몇 글자를 같이 넣어 창에서 '요,가자 → 요, 가자'처럼 보여 줌 · 한두 글자 기호는 칸으로 눈에 띄게
-        frag.append(h('span', { class: 'typo-hint' + (m.len <= 2 && !/[가-힣]/.test(m.w) ? ' typo-sym' : ''), 'data-w': m.w, 'data-fix': m.fix, 'data-kind': m.kind, 'data-note': m.note || '',
+        frag.append(h('span', { class: 'typo-hint' + (m.kind === 'dict' ? ' typo-dict' : m.len <= 2 && !/[가-힣]/.test(m.w) ? ' typo-sym' : ''), 'data-sugg': (m.sugg || []).join('|'), 'data-w': m.w, 'data-fix': m.fix, 'data-kind': m.kind, 'data-note': m.note || '',
           'data-rule': m.rule ?? '', 'data-pre': full.slice(Math.max(0, m.i - 4), m.i), 'data-post': full.slice(m.i + m.len, m.i + m.len + 4) }, m.w));
         at = a + m.len;
       });
       if (at < n.data.length) frag.append(n.data.slice(at));
       n.replaceWith(frag);
     });
-  });
+  });  spellFlush();
 }
 function unmarkTypos(card) {
   card.querySelectorAll('.typo-hint').forEach((el) => el.replaceWith(el.textContent));
@@ -2143,17 +2217,24 @@ function openTypoPop(el) {
     src.scrollTop = Math.max(0, src.value.slice(0, at).split('\n').length * lh - src.clientHeight / 2);
   } }, '입력창에서 보기');
   const apply = (next, msg) => { commit(); src.value = next; state.text = src.value; changed(); commit(); closePop(); toast(msg, { label: '되돌리기', fn: undo }); };
-  const fixHere = () => {
+  const fixHere = (to = fix) => {
     const t = src.value, at = findHere(t);
     if (at < 0) { toast('입력창에서 찾지 못했어요'); return; }
-    apply(t.slice(0, at) + fix + t.slice(at + w.length), '고쳤어요');
+    apply(t.slice(0, at) + to + t.slice(at + w.length), '고쳤어요');
   };
   // 모두 고치기: 문장 부호 규칙은 같은 종류의 실수만 (쉼표 전체를 바꾸지 않게), 낱말은 같은 낱말 전부
   const allRe = rule ? new RegExp(rule[0].source, 'gm') : null;
   const count = rule ? [...src.value.matchAll(allRe)].length : src.value.split(w).length - 1;
   const fixAll = () => apply(rule ? src.value.replace(allRe, (m) => rule[1](m)) : src.value.split(w).join(fix), `${count}곳을 고쳤어요`);
   const ctx = (mid, cls) => h('span', {}, pre, h(cls, {}, showWs(mid) || '∅'), post);
-  const body = kind === 'mark'
+  const sugg = (el.dataset.sugg || '').split('|').filter(Boolean);
+  const body = kind === 'dict'
+    ? [h('p', { class: 'typo-fix' }, ctx(w, 'mark')),
+      h('p', { class: 'pop-note', style: 'margin:0 2px 10px' }, note),
+      sugg.length ? h('div', { class: 'typo-sugg' }, h('span', {}, '이렇게 고칠까요?'), ...sugg.map((x) => h('button', { type: 'button', class: 'btn btn-sm', onclick: () => fixHere(x) }, x)))
+        : h('p', { class: 'pop-note', style: 'margin:0 2px 10px' }, '사전에서 고칠 말을 찾지 못했어요.'),
+      h('div', { class: 'pop-foot' }, h('button', { type: 'button', class: 'link-btn muted', onclick: ignore }, '이대로 둘게요'), h('button', { type: 'button', class: 'link-btn', onclick: () => look.click() }, '입력창에서 보기'))]
+    : kind === 'mark'
     ? [h('p', { class: 'typo-fix' }, ctx(w, 'mark')),
       h('p', { class: 'pop-note', style: 'margin:0 2px 10px' }, note || `‘${w}’를 확인해 주세요.`),
       h('div', { class: 'pop-foot' }, h('button', { type: 'button', class: 'link-btn muted', onclick: ignore }, '이대로 둘게요'), look)]
@@ -2163,9 +2244,9 @@ function openTypoPop(el) {
         h('div', {}, h('button', { type: 'button', class: 'link-btn muted', onclick: ignore }, '이대로 둘게요'), look),
         count > 1
           ? h('div', { class: 'typo-btns' },
-            h('button', { type: 'button', class: 'btn btn-sm', onclick: fixHere }, '여기만'),
+            h('button', { type: 'button', class: 'btn btn-sm', onclick: () => fixHere() }, '여기만'),
             h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: fixAll }, `${count}곳 모두`))
-          : h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: fixHere }, '고치기'))];
+          : h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: () => fixHere() }, '고치기'))];
   openPop(h('div', { class: 'typo-pop' }, h('div', { class: 'pop-title' }, '오타인가요?'), ...body), el);
 }
 
@@ -4467,6 +4548,8 @@ function buildFmtBar() {
   boxBtn.addEventListener('click', () => openBoxInsertPop(boxBtn));
   bar.append(boxBtn);
   bar.append(h('button', { type: 'button', class: 'ft ft-img', title: `찾아 바꾸기 (${modName}+F)`, 'aria-label': '찾아 바꾸기', onclick: () => openFind(), html: icon('search') + '<span>찾기</span>' }));
+  spell.btn = h('button', { type: 'button', class: 'ft ft-img ft-spell', 'aria-label': '맞춤법 정밀 검사', onmousedown: (e) => e.preventDefault(), onclick: () => (spell.on ? spellStop() : spellStart()), html: icon('check') + '<span>정밀 검사</span>' });
+  bar.append(spell.btn); spellPaint();
 }
 
 
