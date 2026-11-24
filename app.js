@@ -6655,8 +6655,10 @@ function buildAiHelp() {
   } }, '내 스킨으로 저장');
   const step = (n, title, sub, ...kids) => h('div', { class: 'my-step' },
     h('div', { class: 'my-step-head' }, h('span', { class: 'my-num' }, n), h('div', {}, h('b', {}, title), sub ? h('small', {}, sub) : null)), ...kids);
-  const box = h('section', { class: 'my-skin', id: 'ai-skin-help' },
-    h('div', { class: 'my-title' }, h('b', {}, '내 스킨 만들기'), h('small', {}, 'AI에게 부탁해서 나만의 배경 · 말풍선 모양을 만들어요')),
+  const box = h('details', { class: 'my-skin', id: 'ai-skin-help', open: uiState.mySkinOpen !== false, ontoggle: (e) => { uiState.mySkinOpen = e.target.open; saveUi(); } },
+    h('summary', { class: 'my-title' },
+      h('div', {}, h('b', {}, '내 스킨 만들기'), h('small', {}, 'AI에게 부탁해서 나만의 배경 · 말풍선 모양을 만들어요')),
+      h('span', { class: 'my-fold', 'aria-hidden': 'true', html: icon('down') })),
     // 1단계는 제목 줄을 눌러 접고 펼침
     h('details', { class: 'my-step my-step-fold' },
       h('summary', { class: 'my-step-head' }, h('span', { class: 'my-num' }, '1'),
@@ -6887,6 +6889,19 @@ $('#btn-html-clear').addEventListener('click', () => {
   changed(); commit();
   if (gone) { buildChars(); buildFields(); buildQuickInsert(); }
   toast(`HTML 배경을 비웠어요${gone ? ` · 배경 등장인물 ${gone}명도 지웠어요` : ''}`, { label: '되돌리기', fn: undo });
+});
+const CSS_EXAMPLE = `/* 예시: 바탕 · 글자 색과 오른쪽 말풍선 색 바꾸기 */
+.card { --card-bg: #1d2230; --text-color: #eef0f5; --title-color: #ffffff; }
+.msg-right .bubble { --b-bg: #ffe14d; --b-color: #222222; --b-border: #ffe14d; }`;
+$('#btn-css-example').addEventListener('click', () => {
+  if (state.skin.trim() && !confirm('지금 CSS 스킨을 예시로 바꿀까요?')) return;
+  commit(); state.skin = CSS_EXAMPLE; $('#skin-css').value = CSS_EXAMPLE; applySkin(); changed(); commit();
+  toast('CSS 스킨 예시를 넣었어요', { label: '되돌리기', fn: undo });
+});
+$('#btn-css-clear').addEventListener('click', () => {
+  if (!state.skin.trim()) return;
+  commit(); state.skin = ''; $('#skin-css').value = ''; applySkin(); changed(); commit();
+  toast('CSS 스킨을 비웠어요', { label: '되돌리기', fn: undo });
 });
 $('#skin-css').addEventListener('keydown', (e) => {
   if (e.key === 'Tab' && !e.shiftKey) {
