@@ -6608,7 +6608,7 @@ function buildAiHelp() {
   const pane = $('[data-pane="skin"].pane');
   if (!pane) return;
   const old = $('#ai-skin-help');
-  const o = { kind: 'bg', theme: '', colors: '', objects: '', links: '' };
+  const o = { kind: 'both', theme: '', colors: '', objects: '', links: '' };
   const field = (k, label, ph, area) => h('label', { class: 'ai-field' }, h('span', {}, label),
     h(area ? 'textarea' : 'input', { class: 'input', ...(area ? { rows: 2 } : { type: 'text' }), placeholder: ph, oninput: (e) => { o[k] = e.target.value; } }));
   const copyText = async (t) => {
@@ -6664,7 +6664,7 @@ function buildAiHelp() {
         h('span', { class: 'my-fold', 'aria-hidden': 'true', html: icon('down') })),
         h('div', { class: 'ai-body' },
           h('div', { class: 'ai-label' }, '무엇을 만들까요?'),
-          segEl([['bg', '배경 · 테두리'], ['css', '말풍선 · 글 모양'], ['both', '둘 다']], o.kind, (v) => { o.kind = v; }, true),
+          segEl([['both', '둘 다'], ['bg', '배경 · 테두리'], ['css', '말풍선 · 글 모양']], o.kind, (v) => { o.kind = v; }, true),
           field('theme', '테마 · 분위기', '예) 겨울밤 기차역, 따뜻한 노란 조명, 레트로 감성', true),
           field('colors', '주요 색', '예) 남색 · 크림색 · 금색 포인트'),
           field('objects', '넣고 싶은 오브제 · 아이콘', '예) 눈송이, 기차표, 작은 별 — 모서리에만 작게', true),
