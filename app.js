@@ -6697,7 +6697,7 @@ function buildAiHelp() {
       field('objects', '넣고 싶은 오브제 · 아이콘', '예) 눈송이, 기차표, 작은 별 — 모서리에만 작게', true),
       field('links', '이미지 링크 (선택)', '쓰고 싶은 아이콘 · 사진 주소를 한 줄에 하나씩 · 없으면 AI가 직접 그려요', true),
       copy,
-      h('p', { class: 'ai-tip' }, 'ChatGPT · Claude 같은 AI 채팅에 붙여 넣어요. 참고 이미지가 있으면 같이 올려요.')));
+      h('p', { class: 'ai-tip' }, '복사한 프롬프트를 ChatGPT · Claude 같은 AI에게 보내요. 참고 이미지가 있으면 함께 첨부해요.')));
   const box = h('details', { class: 'my-skin', id: 'ai-skin-help', open: uiState.mySkinOpen === true, ontoggle: (e) => { uiState.mySkinOpen = e.target.open; saveUi(); } },
     h('summary', { class: 'my-title' },
       h('div', {}, h('b', {}, '내 스킨 만들기'), h('small', {}, 'AI에게 부탁해서 나만의 배경 · 말풍선 모양을 만들어요')),
