@@ -159,6 +159,7 @@ const DEFAULTS = {
   overrides: {},
   memoStyle: {}, // 메모마다 모양: { 'w:메모' | 'b:메모': { color, scale, mark } }
   memoPos: {}, // 메모마다 직접 옮긴 자리 · 폭: { key: { dx, dy, w } }
+  bgOwnText: false, // HTML 배경 안의 제목 · 출처 대신 발췌기가 직접 (서체 탭 글꼴 · 정렬 적용)
   bgPad: { on: false, t: 40, r: 40, b: 40, l: 40 }, // HTML 배경의 글 자리를 직접 맞춤 (px)
   typoCheck: true, // 미리보기에서 남은 서식 기호 · 흔한 맞춤법 실수를 물결 밑줄로 (저장 이미지에는 안 나옴)
   typoIgnore: [], // '이대로 둘게요'를 누른 글자
@@ -1675,7 +1676,8 @@ async function loadBgRef(file) {
   if (!bgCodeCache[file]) bgCodeCache[file] = await (await fetch(file)).text();
   return bgCodeCache[file];
 }
-const bgHasTitle = () => { TITLE_TOKEN.lastIndex = 0; return TITLE_TOKEN.test(bgCode()); };
+const bgOwnText = () => !!state.bgOwnText;
+const bgHasTitle = () => { if (bgOwnText()) return false; TITLE_TOKEN.lastIndex = 0; return TITLE_TOKEN.test(bgCode()); };
 const bgUsesScene = () => /\{\{\s*(장소|생존|전체|place|alive|total)\s*\}\}/i.test(bgCode());
 const bgUsesHompy = () => /\{\{\s*(마이룸|톡톡|프레임색)\s*\}\}/.test(bgCode());
 const bgUsesDiary = () => /\{\{\s*(다이어리색|날짜|날씨)\s*\}\}/.test(bgCode());
@@ -1693,7 +1695,8 @@ function todayLabel() {
 const safeColor = (v, d) => (/^#[0-9a-f]{3,8}$/i.test(v || '') ? v : d);
 function bgLayout(k) {
   const sc = Math.max(0.3, Math.min(4, (+state.head.size || 19) / 19));
-  const T = !!(state.title || '').trim(), S = !!(state.subtitle || '').trim();
+  const own = bgOwnText();
+  const T = !own && !!(state.title || '').trim(), S = !own && !!(state.subtitle || '').trim();
   const r1 = (n) => Math.round(n * 10) / 10, pct = (n) => r1(n / 6);
   if (k === 'AC') {
     const top = 34 + (S ? 31 : 0) + (T ? 39 * sc + 17 : 0) + 26;
@@ -1711,7 +1714,7 @@ function bgLayout(k) {
     return { 안전위: pct(top), 최소: pct(top + 160 + 102) };
   }
   const top = T || S ? 97 + (S ? 28 : 0) + (T ? 44.2 * sc + 17 : 0) + 14 : 66;
-  const cred = !!(((state.accord || {}).char || '').trim() || (state.creator || '').trim());
+  const cred = !!(((state.accord || {}).char || '').trim() || (!own && (state.creator || '').trim()));
   const bot = cred ? 88 : 40;
   return { 박스위: r1(top), 머리아래: r1(top - 14), 안전위: pct(top + 30), 박스아래: bot, 안전아래: pct(bot + 28), 최소: pct(top + 110 + bot) };
 }
@@ -1724,9 +1727,9 @@ function fillBgTokens(html) {
   // 상황판 끄기: data-scene 이 붙은 요소를 숨김
   if (sc.show === false) html = (html || '') + '<style>[data-scene]{display:none !important}</style>';
   return (html || '')
-    .replace(TITLE_TOKEN, () => e(state.title))
-    .replace(/\{\{\s*(출처|credit)\s*\}\}/gi, () => e(state.credit))
-    .replace(/\{\{\s*(제작자|creator)\s*\}\}/gi, () => e(state.creator))
+    .replace(TITLE_TOKEN, () => (bgOwnText() ? '' : e(state.title)))
+    .replace(/\{\{\s*(출처|credit)\s*\}\}/gi, () => (bgOwnText() ? '' : e(state.credit)))
+    .replace(/\{\{\s*(제작자|creator)\s*\}\}/gi, () => (bgOwnText() ? '' : e(state.creator)))
     .replace(/\{\{\s*(생존비율|alivePct)\s*\}\}/gi, () => {
       const a = parseFloat(sc.alive), t = parseFloat(sc.total);
       return `${t > 0 && a >= 0 ? Math.max(0, Math.min(100, (a / t) * 100)).toFixed(2) : 0}%`;
@@ -1738,7 +1741,7 @@ function fillBgTokens(html) {
     .replace(/\{\{\s*토탈\s*\}\}/g, () => e(String(hp.total ?? '')))
     .replace(/\{\{\s*마이룸\s*\}\}/g, () => (hp.room ? `<img src="${hp.room.replace(/"/g, '&quot;')}" alt="">` : '')
       + ((hp.say || '').trim() ? `<div class="say">${e(hp.say)}</div>` : ''))
-    .replace(/\{\{\s*소제목\s*\}\}/g, () => e(state.subtitle))
+    .replace(/\{\{\s*소제목\s*\}\}/g, () => (bgOwnText() ? '' : e(state.subtitle)))
     // 제목 · 소제목 · 크레딧이 비면 그 자리만큼 상자를 끌어올림 (값은 카드 폭 600 기준 단위)
     .replace(/\{\{(AC|MG|WD|XM)(박스위|머리아래|안전위|박스아래|안전아래|최소)\}\}/g, (m, k, w) => String(bgLayout(k)[w]))
     // 서체 탭 '제목 크기'를 배경 속 제목에도 반영 (기본 19px = 1배)
@@ -2293,7 +2296,7 @@ function newPage(idx, W, H) {
   content.append(flow);
   card.append(content);
   // HTML 배경이 출처 · 제작자를 직접 보여 주면 카드 아래쪽 출처 줄은 생략
-  const bgCredit = /\{\{\s*(출처|credit|제작자|creator)\s*\}\}/i.test(bgCode());
+  const bgCredit = !bgOwnText() && /\{\{\s*(출처|credit|제작자|creator)\s*\}\}/i.test(bgCode());
   const work = bgCredit ? '' : (state.credit || '').trim(), author = bgCredit ? '' : (state.creator || '').trim();
   if (work || author || state.canvas.pageNum) {
     const foot = h('div', { class: 'card-footer' });
@@ -6537,10 +6540,10 @@ function aiSkinPrompt(o) {
     '   <!-- ninining-safe: 위% 오른쪽% 아래% 왼쪽%; min-height: 최소높이% -->',
     '   예) 테두리가 카드 끝에서 30px 안쪽까지 오면 그보다 넉넉하게 8% 정도. 위 · 아래에 장식이나 제목이 있으면 그 높이만큼 더 크게.',
     '   이 숫자보다 안쪽에만 글이 들어가요. 숫자가 작으면 글이 테두리 · 장식과 겹치니, 장식이 닿는 곳보다 2~4% 더 넉넉하게 잡아 주세요.',
-    '6. 제목 자리가 필요하면 {{제목}}, 그 아래 작은 줄은 {{소제목}}, 아래쪽 크레딧은 {{출처}} · {{제작자}}를 그대로 쓰세요. 값이 비면 :empty로 숨겨 주세요.',
+    '6. 제목 · 소제목 · 출처 · 제작자 글자는 배경에 넣지 마세요. 발췌기가 사용자가 고른 글꼴 · 크기 · 정렬로 글 자리의 맨 위(제목)와 맨 아래(출처)에 직접 넣어요. 그래서 제목 · 출처가 놓일 곳까지 5번의 글 자리 안에 넉넉히 포함해 주세요.',
     '7. 글자보다 앞에 보여야 하는 장식에만 data-layer="top"을 붙여 주세요.',
     '8. 아이콘 · 장식은 인라인 SVG나 CSS로 직접 그려 주세요 (이미지 링크를 준 것만 <img src="주소">로).',
-    '9. 글꼴이 필요하면 <style> 맨 위에 Google Fonts @import를 써 주세요.',
+    '9. 장식용 글자(로고 · 문구 등)에 글꼴이 필요할 때만 <style> 맨 위에 Google Fonts @import를 써 주세요.',
   ].join('\n');
   const css = [
     '■ CSS 스킨 규칙',
@@ -6551,8 +6554,8 @@ function aiSkinPrompt(o) {
     '   .card-footer 아래 출처 줄 · mark 형광펜 · .divider 구분선',
     '3. 색은 변수로 바꿔 주세요: .card { --card-bg: 바탕색; --text-color: 글자색; }',
     '   말풍선은 .msg-left .bubble { --b-bg: 바탕; --b-color: 글자; --b-border: 테두리; } (오른쪽은 .msg-right)',
-    '4. 글꼴은 .card { --text-font: …; --b-font: …; --title-font: …; } 변수로 바꾸고, 필요하면 맨 위에 Google Fonts @import를 넣어 주세요.',
-    '5. 글자 크기와 줄 간격은 바꾸지 마세요.',
+    '4. 글꼴 · 글자 크기 · 줄 간격 · 정렬(text-align)은 정하지 마세요. 사용자가 발췌기 서체 탭에서 직접 바꿔요. 색과 꾸밈만 바꿔 주세요.',
+    '5. 제목(.card-title)은 위 · 아래 장식선, 배경, 테두리 같은 꾸밈만 넣고 글꼴 · 크기 · 정렬은 그대로 두세요.',
     '6. 카드 장식은 .card::before / .card::after(pointer-events: none)와 배경 이미지(인라인 SVG data URI 가능)로 만들어 주세요.',
   ].join('\n');
   const head = `웹 도구 '발췌기'에 넣을 ${kindLabel}를 만들어 주세요.`;
@@ -6583,7 +6586,7 @@ function buildAiHelp() {
         : h('small', {}, o.kind === 'bg' ? 'CSS 스킨 칸에 넣으면 적용되지 않아요.' : 'HTML 배경 칸에 넣으면 적용되지 않아요.'));
   };
   const copy = h('button', { type: 'button', class: 'btn btn-primary btn-block', onclick: async () => {
-    toast((await copyText(aiSkinPrompt(o))) ? '부탁 글을 복사했어요 · AI 채팅에 붙여 넣으세요' : '복사하지 못했어요. 다시 눌러 주세요');
+    toast((await copyText(aiSkinPrompt(o))) ? '프롬프트 복사 완료' : '복사하지 못했어요. 다시 눌러 주세요');
   } }, '프롬프트 복사');
   const box = h('details', { class: 'ai-help', id: 'ai-skin-help' },
     h('summary', {}, h('b', {}, 'AI로 스킨 만들기'), h('small', {}, '테마랑 넣고 싶은 아이콘만 적으면 AI에게 줄 부탁 글을 복사해 줘요')),
@@ -6632,7 +6635,9 @@ function buildBgPad() {
     sl.addEventListener('input', () => { cur()[k] = +sl.value; out.textContent = `${sl.value}px`; sl.style.setProperty('--p', pct(sl.value)); changed(); showPadGuide(); });
     return h('div', { class: 'bg-pad-row' }, h('div', { class: 'pop-label row-top' }, label, out), sl);
   };
+  const ownSw = h('input', { type: 'checkbox', class: 'switch', role: 'switch', checked: !!state.bgOwnText, onchange: (e) => { state.bgOwnText = e.target.checked; htmlBg.cache.clear(); changed(); } });
   wrap.replaceChildren(...[
+    h('label', { class: 'row' }, labelEl('제목 · 출처는 발췌기에서 넣기', '배경 코드에 들어간 제목 · 출처 대신, 서체 탭의 글꼴 · 크기 · 정렬로 보여요'), ownSw),
     h('label', { class: 'row' }, labelEl('글 자리 여백 직접 맞추기', '글이 테두리 · 장식과 겹칠 때 위 · 아래 · 양옆 여백을 따로 맞춰요'), sw),
     P.on ? h('div', { class: 'bg-pad-grid' }, slider('t', '위'), slider('b', '아래'), slider('l', '왼쪽'), slider('r', '오른쪽')) : null].filter(Boolean));
 }
