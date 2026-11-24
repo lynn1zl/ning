@@ -6509,6 +6509,82 @@ $('#btn-add-char').addEventListener('click', () => {
   if (last) { last.focus(); last.select(); }
 });
 
+/* AI로 스킨 만들기: 테마 · 색 · 넣고 싶은 아이콘만 적으면 AI에게 줄 프롬프트를 만들어 줌 */
+function aiSkinPrompt(o) {
+  const kindLabel = { bg: 'HTML 배경 코드', css: 'CSS 스킨', both: 'HTML 배경 코드와 CSS 스킨' }[o.kind];
+  const want = [
+    '■ 원하는 디자인',
+    `- 테마 · 분위기: ${o.theme.trim() || '(자유롭게 제안해 주세요)'}`,
+    o.colors.trim() ? `- 주요 색: ${o.colors.trim()}` : '- 주요 색: 테마에 어울리게 2~4가지',
+    o.objects.trim() ? `- 넣고 싶은 오브제 · 아이콘: ${o.objects.trim()}` : null,
+    o.links.trim() ? `- 꼭 쓸 이미지 링크 (아이콘 · 사진, 주소 그대로 사용):\n${o.links.trim().split(/\n+/).map((l) => `  ${l.trim()}`).join('\n')}` : null,
+    '- 참고 이미지를 함께 올렸다면 분위기만 참고하고 그대로 따라 하지는 마세요.',
+    '- 오브제가 글보다 눈에 띄지 않게, 촌스럽지 않고 완성도 높은 그래픽 디자인으로 만들어 주세요.',
+  ].filter(Boolean).join('\n');
+  const bg = [
+    '■ HTML 배경 규칙',
+    '1. <style> 한 개와 HTML만 쓰세요. <script>, <html>, <head>, <body> 태그는 쓰지 마세요.',
+    '2. body가 카드 한 장이에요. 카드 폭은 600px 기준이고, 높이는 글 길이에 따라 늘어나요.',
+    '3. 장식은 모두 position: absolute로 놓고, 맨 바깥 요소에 position: absolute; inset: 0; container-type: size;를 준 뒤 크기 · 위치를 cqw 단위로 써서 카드 폭에 비례하게 만들어 주세요.',
+    '4. 그 위에 글과 말풍선이 올라가요. 가운데는 비워 두고 장식은 가장자리 · 모서리에 작게, 바깥 여백은 좁게 해 주세요.',
+    '5. 코드 맨 첫 줄에 글이 들어갈 자리를 이렇게 적어 주세요 (모두 카드 폭에 대한 %):',
+    '   <!-- ninining-safe: 위% 오른쪽% 아래% 왼쪽%; min-height: 최소높이% -->',
+    '6. 제목 자리가 필요하면 {{제목}}, 그 아래 작은 줄은 {{소제목}}, 아래쪽 크레딧은 {{출처}} · {{제작자}}를 그대로 쓰세요. 값이 비면 :empty로 숨겨 주세요.',
+    '7. 글자보다 앞에 보여야 하는 장식에만 data-layer="top"을 붙여 주세요.',
+    '8. 아이콘 · 장식은 인라인 SVG나 CSS로 직접 그려 주세요 (이미지 링크를 준 것만 <img src="주소">로).',
+    '9. 글꼴이 필요하면 <style> 맨 위에 Google Fonts @import를 써 주세요.',
+  ].join('\n');
+  const css = [
+    '■ CSS 스킨 규칙',
+    '1. CSS만 쓰세요 (<style> 태그 없이).',
+    '2. 쓸 수 있는 요소는 이것뿐이에요:',
+    '   .card 카드 전체 · .card-title 제목 · .card-title .card-sub 소제목 · .narr 나레이션 문단',
+    '   .msg 말풍선 한 줄 (.msg-left 왼쪽 · .msg-right 오른쪽) · .avatar 프로필 사진 · .name 이름 · .bubble 말풍선',
+    '   .card-footer 아래 출처 줄 · mark 형광펜 · .divider 구분선',
+    '3. 색은 변수로 바꿔 주세요: .card { --card-bg: 바탕색; --text-color: 글자색; }',
+    '   말풍선은 .msg-left .bubble { --b-bg: 바탕; --b-color: 글자; --b-border: 테두리; } (오른쪽은 .msg-right)',
+    '4. 글꼴은 .card { --text-font: …; --b-font: …; --title-font: …; } 변수로 바꾸고, 필요하면 맨 위에 Google Fonts @import를 넣어 주세요.',
+    '5. 글자 크기와 줄 간격은 바꾸지 마세요.',
+    '6. 카드 장식은 .card::before / .card::after(pointer-events: none)와 배경 이미지(인라인 SVG data URI 가능)로 만들어 주세요.',
+  ].join('\n');
+  const head = `웹 도구 '발췌기'에 넣을 ${kindLabel}를 만들어 주세요.`;
+  const tail = o.kind === 'both'
+    ? '■ 답변 형식\n코드 블록 두 개로만 답해 주세요. 첫 번째는 "HTML 배경", 두 번째는 "CSS 스킨"이에요. 둘의 색 · 분위기를 맞춰 주세요.'
+    : '■ 답변 형식\n설명 없이 코드 블록 하나로만 답해 주세요.';
+  return [head, want, o.kind !== 'css' ? bg : null, o.kind !== 'bg' ? css : null, tail].filter(Boolean).join('\n\n');
+}
+function buildAiHelp() {
+  const pane = $('[data-pane="skin"].pane');
+  if (!pane || $('#ai-skin-help')) return;
+  const o = { kind: 'bg', theme: '', colors: '', objects: '', links: '' };
+  const out = h('textarea', { class: 'code ai-out', readonly: true, rows: 7, 'aria-label': 'AI에게 줄 프롬프트' });
+  const sync = () => { out.value = aiSkinPrompt(o); };
+  const field = (k, label, ph, area) => h('label', { class: 'ai-field' }, h('span', {}, label),
+    h(area ? 'textarea' : 'input', { class: 'input', ...(area ? { rows: 2 } : { type: 'text' }), placeholder: ph, oninput: (e) => { o[k] = e.target.value; sync(); } }));
+  const copy = h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: async () => {
+    sync();
+    try { await navigator.clipboard.writeText(out.value); toast('프롬프트를 복사했어요 · AI 채팅에 붙여 넣으세요'); }
+    catch (e) { out.focus(); out.select(); toast('글이 선택됐어요 · 길게 눌러 복사해 주세요'); }
+  } }, '프롬프트 복사');
+  const box = h('details', { class: 'ai-help', id: 'ai-skin-help' },
+    h('summary', {}, h('b', {}, 'AI로 스킨 만들기'), h('small', {}, '테마랑 넣고 싶은 아이콘만 적으면 AI에게 줄 부탁 글을 만들어 줘요')),
+    h('div', { class: 'ai-body' },
+      h('div', { class: 'ai-label' }, '무엇을 만들까요?'),
+      segEl([['bg', '배경 · 테두리'], ['css', '말풍선 · 글 모양'], ['both', '둘 다']], o.kind, (v) => { o.kind = v; sync(); }, true),
+      field('theme', '테마 · 분위기', '예) 겨울밤 기차역, 따뜻한 노란 조명, 레트로 감성', true),
+      field('colors', '주요 색', '예) 남색 · 크림색 · 금색 포인트'),
+      field('objects', '넣고 싶은 오브제 · 아이콘', '예) 눈송이, 기차표, 작은 별 — 모서리에만 작게', true),
+      field('links', '이미지 링크 (선택)', '쓰고 싶은 아이콘 · 사진 주소를 한 줄에 하나씩 · 없으면 AI가 직접 그려요', true),
+      h('div', { class: 'ai-label row-top' }, 'AI에게 줄 부탁 글', copy),
+      out,
+      h('ol', { class: 'ai-steps' },
+        h('li', {}, '‘프롬프트 복사’를 눌러 ChatGPT · Claude 같은 AI 채팅에 붙여 넣어요. 참고 이미지가 있으면 같이 올려요.'),
+        h('li', {}, 'AI가 준 코드를 복사해서, 배경은 아래 ‘HTML 배경’ 칸에, 말풍선 · 글 모양은 ‘CSS 스킨’ 칸에 붙여 넣어요.'),
+        h('li', {}, '마음에 안 드는 곳은 AI에게 이어서 부탁해요. 예) “모서리 장식을 더 작게”, “색을 더 차분하게”, “글 자리를 넓게”'))));
+  sync();
+  pane.prepend(box);
+}
+
 /* 스킨 */
 function buildSkin() {
   const row = $('#skin-presets');
@@ -7651,6 +7727,7 @@ function rebuildAll() {
   buildChars();
   buildQuickInsert();
   buildSkin();
+  buildAiHelp();
   applySkin();
   render();
   $('#panel-scroll').scrollTop = scroll;
