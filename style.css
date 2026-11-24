@@ -2058,6 +2058,18 @@ img[src^="nnimg:"] { visibility: hidden; }
 .ai-label.row-top { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
 .ai-field { display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; font-weight: 700; color: var(--text-2, var(--text)); }
 .ai-field .input { font-weight: 400; resize: vertical; }
-.ai-out { width: 100%; min-height: 150px; font-family: inherit !important; font-size: 12.5px; line-height: 1.6; letter-spacing: 0; resize: vertical; }
 .ai-steps { margin: 2px 0 0; padding-left: 18px; font-size: 12.5px; line-height: 1.6; color: var(--text-3); }
 .ai-steps li + li { margin-top: 3px; }
+
+.ai-help .btn-block { width: 100%; margin-top: 4px; }
+.ai-tip { margin: -2px 2px 0; font-size: 12.5px; line-height: 1.6; color: var(--text-3); }
+.ai-where { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 10px; background: rgba(49, 130, 246, .08); border: 1.5px solid rgba(49, 130, 246, .35); font-size: 13.5px; }
+.ai-where > b { font-size: 13px; color: var(--accent, #3182f6); }
+.ai-where-row { display: flex; align-items: center; gap: 8px; }
+.ai-where-row strong { font-size: 14.5px; }
+.ai-where .ai-arrow { color: var(--accent, #3182f6); font-weight: 700; }
+.ai-where small { font-size: 12px; color: var(--text-3); line-height: 1.5; }
+/* 글 자리 여백 */
+.bg-pad { margin: 4px 0 12px; border-radius: var(--r-md, 12px); background: var(--surface); }
+.bg-pad-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px; padding: 4px 16px 14px; }
+#stage.show-pad .card .card-content { outline: 1.5px dashed rgba(49, 130, 246, .9); outline-offset: 0; }

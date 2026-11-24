@@ -159,6 +159,7 @@ const DEFAULTS = {
   overrides: {},
   memoStyle: {}, // 메모마다 모양: { 'w:메모' | 'b:메모': { color, scale, mark } }
   memoPos: {}, // 메모마다 직접 옮긴 자리 · 폭: { key: { dx, dy, w } }
+  bgPad: { on: false, t: 40, r: 40, b: 40, l: 40 }, // HTML 배경의 글 자리를 직접 맞춤 (px)
   typoCheck: true, // 미리보기에서 남은 서식 기호 · 흔한 맞춤법 실수를 물결 밑줄로 (저장 이미지에는 안 나옴)
   typoIgnore: [], // '이대로 둘게요'를 누른 글자
   palette: [], // 내 팔레트: 자주 쓰는 색 (모든 색 고르기 창에서 꺼내 씀)
@@ -2275,7 +2276,12 @@ function newPage(idx, W, H) {
     card.append(t);
   }
   const safe = bgCode() ? bgSafeArea() : null;
-  if (safe) {
+  const bp = bgCode() && state.bgPad && state.bgPad.on ? state.bgPad : null;
+  if (bp) {
+    // 글 자리 여백을 직접 맞춘 경우 (배경이 정한 자리보다 우선)
+    card.style.padding = `${bp.t}px ${bp.r}px ${bp.b}px ${bp.l}px`;
+    if (!H && safe && safe.minH) card.style.minHeight = `${Math.round((safe.minH * W) / 100)}px`;
+  } else if (safe) {
     // 배경이 정한 글 자리 + '바깥 여백'을 기본값(40px)보다 늘리거나 줄인 만큼 더함
     const extra = (state.canvas.pad ?? 40) - 40;
     const px = (v) => `${Math.max(0, Math.round((v * W) / 100 + extra))}px`;
@@ -6527,8 +6533,10 @@ function aiSkinPrompt(o) {
     '2. body가 카드 한 장이에요. 카드 폭은 600px 기준이고, 높이는 글 길이에 따라 늘어나요.',
     '3. 장식은 모두 position: absolute로 놓고, 맨 바깥 요소에 position: absolute; inset: 0; container-type: size;를 준 뒤 크기 · 위치를 cqw 단위로 써서 카드 폭에 비례하게 만들어 주세요.',
     '4. 그 위에 글과 말풍선이 올라가요. 가운데는 비워 두고 장식은 가장자리 · 모서리에 작게, 바깥 여백은 좁게 해 주세요.',
-    '5. 코드 맨 첫 줄에 글이 들어갈 자리를 이렇게 적어 주세요 (모두 카드 폭에 대한 %):',
+    '5. [가장 중요] 코드 맨 첫 줄에 글이 들어갈 자리를 반드시 이렇게 적어 주세요 (모두 카드 폭 600px에 대한 %, 숫자만 바꿔서):',
     '   <!-- ninining-safe: 위% 오른쪽% 아래% 왼쪽%; min-height: 최소높이% -->',
+    '   예) 테두리가 카드 끝에서 30px 안쪽까지 오면 그보다 넉넉하게 8% 정도. 위 · 아래에 장식이나 제목이 있으면 그 높이만큼 더 크게.',
+    '   이 숫자보다 안쪽에만 글이 들어가요. 숫자가 작으면 글이 테두리 · 장식과 겹치니, 장식이 닿는 곳보다 2~4% 더 넉넉하게 잡아 주세요.',
     '6. 제목 자리가 필요하면 {{제목}}, 그 아래 작은 줄은 {{소제목}}, 아래쪽 크레딧은 {{출처}} · {{제작자}}를 그대로 쓰세요. 값이 비면 :empty로 숨겨 주세요.',
     '7. 글자보다 앞에 보여야 하는 장식에만 data-layer="top"을 붙여 주세요.',
     '8. 아이콘 · 장식은 인라인 SVG나 CSS로 직접 그려 주세요 (이미지 링크를 준 것만 <img src="주소">로).',
@@ -6557,32 +6565,76 @@ function buildAiHelp() {
   const pane = $('[data-pane="skin"].pane');
   if (!pane || $('#ai-skin-help')) return;
   const o = { kind: 'bg', theme: '', colors: '', objects: '', links: '' };
-  const out = h('textarea', { class: 'code ai-out', readonly: true, rows: 7, 'aria-label': 'AI에게 줄 프롬프트' });
-  const sync = () => { out.value = aiSkinPrompt(o); };
   const field = (k, label, ph, area) => h('label', { class: 'ai-field' }, h('span', {}, label),
-    h(area ? 'textarea' : 'input', { class: 'input', ...(area ? { rows: 2 } : { type: 'text' }), placeholder: ph, oninput: (e) => { o[k] = e.target.value; sync(); } }));
-  const copy = h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: async () => {
-    sync();
-    try { await navigator.clipboard.writeText(out.value); toast('프롬프트를 복사했어요 · AI 채팅에 붙여 넣으세요'); }
-    catch (e) { out.focus(); out.select(); toast('글이 선택됐어요 · 길게 눌러 복사해 주세요'); }
+    h(area ? 'textarea' : 'input', { class: 'input', ...(area ? { rows: 2 } : { type: 'text' }), placeholder: ph, oninput: (e) => { o[k] = e.target.value; } }));
+  const copyText = async (t) => {
+    try { await navigator.clipboard.writeText(t); return true; } catch (e) { /* 아래 방법으로 */ }
+    const ta = h('textarea', { style: 'position:fixed;left:-9999px;top:0' }, t);
+    document.body.append(ta); ta.select();
+    let ok = false; try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    ta.remove(); return ok;
+  };
+  const where = h('div', { class: 'ai-where' });
+  const paintWhere = () => {
+    const rows = { bg: [['배경 · 테두리', 'HTML 배경']], css: [['말풍선 · 글 모양', 'CSS 스킨']], both: [['배경 · 테두리', 'HTML 배경'], ['말풍선 · 글 모양', 'CSS 스킨']] }[o.kind];
+    where.replaceChildren(h('b', {}, 'AI가 준 코드는 여기에 붙여 넣어요'),
+      ...rows.map(([what, box]) => h('div', { class: 'ai-where-row' }, h('span', {}, what), h('span', { class: 'ai-arrow' }, '→'), h('strong', {}, `아래 ‘${box}’ 칸`))),
+      o.kind === 'both' ? h('small', {}, 'AI가 코드를 두 개 줘요. 첫 번째는 HTML 배경 칸, 두 번째는 CSS 스킨 칸에 따로 넣어요. 바꿔 넣으면 적용되지 않아요.')
+        : h('small', {}, o.kind === 'bg' ? 'CSS 스킨 칸에 넣으면 적용되지 않아요.' : 'HTML 배경 칸에 넣으면 적용되지 않아요.'));
+  };
+  const copy = h('button', { type: 'button', class: 'btn btn-primary btn-block', onclick: async () => {
+    toast((await copyText(aiSkinPrompt(o))) ? '부탁 글을 복사했어요 · AI 채팅에 붙여 넣으세요' : '복사하지 못했어요. 다시 눌러 주세요');
   } }, '프롬프트 복사');
   const box = h('details', { class: 'ai-help', id: 'ai-skin-help' },
-    h('summary', {}, h('b', {}, 'AI로 스킨 만들기'), h('small', {}, '테마랑 넣고 싶은 아이콘만 적으면 AI에게 줄 부탁 글을 만들어 줘요')),
+    h('summary', {}, h('b', {}, 'AI로 스킨 만들기'), h('small', {}, '테마랑 넣고 싶은 아이콘만 적으면 AI에게 줄 부탁 글을 복사해 줘요')),
     h('div', { class: 'ai-body' },
       h('div', { class: 'ai-label' }, '무엇을 만들까요?'),
-      segEl([['bg', '배경 · 테두리'], ['css', '말풍선 · 글 모양'], ['both', '둘 다']], o.kind, (v) => { o.kind = v; sync(); }, true),
+      segEl([['bg', '배경 · 테두리'], ['css', '말풍선 · 글 모양'], ['both', '둘 다']], o.kind, (v) => { o.kind = v; paintWhere(); }, true),
       field('theme', '테마 · 분위기', '예) 겨울밤 기차역, 따뜻한 노란 조명, 레트로 감성', true),
       field('colors', '주요 색', '예) 남색 · 크림색 · 금색 포인트'),
       field('objects', '넣고 싶은 오브제 · 아이콘', '예) 눈송이, 기차표, 작은 별 — 모서리에만 작게', true),
       field('links', '이미지 링크 (선택)', '쓰고 싶은 아이콘 · 사진 주소를 한 줄에 하나씩 · 없으면 AI가 직접 그려요', true),
-      h('div', { class: 'ai-label row-top' }, 'AI에게 줄 부탁 글', copy),
-      out,
-      h('ol', { class: 'ai-steps' },
-        h('li', {}, '‘프롬프트 복사’를 눌러 ChatGPT · Claude 같은 AI 채팅에 붙여 넣어요. 참고 이미지가 있으면 같이 올려요.'),
-        h('li', {}, 'AI가 준 코드를 복사해서, 배경은 아래 ‘HTML 배경’ 칸에, 말풍선 · 글 모양은 ‘CSS 스킨’ 칸에 붙여 넣어요.'),
-        h('li', {}, '마음에 안 드는 곳은 AI에게 이어서 부탁해요. 예) “모서리 장식을 더 작게”, “색을 더 차분하게”, “글 자리를 넓게”'))));
-  sync();
+      copy,
+      h('p', { class: 'ai-tip' }, 'ChatGPT · Claude 같은 AI 채팅에 붙여 넣어요. 참고 이미지가 있으면 같이 올려요.'),
+      where,
+      h('p', { class: 'ai-tip' }, '글이 테두리와 겹치면 ‘HTML 배경’ 아래 ‘글 자리 여백’으로 직접 맞추거나, AI에게 “글 자리를 더 넉넉하게”라고 이어서 부탁해요.')));
+  paintWhere();
   pane.prepend(box);
+}
+
+
+/* HTML 배경: 글 자리 여백 직접 맞추기 (글이 테두리 · 장식과 겹칠 때) */
+let padGuideTimer;
+function showPadGuide() {
+  $('#stage').classList.add('show-pad');
+  clearTimeout(padGuideTimer);
+  padGuideTimer = setTimeout(() => $('#stage').classList.remove('show-pad'), 2200);
+}
+function buildBgPad() {
+  let wrap = $('#bg-pad');
+  if (!wrap) { wrap = h('div', { id: 'bg-pad', class: 'bg-pad' }); $('#html-bg-status').after(wrap); }
+  // 되돌리기 · 프리셋으로 설정이 통째로 바뀌어도 늘 지금 값을 고치도록 매번 state에서 읽음
+  const cur = () => (state.bgPad = { on: false, t: 40, r: 40, b: 40, l: 40, ...(state.bgPad || {}) });
+  const P = cur();
+  const sw = h('input', { type: 'checkbox', class: 'switch', role: 'switch', checked: P.on, onchange: (e) => {
+    if (e.target.checked) {
+      // 지금 보이는 글 자리에서 시작
+      const c = $('#stage .card');
+      if (c) { const cs = getComputedStyle(c); Object.assign(cur(), { t: Math.round(parseFloat(cs.paddingTop)), r: Math.round(parseFloat(cs.paddingRight)), b: Math.round(parseFloat(cs.paddingBottom)), l: Math.round(parseFloat(cs.paddingLeft)) }); }
+    }
+    cur().on = e.target.checked; changed(); buildBgPad(); showPadGuide();
+  } });
+  const slider = (k, label) => {
+    const out = h('output', {}, `${P[k]}px`);
+    const sl = h('input', { type: 'range', class: 'slider', min: 0, max: 260, step: 2, value: P[k], 'aria-label': `글 자리 ${label}` });
+    const pct = (v) => `${(v / 260) * 100}%`;
+    sl.style.setProperty('--p', pct(P[k]));
+    sl.addEventListener('input', () => { cur()[k] = +sl.value; out.textContent = `${sl.value}px`; sl.style.setProperty('--p', pct(sl.value)); changed(); showPadGuide(); });
+    return h('div', { class: 'bg-pad-row' }, h('div', { class: 'pop-label row-top' }, label, out), sl);
+  };
+  wrap.replaceChildren(...[
+    h('label', { class: 'row' }, labelEl('글 자리 여백 직접 맞추기', '글이 테두리 · 장식과 겹칠 때 위 · 아래 · 양옆 여백을 따로 맞춰요'), sw),
+    P.on ? h('div', { class: 'bg-pad-grid' }, slider('t', '위'), slider('b', '아래'), slider('l', '왼쪽'), slider('r', '오른쪽')) : null].filter(Boolean));
 }
 
 /* 스킨 */
@@ -7728,6 +7780,7 @@ function rebuildAll() {
   buildQuickInsert();
   buildSkin();
   buildAiHelp();
+  buildBgPad();
   applySkin();
   render();
   $('#panel-scroll').scrollTop = scroll;
