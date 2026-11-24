@@ -1677,7 +1677,9 @@ async function loadBgRef(file) {
   if (!bgCodeCache[file]) bgCodeCache[file] = await (await fetch(file)).text();
   return bgCodeCache[file];
 }
-const bgOwnText = () => !!state.bgOwnText;
+const bgOwnText = () => !!state.bgOwnText && bgOwnTextNeeded();
+// 직접 넣은 배경 코드에 제목 · 출처 자리({{제목}} 등)가 있을 때만 스위치가 필요 (예전에 AI로 만든 코드 · 등록 배경은 해당 없음)
+const bgOwnTextNeeded = () => !state.bgRef && /\{\{\s*(제목|소제목|출처|제작자|title|credit|creator)\s*\}\}/i.test(state.bgHtml || '');
 const bgHasTitle = () => { if (bgOwnText()) return false; TITLE_TOKEN.lastIndex = 0; return TITLE_TOKEN.test(bgCode()); };
 const bgUsesScene = () => /\{\{\s*(장소|생존|전체|place|alive|total)\s*\}\}/i.test(bgCode());
 const bgUsesHompy = () => /\{\{\s*(마이룸|톡톡|프레임색)\s*\}\}/.test(bgCode());
@@ -2927,6 +2929,8 @@ function wrapNote(el, note, posOverride) {
 }
 let lastRenderMs = 0;
 function render() {
+  const ownRow = document.getElementById('bg-own-row');
+  if (ownRow) ownRow.hidden = !bgOwnTextNeeded();
   const t0 = performance.now();
   dropcapPending = !!state.typo.dropcap;
   ensureFonts();
@@ -6709,7 +6713,7 @@ function buildBgPad() {
   };
   const ownSw = h('input', { type: 'checkbox', class: 'switch', role: 'switch', checked: !!state.bgOwnText, onchange: (e) => { state.bgOwnText = e.target.checked; htmlBg.cache.clear(); changed(); } });
   wrap.replaceChildren(...[
-    h('label', { class: 'row' }, labelEl('제목 · 출처는 발췌기에서 넣기', '배경 코드에 들어간 제목 · 출처 대신, 서체 탭의 글꼴 · 크기 · 정렬로 보여요'), ownSw),
+    h('label', { class: 'row', id: 'bg-own-row', hidden: !bgOwnTextNeeded() }, labelEl('제목 · 출처는 발췌기에서 넣기', '이 배경 코드에 제목 · 출처가 그려져 있어요. 켜면 서체 탭의 글꼴 · 크기 · 정렬로 바꿔 보여요'), ownSw),
     h('label', { class: 'row' }, labelEl('글 자리 여백 직접 맞추기', '글이 테두리 · 장식과 겹칠 때 위 · 아래 · 양옆 여백을 따로 맞춰요'), sw),
     P.on ? h('div', { class: 'bg-pad-grid' }, slider('t', '위'), slider('b', '아래'), slider('l', '왼쪽'), slider('r', '오른쪽')) : null].filter(Boolean));
 }
