@@ -7527,6 +7527,8 @@ async function makeImages(indices, onProgress) {
   renderQueued = false;
   render();
   exporting = true;
+  // 저장하는 동안은 미리보기용 테두리(마우스를 올린 말풍선 · 고르던 그림 등)가 그림에 찍히지 않게
+  document.body.classList.add('exporting');
   try {
     await document.fonts.ready;
     await htmlBgReady;
@@ -7539,6 +7541,7 @@ async function makeImages(indices, onProgress) {
     return await makeImagesOf(cards, fontCSS, onProgress);
   } finally {
     exporting = false;
+    document.body.classList.remove('exporting');
     renderAfterExport = false;
     render(); // 줄 고정을 풀고 원래 미리보기로
   }
