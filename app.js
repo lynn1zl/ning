@@ -1294,7 +1294,7 @@ function parseText() {
     const hrm = line.match(HR_RE);
     if (hrm && (!hrm[2] || HR_BY_NAME[hrm[2]])) { out.push({ type: 'hr', kind: hrm[2] ? HR_BY_NAME[hrm[2]] : 'line', line: li }); continue; }
     const bxm = line.match(/^!\[[^\]]*\]\(box:([\w-]+)\)$/);
-    if (bxm) { if (state.boxes && state.boxes[bxm[1]]) out.push({ type: 'box', id: bxm[1] }); continue; }
+    if (bxm) { if (state.boxes && state.boxes[bxm[1]] && boxAllowed(state.boxes[bxm[1]])) out.push({ type: 'box', id: bxm[1] }); continue; }
     const im = line.match(/^!\[([^\]]*)\]\(img:([\w-]+)\)$/);
     if (im) { if (state.images[im[2]]) out.push({ type: 'img', id: im[2], alt: im[1] }); continue; }
 
@@ -3343,7 +3343,7 @@ const SCHEMA = {
       { t: 'text', p: 'scene.alive', l: '생존 인원', ph: '예) 31', show: () => state.scene.show !== false },
       { t: 'text', p: 'scene.total', l: '전체 인원', ph: '예) 31', show: () => state.scene.show !== false },
     ] },
-    { sec: 'HTML 상자', note: '글 속 ![](box:…) 줄을 옮기면 상자 위치도 바뀌어요. 미리보기에서 상자를 눌러도 고칠 수 있어요.', show: () => Object.keys(state.boxes || {}).length > 0, rows: [{ t: 'boxes' }] },
+    { sec: 'HTML 상자', note: '글 속 ![](box:…) 줄을 옮기면 상자 위치도 바뀌어요. 미리보기에서 상자를 눌러도 고칠 수 있어요.', show: () => Object.values(state.boxes || {}).some(boxAllowed), rows: [{ t: 'boxes' }] },
     { sec: '미니홈피', show: () => bgUsesHompy(), rows: [
       { t: 'color', p: 'hompy.frame', l: '프레임 색' },
       { t: 'color', p: 'hompy.bg', l: '배경 색' },
@@ -3834,7 +3834,8 @@ function fieldEl(d) {
 
     case 'boxes': {
       el = h('div', { class: 'row stack box-list' });
-      const ids = Object.keys(state.boxes || {}).filter((id) => state.text.includes(`(box:${id})`));
+      // MISFIT 갤러리처럼 배경 전용 상자는 그 배경일 때만
+      const ids = Object.keys(state.boxes || {}).filter((id) => state.text.includes(`(box:${id})`) && boxAllowed(state.boxes[id]));
       if (!ids.length) el.append(h('small', { class: 'muted' }, '아직 넣은 상자가 없어요'));
       ids.forEach((id) => {
         const bx = state.boxes[id];
@@ -5018,6 +5019,48 @@ const BOX_PRESETS = {
   <div class="x-end">— END OF TRANSMISSION —</div>
 </div>` },
   // ── 구일오 (홍콩 · 기사부 테마) ──
+  // ── MISFIT 전용 (MISFIT 배경일 때만 보이고 · 넣을 수 있음) ──
+  misfit_gall: { name: '힙합 갤러리', group: '장르', sub: 'MISFIT', only: 'bg/misfit.html', head: '힙합 갤러리', text: '',
+    code: `<style>
+  .x-g { --blue: #3b4890; --line: #d6d6d6; --soft: #f3f3f3; --gray: #999; --ink: #333;
+    background: #fff; color: var(--ink); border: .07em solid #c9c9c9; font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif; letter-spacing: -.01em; }
+  .x-gh { display: flex; align-items: center; justify-content: space-between; gap: .8em; padding: .62em .95em; background: var(--blue); color: #fff; }
+  .x-gh b { font-size: 1.02em; font-weight: 800; letter-spacing: -.02em; }
+  .x-gh span { padding: .3em .7em; border: .1em solid rgba(255,255,255,.55); border-radius: .3em; font-size: .66em; font-weight: 700; }
+  .x-gtab { display: flex; gap: 1.1em; padding: .5em .95em; border-bottom: .14em solid var(--blue); font-size: .72em; font-weight: 700; color: #777; }
+  .x-gtab i { font-style: normal; color: var(--blue); }
+  .x-gp + .x-gp { border-top: .5em solid #eceef4; }
+  .x-gt { padding: .95em .95em .55em; border-bottom: .07em solid var(--line); }
+  .x-gt h4 { margin: 0; font-size: 1.06em; font-weight: 800; line-height: 1.45; word-break: keep-all; overflow-wrap: anywhere; }
+  .x-gt h4 em { font-style: normal; color: var(--gray); font-weight: 600; margin-right: .3em; }
+  .x-gm { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .3em .8em; margin-top: .5em; font-size: .72em; color: #777; }
+  .x-gm b { color: var(--ink); font-weight: 700; }
+  .x-gm u { text-decoration: none; color: var(--gray); }
+  .x-gm s { text-decoration: none; margin-left: .7em; }
+  .x-gm s:first-child { margin-left: 0; }
+  .x-gb { padding: 1em .95em 1.1em; font-size: .92em; line-height: 1.8; white-space: pre-wrap; word-break: keep-all; overflow-wrap: anywhere; }
+  .x-gr { display: flex; justify-content: center; gap: .9em; padding: 0 0 1.05em; }
+  .x-gr div { display: grid; place-items: center; width: 3.6em; height: 3.6em; border-radius: 50%; border: .1em solid var(--line); font-size: .74em; color: #777; line-height: 1.2; text-align: center; }
+  .x-gr div b { display: block; font-size: 1.35em; font-weight: 800; }
+  .x-gr .up { border-color: var(--blue); color: var(--blue); }
+  .x-gr .up b { color: #d31900; }
+  .x-gc { background: var(--soft); border-top: .07em solid var(--line); }
+  .x-gch { padding: .55em .95em; font-size: .74em; font-weight: 700; border-bottom: .07em solid var(--line); }
+  .x-gch i { font-style: normal; color: #d31900; }
+  .x-c { display: grid; grid-template-columns: auto 1fr; gap: .15em .6em; padding: .55em .95em; border-bottom: .07em solid #e3e3e3; font-size: .82em; line-height: 1.6; }
+  .x-c:last-child { border-bottom: 0; }
+  .x-c .n { font-weight: 700; white-space: nowrap; }
+  .x-c .n u { text-decoration: none; color: var(--gray); font-weight: 500; font-size: .9em; }
+  .x-c .t { word-break: keep-all; overflow-wrap: anywhere; }
+  .x-c.re { padding-left: 2.1em; background: #ebebeb; position: relative; }
+  .x-c.re::before { content: 'ㄴ'; position: absolute; left: 1em; top: .55em; color: var(--gray); }
+  .x-gempty { padding: 1.4em .95em; font-size: .82em; color: var(--gray); text-align: center; }
+</style>
+<div class="x-g">
+  <div class="x-gh"><b>{{머리글}}</b><span>글쓰기</span></div>
+  <div class="x-gtab"><i>전체글</i><span>개념글</span><span>공지</span></div>
+  {{갤러리}}
+</div>` },
   gu_header: { name: '기사부 표지', group: '장르', sub: '구일오', head: '', text: '',
     fields: [[['corp', '회사 · 윗줄', '𝐋𝐀𝐍𝐃 𝐃𝐄𝐕𝐄𝐋𝐎𝐏𝐌𝐄𝐍𝐓 𝐂𝐎𝐑𝐏𝐎𝐑𝐀𝐓𝐈𝐎𝐍']], [['title', '제목', '記事簿'], ['tag', '노란 표', '𝐆𝐄𝐑𝐑𝐀𝐑𝐃']], [['date', '날짜', ''], ['time', '시간', '']], [['place', '장소', '']]],
     code: `<style>
@@ -5178,6 +5221,64 @@ function scopeBoxCss(css, scope) {
   return out;
 }
 /** 상자 HTML: 위험한 태그 · 속성은 빼고, {{머리글}} · {{내용}} 자리를 채움 */
+/* 갤러리 글 붙여넣기 → 글 · 댓글로 정리
+   [1] 제목: …  /  글쓴이: 닉(아이피) | 조회수: 14,203 | 추천: 382  /  내용: … (여러 줄 가능)  /  ㄴ 닉(아이피): 댓글 (더 들여 쓰면 답글) */
+function parseGall(text) {
+  const posts = [];
+  let cur = null, inBody = false, baseIndent = null;
+  const who = (raw) => {
+    const m = String(raw || '').trim().match(/^(.*?)\s*[(（]\s*([^()（）]*)\s*[)）]\s*$/);
+    return m ? { nick: m[1].trim(), ip: m[2].trim() } : { nick: String(raw || '').trim(), ip: '' };
+  };
+  for (const line of String(text || '').replace(/\r/g, '').split('\n')) {
+    const t = line.trim();
+    const head = t.match(/^(?:\[\s*([^\]]*)\s*\]\s*)?제목\s*[:：]\s*(.*)$/);
+    if (head) { cur = { no: head[1] || '', title: head[2].trim(), meta: {}, body: [], cmts: [] }; posts.push(cur); inBody = false; baseIndent = null; continue; }
+    if (!cur) continue;
+    const cm = line.match(/^(\s*)ㄴ\s*(.+?)\s*[:：]\s*([\s\S]*)$/);
+    if (cm) {
+      const ind = cm[1].replace(/\t/g, '    ').length;
+      if (baseIndent == null) baseIndent = ind;
+      cur.cmts.push({ ...who(cm[2]), text: cm[3].trim(), re: ind > baseIndent });
+      inBody = false;
+      continue;
+    }
+    if (!inBody && /^(글쓴이|작성자)\s*[:：]/.test(t)) {
+      for (const part of t.split(/\s*[|｜]\s*/)) {
+        const kv = part.match(/^([^:：]+?)\s*[:：]\s*(.*)$/);
+        if (kv) cur.meta[kv[1].trim()] = kv[2].trim();
+      }
+      continue;
+    }
+    const bm = t.match(/^(내용|본문)\s*[:：]\s*([\s\S]*)$/);
+    if (bm && !inBody) { inBody = true; cur.body.push(bm[2]); continue; }
+    if (inBody) cur.body.push(line.replace(/\s+$/, ''));
+    else if (t && !cur.cmts.length) { inBody = true; cur.body.push(t); }
+  }
+  return posts;
+}
+function gallHtml(text) {
+  const posts = parseGall(text);
+  if (!posts.length) return '<div class="x-gempty">제목: · 글쓴이: · 내용: · ㄴ 댓글 양식으로 붙여넣으면 여기에 정리돼요</div>';
+  const pick = (m, ...keys) => { for (const k of keys) if (m[k] != null && m[k] !== '') return m[k]; return ''; };
+  return posts.map((p) => {
+    const w = (() => { const raw = pick(p.meta, '글쓴이', '작성자'); const m = raw.match(/^(.*?)\s*[(（]\s*([^()（）]*)\s*[)）]\s*$/); return m ? { nick: m[1], ip: m[2] } : { nick: raw, ip: '' }; })();
+    const views = pick(p.meta, '조회수', '조회'), up = pick(p.meta, '추천', '개념'), down = pick(p.meta, '비추천', '비추');
+    const date = pick(p.meta, '날짜', '작성일', '시간');
+    const body = p.body.join('\n').replace(/^\n+|\n+$/g, '');
+    const nC = p.cmts.length;
+    return `<div class="x-gp">
+      <div class="x-gt"><h4>${p.no ? `<em>[${esc(p.no)}]</em>` : ''}${fmt(p.title)}</h4>
+        <div class="x-gm"><span>${w.nick ? `<b>${esc(w.nick)}</b>` : ''}${w.ip ? `<u>(${esc(w.ip)})</u>` : ''}${date ? `<s>${esc(date)}</s>` : ''}</span>
+        <span>${views ? `<s>조회 ${esc(views)}</s>` : ''}${up ? `<s>추천 ${esc(up)}</s>` : ''}<s>댓글 ${nC}</s></span></div></div>
+      ${body ? `<div class="x-gb">${fmt(body)}</div>` : ''}
+      ${up || down ? `<div class="x-gr"><div class="up"><span><b>${esc(up || '0')}</b>개념</span></div><div><span><b>${esc(down || '0')}</b>비추</span></div></div>` : ''}
+      ${nC ? `<div class="x-gc"><div class="x-gch">전체 댓글 <i>${nC}</i>개</div>${p.cmts.map((c) => `<div class="x-c${c.re ? ' re' : ''}"><span class="n">${esc(c.nick)}${c.ip ? `<u>(${esc(c.ip)})</u>` : ''}</span><span class="t">${fmt(c.text)}</span></div>`).join('')}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+// 배경 전용 상자(예: MISFIT 갤러리)는 그 배경일 때만 보이고 넣을 수 있음
+const boxAllowed = (bx) => { const pr = BOX_PRESETS[(bx || {}).preset]; return !pr || !pr.only || state.bgRef === pr.only; };
 function boxHtml(bx) {
   const code = bx.code || '';
   const css = [...code.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map((m) => m[1]).join('\n');
@@ -5192,6 +5293,7 @@ function boxHtml(bx) {
   const body = code.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
     .replace(/\{\{\s*(머리글|head)\s*\}\}/gi, () => esc(bx.head || ''))
     .replace(/\{\{\s*(내용|text)\s*\}\}/gi, () => fmt(bx.text || ''))
+    .replace(/\{\{\s*갤러리\s*\}\}/g, () => gallHtml(bx.text || ''))
     .replace(/\{\{\s*(로그|log)\s*\}\}/gi, () => (bx.text || '').split('\n').map((l) => l.trim()).filter(Boolean).map((l) => {
       const m = l.match(/^([^:：\s][^:：]{0,23}?)\s*[:：]\s*([\s\S]*)$/);
       return m ? `<div class="x-l"><b>${esc(m[1])}:</b> ${fmt(m[2])}</div>` : `<div class="x-l">${fmt(l)}</div>`;
@@ -5256,9 +5358,9 @@ function openBoxInsertPop(anchor) {
   const tiles = h('div', { class: 'box-presets' });
   const folders = {};
   const subs = {};
-  const SUB_ORDER = ['ACCORD', 'MENAGERIE', '구일오'];
+  const SUB_ORDER = ['MISFIT', 'ACCORD', 'MENAGERIE', '구일오'];
   const rank = ([k, pr]) => (k === 'custom' ? -1 : pr.sub ? 100 + SUB_ORDER.indexOf(pr.sub) : 0);
-  const order = Object.entries(BOX_PRESETS).map((e, i) => [e, i]).sort(([a, i], [b, j]) => rank(a) - rank(b) || i - j).map(([e]) => e);
+  const order = Object.entries(BOX_PRESETS).filter(([, pr]) => !pr.only || state.bgRef === pr.only).map((e, i) => [e, i]).sort(([a, i], [b, j]) => rank(a) - rank(b) || i - j).map(([e]) => e);
   order.forEach(([k, pr]) => {
     let target = tiles;
     if (pr.group) {
@@ -5302,16 +5404,17 @@ function openBoxPop(anchor, id) {
   };
   const usesHead = /\{\{\s*(머리글|head)\s*\}\}/i.test(bx.code);
   const usesLog = /\{\{\s*(로그|log)\s*\}\}/i.test(bx.code);
-  const usesText = usesLog || /\{\{\s*(내용|text)\s*\}\}/i.test(bx.code);
+  const usesGall = /\{\{\s*갤러리\s*\}\}/.test(bx.code);
+  const usesText = usesLog || usesGall || /\{\{\s*(내용|text)\s*\}\}/i.test(bx.code);
   const headIn = h('input', { type: 'text', class: 'input', value: bx.head || '', placeholder: '머리글 (비우면 숨김)', oninput: (e) => upd({ head: e.target.value }) });
-  const textIn = h('textarea', { class: 'input area-input', rows: /\{\{\s*(로그|log)\s*\}\}/i.test(bx.code) ? 7 : 4, placeholder: /\{\{\s*(로그|log)\s*\}\}/i.test(bx.code) ? '이름: 대사\n이름: 대사' : '상자 안에 들어갈 글', oninput: (e) => upd({ text: e.target.value }) }, bx.text || '');
+  const textIn = h('textarea', { class: 'input area-input', rows: usesGall ? 10 : usesLog ? 7 : 4, placeholder: usesGall ? '[1] 제목: 글 제목\n글쓴이: ㅇㅇ(223.38) | 조회수: 1,234 | 추천: 56\n내용: 본문 (여러 줄 가능)\n\n  ㄴ ㅇㅇ(118.235): 댓글\n    ㄴ ㅇㅇ(175.223): 더 들여 쓰면 답글' : usesLog ? '이름: 대사\n이름: 대사' : '상자 안에 들어갈 글', oninput: (e) => upd({ text: e.target.value }) }, bx.text || '');
   const out = h('output', {}, `${bx.w || 100}%`);
   const sl = h('input', { type: 'range', class: 'slider', min: 20, max: 100, step: 1, value: bx.w || 100 });
   sl.style.setProperty('--p', `${((bx.w || 100) - 20) / 80 * 100}%`);
   sl.addEventListener('input', () => { out.textContent = `${sl.value}%`; sl.style.setProperty('--p', `${(sl.value - 20) / 80 * 100}%`); upd({ w: +sl.value }); });
   const presetSel = h('select', { class: 'select', 'aria-label': '상자 모양' },
     Object.entries(BOX_PRESETS).filter(([, pr]) => !pr.group).sort(([a], [b]) => (a === 'custom' ? -1 : b === 'custom' ? 1 : 0)).map(([k, pr]) => h('option', { value: k }, pr.name)),
-    [...new Set(Object.values(BOX_PRESETS).filter((pr) => pr.group).map((pr) => `${pr.group}${pr.sub ? ` · ${pr.sub}` : ''}`))].map((g) => h('optgroup', { label: g }, Object.entries(BOX_PRESETS).filter(([, pr]) => pr.group && `${pr.group}${pr.sub ? ` · ${pr.sub}` : ''}` === g).map(([k, pr]) => h('option', { value: k }, pr.name)))));
+    [...new Set(Object.values(BOX_PRESETS).filter((pr) => pr.group && (!pr.only || state.bgRef === pr.only)).map((pr) => `${pr.group}${pr.sub ? ` · ${pr.sub}` : ''}`))].map((g) => h('optgroup', { label: g }, Object.entries(BOX_PRESETS).filter(([, pr]) => pr.group && (!pr.only || state.bgRef === pr.only) && `${pr.group}${pr.sub ? ` · ${pr.sub}` : ''}` === g).map(([k, pr]) => h('option', { value: k }, pr.name)))));
   presetSel.value = bx.preset in BOX_PRESETS ? bx.preset : 'custom';
   presetSel.addEventListener('change', () => {
     const k = presetSel.value;
@@ -5350,8 +5453,8 @@ function openBoxPop(anchor, id) {
   })))) : null;
   openPop(h('div', { class: 'box-pop' },
     h('div', { class: 'pop-title' }, `HTML 상자 · ${(BOX_PRESETS[bx.preset] || {}).sub ? `${BOX_PRESETS[bx.preset].sub} ` : ''}${(BOX_PRESETS[bx.preset] || BOX_PRESETS.custom).name}`),
-    usesHead ? h('div', { class: 'pop-label' }, bx.preset === 'transcript' ? '오른쪽 위 글자' : '머리글') : null, usesHead ? headIn : null,
-    usesText ? h('div', { class: 'pop-label' }, usesLog ? '대화 (한 줄에 한 마디 · 이름: 대사)' : '내용') : null, usesText ? textIn : null,
+    usesHead ? h('div', { class: 'pop-label' }, bx.preset === 'transcript' ? '오른쪽 위 글자' : usesGall ? '갤러리 이름' : '머리글') : null, usesHead ? headIn : null,
+    usesText ? h('div', { class: 'pop-label' }, usesGall ? '글 (양식대로 붙여넣으면 제목 · 글쓴이 · 댓글로 정리돼요)' : usesLog ? '대화 (한 줄에 한 마디 · 이름: 대사)' : '내용') : null, usesText ? textIn : null,
     fieldsEl ? h('div', { class: 'pop-label' }, bx.preset === 'dice' ? '주사위' : (BOX_PRESETS[bx.preset] || {}).group ? '내용' : '수치') : null, fieldsEl,
     h('div', { class: 'pop-label row-top' }, '폭', out), sl,
     h('div', { class: 'pop-label' }, '정렬'), segEl(ALIGN3, bx.align || 'center', (v) => upd({ align: v }), true),
@@ -8167,7 +8270,7 @@ if (state.accord && state.accord.sub === 'MERIDIAN SOLUTIONS / EST. 2041') { sta
 // 없앤 설정: '문장 속 대사도 분리'는 늘 끔 · '아랫줄 번역은 같은 말풍선에'는 늘 켬
 if (state.parse) { state.parse.inline = false; state.parse.mergeTl = true; }
 if (state.subtitle === "FOMO's FIRST BOY GROUP") { state.subtitle = ''; save(); }
-if (state.creator === '도와줘요 마마') { state.creator = '도와줘요마마'; save(); }
+if (/^@?도와줘요 ?마마$/.test(state.creator || '') && state.creator !== '도와줘요마마') { state.creator = '도와줘요마마'; save(); }
 if (state.accord && state.accord.sub) {
   if (/(accord|menagerie)\.html$/.test(state.bgRef || '') && !String(state.subtitle || '').trim()) state.subtitle = state.accord.sub;
   state.accord.sub = ''; save();
