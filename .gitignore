@@ -1,0 +1,7 @@
+*.zip
+screenshot-*.png
+sample-*.png
+.DS_Store
+*.whl
+imgonly.png
+raw.png

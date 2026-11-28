@@ -1,0 +1,154 @@
+<!-- ninining-safe: {{WD안전위}}% 12.5% 17% 12.5%; min-height: {{WD최소}}% -->
+<!-- WEDDING: 마주 보는 비둘기 · 리본 · 네 잎 꽃 · 스캘럽 종이 · 아치 겹선 (좌우 대칭) -->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap');
+
+  :root {
+    --blush: #f4d6dc;
+    --paper: #fffaf3;
+    --rose: #d9577a;
+    --rose-soft: #ec9fb1;
+    --gold: #b8924a;
+    --gold-soft: #d8bf8a;
+    --blue: #3f5fb5;
+  }
+  body { background: var(--blush); }
+
+  /* 카드 폭에 맞춰 모든 치수가 함께 커지고 작아지도록 (600px 기준 1u) */
+  .wd { position: absolute; inset: 0; overflow: hidden; container-type: size; }
+  .wd * { --u: calc(100cqw / 600); }
+  .wd > div, .wd > svg { position: absolute; }
+
+  /* 바탕: 블러시 + 아주 옅은 종이 결 */
+  .base { inset: 0; background: radial-gradient(120% 80% at 50% 0%, #f8e2e6, var(--blush) 70%); }
+  .grain { inset: 0; width: 100%; height: 100%; opacity: .16; mix-blend-mode: multiply; }
+
+  /* 종이 + 물결(스캘럽) 가장자리 */
+  .paper { top: calc(26 * var(--u)); left: calc(26 * var(--u)); right: calc(26 * var(--u)); bottom: calc(26 * var(--u)); background: var(--paper);
+    box-shadow: 0 calc(10 * var(--u)) calc(24 * var(--u)) rgba(176, 82, 106, .14); }
+  .sc { --dot: radial-gradient(circle, var(--paper) calc(6.6 * var(--u)), transparent calc(7.1 * var(--u))); }
+  .sc.t, .sc.b { left: calc(26 * var(--u)); right: calc(26 * var(--u)); height: calc(14 * var(--u)); background: var(--dot) 0 50% / calc(14 * var(--u)) 100% round no-repeat; }
+  .sc.t { top: calc(19 * var(--u)); }
+  .sc.b { bottom: calc(19 * var(--u)); }
+  .sc.l, .sc.r { top: calc(26 * var(--u)); bottom: calc(26 * var(--u)); width: calc(14 * var(--u)); background: var(--dot) 50% 0 / 100% calc(14 * var(--u)) no-repeat round; }
+  .sc.l { left: calc(19 * var(--u)); }
+  .sc.r { right: calc(19 * var(--u)); }
+
+  /* 종이 안쪽 금색 실선 */
+  .rule { top: calc(38 * var(--u)); left: calc(38 * var(--u)); right: calc(38 * var(--u)); bottom: calc(38 * var(--u)); border: calc(.8 * var(--u)) solid var(--gold-soft); }
+
+  /* 아치 겹선 */
+  .arch { top: calc(98 * var(--u)); left: calc(54 * var(--u)); right: calc(54 * var(--u)); bottom: calc(54 * var(--u));
+    border: calc(1.5 * var(--u)) solid var(--rose); border-radius: 50% 50% calc(6 * var(--u)) calc(6 * var(--u)) / calc(110 * var(--u)) calc(110 * var(--u)) calc(6 * var(--u)) calc(6 * var(--u)); }
+  .arch::after { content: ''; position: absolute; inset: calc(5 * var(--u)); border: calc(.7 * var(--u)) solid var(--gold);
+    border-radius: 50% 50% calc(3 * var(--u)) calc(3 * var(--u)) / calc(105 * var(--u)) calc(105 * var(--u)) calc(3 * var(--u)) calc(3 * var(--u)); }
+
+  /* 오브제에만 아주 옅은 판화 결 */
+  .ink { filter: url(#print); }
+
+  /* 제목 */
+  .head { left: calc(84 * var(--u)); right: calc(84 * var(--u)); top: calc(136 * var(--u)); text-align: center; }
+  h1 { margin: 0; font: 700 calc(30 * var(--u) * {{제목배율}})/1.3 'Gowun Batang', serif; color: var(--rose); letter-spacing: .06em; word-break: keep-all; }
+  h1:empty { display: none; }
+  .sub { margin: calc(8 * var(--u)) 0 0; font: 400 calc(13 * var(--u))/1.4 'Gowun Batang', serif; color: var(--gold); letter-spacing: .08em; word-break: keep-all; }
+  .sub:empty { display: none; }
+  h1:empty + .sub { margin-top: 0; }
+  .dash { display: block; width: calc(120 * var(--u)); height: calc(12 * var(--u)); margin: calc(10 * var(--u)) auto 0; }
+  .foot { left: 0; right: 0; bottom: calc(66 * var(--u)); text-align: center; font: 400 calc(10.5 * var(--u))/1 'Gowun Batang', serif; letter-spacing: .3em; color: var(--gold); }
+  .foot:empty { display: none; }
+
+  /* 오브제 자리 (좌우 대칭) */
+  .crest { top: calc(38 * var(--u)); left: calc(38 * var(--u)); right: calc(38 * var(--u)); height: calc(104 * var(--u)); width: auto; }
+  .spray { top: calc(42 * var(--u)); width: calc(92 * var(--u)); height: calc(92 * var(--u)); }
+  .spray.l { left: calc(42 * var(--u)); }
+  .spray.r { right: calc(42 * var(--u)); transform: scaleX(-1); }
+  .low { bottom: calc(40 * var(--u)); width: calc(66 * var(--u)); height: calc(66 * var(--u)); }
+  .low.l { left: calc(42 * var(--u)); transform: scaleY(-1); }
+  .low.r { right: calc(42 * var(--u)); transform: scale(-1, -1); }
+  .bloom { width: calc(18 * var(--u)); height: calc(18 * var(--u)); }
+  .bloom.l { left: calc(45 * var(--u)); top: 55%; }
+  .bloom.r { right: calc(45 * var(--u)); top: 55%; }
+</style>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <!-- 아주 옅은 판화 결: 가장자리만 미세하게 흔들림 + 드문 잉크 빠짐 -->
+    <filter id="print" x="-4%" y="-4%" width="108%" height="108%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="0.5" xChannelSelector="R" yChannelSelector="G" result="d"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="3" seed="12" result="g"/>
+      <feColorMatrix in="g" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -16 12.6" result="keep"/>
+      <feComposite in="d" in2="keep" operator="in"/>
+    </filter>
+    <filter id="grainf"><feTurbulence type="fractalNoise" baseFrequency="0.95" numOctaves="2" seed="21"/><feColorMatrix values="0 0 0 0 .7  0 0 0 0 .36  0 0 0 0 .44  0 0 0 -1.4 .9"/></filter>
+    <!-- 네 잎 꽃 -->
+    <g id="flw"><circle cx="0" cy="-6.6" r="6"/><circle cx="6.6" cy="0" r="6"/><circle cx="0" cy="6.6" r="6"/><circle cx="-6.6" cy="0" r="6"/></g>
+    <!-- 잎 -->
+    <path id="leaf" d="M0 0 C 6 -6, 14 -6, 20 0 C 14 6, 6 6, 0 0 Z"/>
+    <!-- 비둘기 (오른쪽을 봄) -->
+    <g id="dove">
+      <path d="M2 44 L 17 38 C 24 33, 33 33, 41 36 C 47 37, 54 36, 60 33 C 68 29, 77 29, 85 33 C 89 31, 93 31, 96 33 L 101 34.4 L 96 36 C 95 41, 91 45, 85 47 C 75 53, 59 55, 47 53 C 37 52, 29 49, 23 47 L 5 52 C 8 49, 7 46, 2 44 Z" fill="var(--rose)"/>
+      <path d="M38 36 C 40 22, 50 10, 66 3 C 65 13, 62 22, 57 30 C 52 34, 45 36, 38 36 Z" fill="var(--rose-soft)"/>
+      <path d="M44 33 C 48 24, 54 16, 62 10 M50 34 C 53 27, 57 21, 62 17" stroke="var(--paper)" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+      <path d="M8 46 C 14 45, 19 44, 24 44 M10 49.5 C 16 48.5, 21 48, 26 48" stroke="var(--paper)" stroke-width="1" fill="none" stroke-linecap="round"/>
+      <circle cx="89" cy="35.2" r="1.6" fill="var(--paper)"/>
+      <path d="M96 33 L 102.5 34.4 L 96 36 Z" fill="var(--gold)"/>
+    </g>
+  </defs>
+</svg>
+
+<div class="wd">
+  <div class="base"></div>
+  <svg class="grain" preserveAspectRatio="none"><rect width="100%" height="100%" filter="url(#grainf)"/></svg>
+
+  <div class="paper"></div>
+  <div class="sc t"></div><div class="sc b"></div><div class="sc l"></div><div class="sc r"></div>
+  <div class="rule"></div>
+  <div class="arch"></div>
+
+  <!-- 위쪽 띠: 양 모서리의 비둘기가 리본을 물고, 리본이 아치 꼭대기 매듭으로 이어짐 -->
+  <svg class="crest ink" viewBox="0 0 524 104" fill="none">
+    <use href="#dove" transform="translate(10 6) scale(1.22)"/>
+    <use href="#dove" transform="translate(514 6) scale(-1.22 1.22)"/>
+    <!-- 리본 줄 (부리 → 매듭) -->
+    <path d="M134 48 C 168 82, 214 84, 248 60" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M390 48 C 356 82, 310 84, 276 60" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round"/>
+    <!-- 줄 위 작은 꽃 -->
+    <g transform="translate(186 74)"><use href="#flw" fill="var(--rose-soft)" transform="scale(.55)"/><circle r="1.6" fill="var(--gold)"/></g>
+    <g transform="translate(338 74)"><use href="#flw" fill="var(--rose-soft)" transform="scale(.55)"/><circle r="1.6" fill="var(--gold)"/></g>
+    <!-- 가운데 리본 매듭 -->
+    <g transform="translate(262 58)">
+      <path d="M0 0 C -14 -22, -40 -20, -36 -2 C -32 12, -14 8, 0 0 Z" fill="var(--rose)"/>
+      <path d="M0 0 C 14 -22, 40 -20, 36 -2 C 32 12, 14 8, 0 0 Z" fill="var(--rose)"/>
+      <path d="M-26 -8 C -18 -6, -10 -4, -3 -1 M26 -8 C 18 -6, 10 -4, 3 -1" stroke="var(--paper)" stroke-width="1.3" stroke-linecap="round"/>
+      <path d="M-3 3 C -8 16, -14 26, -22 38 M3 3 C 8 16, 14 26, 22 38" stroke="var(--rose)" stroke-width="4.2" stroke-linecap="round"/>
+      <rect x="-6" y="-6" width="12" height="12" rx="4" fill="var(--gold)"/>
+    </g>
+    <!-- 모서리 꽃 (비둘기 아래) -->
+    <g transform="translate(26 92)"><use href="#flw" fill="var(--blue)" transform="scale(.6)"/><circle r="1.8" fill="var(--paper)"/></g>
+    <g transform="translate(498 92)"><use href="#flw" fill="var(--blue)" transform="scale(.6)"/><circle r="1.8" fill="var(--paper)"/></g>
+    <g transform="translate(70 96)"><use href="#flw" fill="var(--rose)" transform="scale(.48)"/><circle r="1.5" fill="var(--paper)"/></g>
+    <g transform="translate(454 96)"><use href="#flw" fill="var(--rose)" transform="scale(.48)"/><circle r="1.5" fill="var(--paper)"/></g>
+  </svg>
+
+  <!-- 아래 양쪽 모서리: 작은 꽃 가지 (위와 짝) -->
+  <svg class="low l ink" viewBox="0 0 92 92" fill="none">
+    <path d="M6 86 C 22 64, 38 44, 66 22" stroke="var(--gold)" stroke-width="1.8" stroke-linecap="round"/>
+    <use href="#leaf" fill="var(--gold-soft)" transform="translate(30 58) rotate(-62)"/>
+    <g transform="translate(70 20)"><use href="#flw" fill="var(--rose-soft)" transform="scale(.8)"/><circle r="2.4" fill="var(--paper)"/></g>
+  </svg>
+  <svg class="low r ink" viewBox="0 0 92 92" fill="none">
+    <path d="M6 86 C 22 64, 38 44, 66 22" stroke="var(--gold)" stroke-width="1.8" stroke-linecap="round"/>
+    <use href="#leaf" fill="var(--gold-soft)" transform="translate(30 58) rotate(-62)"/>
+    <g transform="translate(70 20)"><use href="#flw" fill="var(--rose-soft)" transform="scale(.8)"/><circle r="2.4" fill="var(--paper)"/></g>
+  </svg>
+
+  <!-- 아치 양옆 가운데 -->
+  <svg class="bloom l ink" viewBox="-14 -14 28 28"><use href="#flw" fill="var(--rose)" transform="scale(.9)"/><circle r="2.4" fill="var(--paper)"/></svg>
+  <svg class="bloom r ink" viewBox="-14 -14 28 28"><use href="#flw" fill="var(--rose)" transform="scale(.9)"/><circle r="2.4" fill="var(--paper)"/></svg>
+
+  <div class="head"><h1>{{제목}}</h1><p class="sub">{{소제목}}</p>
+    <svg class="dash" viewBox="0 0 120 12" fill="none"><path d="M4 6 H 48 M72 6 H 116" stroke="var(--gold)" stroke-width=".9"/><g transform="translate(60 6)"><use href="#flw" fill="var(--rose)" transform="scale(.42)"/><circle r="1.3" fill="var(--paper)"/></g></svg>
+  </div>
+  <div class="foot">{{제작자}}</div>
+</div>
